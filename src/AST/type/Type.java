@@ -1,19 +1,20 @@
-package src.AST;
+package src.AST.type;
 
 
-import org.antlr.v4.runtime.atn.SemanticContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import src.AST.ASTNode;
+import src.AST.ASTVisitor;
 
-import static src.AST.Type.TypeEnum.*;
+import static src.AST.type.Type.TypeEnum.*;
 
 public class Type extends ASTNode {
     enum TypeEnum {
         VOID, BOOL, INT, STRING, CLASS, NULL, UNKNOWN;
     }
 
-    TypeEnum typeEnum;
-    String typeName;
-    int dim;
+    public TypeEnum typeEnum;
+    public String typeName;
+    public int dim;
 
     public Type(TerminalNode Void, TerminalNode Bool, TerminalNode Int, TerminalNode String) { //基础类型
         if (Void != null) {

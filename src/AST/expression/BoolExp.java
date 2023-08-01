@@ -1,12 +1,12 @@
-package src.AST;
+package src.AST.expression;
 
 import org.antlr.v4.runtime.tree.TerminalNode;
-import src.AST.expression.TernaryExp;
+import src.AST.ASTVisitor;
 
 public class BoolExp extends Expression {
     public boolean value;
 
-    BoolExp(TerminalNode True, TerminalNode False) {
+    public BoolExp(TerminalNode True, TerminalNode False) {
         if (True == null) {
             value = false;
         } else {

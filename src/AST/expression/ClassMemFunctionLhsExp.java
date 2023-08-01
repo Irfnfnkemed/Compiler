@@ -1,9 +1,14 @@
 package src.AST.expression;
 
-import src.AST.ParallelExp;
+import src.AST.ASTVisitor;
 
-public class ClassMemFunctionLhsExp {
-    VariableLhsExp classVariable;
-    String memberFuncName;
-    ParallelExp callList;
+public class ClassMemFunctionLhsExp extends Expression {
+    public VariableLhsExp classVariable;
+    public String memberFuncName;
+    public ParallelExp callList;
+
+    @Override
+    public void accept(ASTVisitor visitor) {
+
+    }
 }

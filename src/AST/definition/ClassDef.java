@@ -1,12 +1,16 @@
-package src.AST;
+package src.AST.definition;
+
+import src.AST.ASTNode;
+import src.AST.ASTVisitor;
+import src.AST.definition.variableDef.VariableDef;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ClassDef extends ASTNode {
-    String className;
-    List<VariableDef> variableDefList;
-    List<FunctionDef> functionDefList;
+    public String className;
+    public List<VariableDef> variableDefList;
+    public List<FunctionDef> functionDefList;
 
     public ClassDef() {
         variableDefList = new ArrayList<>();
