@@ -36,9 +36,9 @@ selectStatement
     ;
 
 loopStatement
-    : WHILE '(' expression ')' ( suite | statement )                # Whileloop
+    : WHILE '(' expression ')' statement                            # WhileLoop
     | FOR '(' ( parallelExp | variableDef )? ';'
-      condition=expression? ';' step=expression? ')' statement      # Forloop
+      condition=expression? ';' step=expression? ')' statement      # ForLoop
     ;
 
 jumpStatement

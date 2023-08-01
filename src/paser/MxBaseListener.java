@@ -101,25 +101,25 @@ public class MxBaseListener implements MxListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterWhileloop(MxParser.WhileloopContext ctx) { }
+	@Override public void enterWhileLoop(MxParser.WhileLoopContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitWhileloop(MxParser.WhileloopContext ctx) { }
+	@Override public void exitWhileLoop(MxParser.WhileLoopContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterForloop(MxParser.ForloopContext ctx) { }
+	@Override public void enterForLoop(MxParser.ForLoopContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitForloop(MxParser.ForloopContext ctx) { }
+	@Override public void exitForLoop(MxParser.ForLoopContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

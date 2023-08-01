@@ -1,8 +1,7 @@
 package src.AST;
 
-public class Expression extends ASTNode {
-    public Type type;
-
+public class JumpStatement extends ASTNode{
+    @Override
     public void accept(ASTVisitor visitor) {
 
     }

@@ -78,29 +78,29 @@ public interface MxListener extends ParseTreeListener {
 	 */
 	void exitSelectStatement(MxParser.SelectStatementContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code Whileloop}
+	 * Enter a parse tree produced by the {@code WhileLoop}
 	 * labeled alternative in {@link MxParser#loopStatement}.
 	 * @param ctx the parse tree
 	 */
-	void enterWhileloop(MxParser.WhileloopContext ctx);
+	void enterWhileLoop(MxParser.WhileLoopContext ctx);
 	/**
-	 * Exit a parse tree produced by the {@code Whileloop}
+	 * Exit a parse tree produced by the {@code WhileLoop}
 	 * labeled alternative in {@link MxParser#loopStatement}.
 	 * @param ctx the parse tree
 	 */
-	void exitWhileloop(MxParser.WhileloopContext ctx);
+	void exitWhileLoop(MxParser.WhileLoopContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code Forloop}
+	 * Enter a parse tree produced by the {@code ForLoop}
 	 * labeled alternative in {@link MxParser#loopStatement}.
 	 * @param ctx the parse tree
 	 */
-	void enterForloop(MxParser.ForloopContext ctx);
+	void enterForLoop(MxParser.ForLoopContext ctx);
 	/**
-	 * Exit a parse tree produced by the {@code Forloop}
+	 * Exit a parse tree produced by the {@code ForLoop}
 	 * labeled alternative in {@link MxParser#loopStatement}.
 	 * @param ctx the parse tree
 	 */
-	void exitForloop(MxParser.ForloopContext ctx);
+	void exitForLoop(MxParser.ForLoopContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code ReturnStmt}
 	 * labeled alternative in {@link MxParser#jumpStatement}.

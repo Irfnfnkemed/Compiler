@@ -1,6 +1,6 @@
 package src.AST;
 
-public class StringExp extends ASTNode {
+public class StringExp extends Expression {
 
     public String value;
 

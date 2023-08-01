@@ -53,19 +53,19 @@ public interface MxVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitSelectStatement(MxParser.SelectStatementContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code Whileloop}
+	 * Visit a parse tree produced by the {@code WhileLoop}
 	 * labeled alternative in {@link MxParser#loopStatement}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitWhileloop(MxParser.WhileloopContext ctx);
+	T visitWhileLoop(MxParser.WhileLoopContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code Forloop}
+	 * Visit a parse tree produced by the {@code ForLoop}
 	 * labeled alternative in {@link MxParser#loopStatement}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitForloop(MxParser.ForloopContext ctx);
+	T visitForLoop(MxParser.ForLoopContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code ReturnStmt}
 	 * labeled alternative in {@link MxParser#jumpStatement}.
