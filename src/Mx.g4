@@ -28,15 +28,17 @@ statement
     | jumpStatement
     | variableDef ';'
     | parallelExp ';'
+    | ';'
     ;
 
 selectStatement
-    : IF '(' expression ')' ( suite | statement ) ( ELSE ( suite | statement ) )?
+    : IF '(' expression ')' statement ( ELSE statement )?
     ;
 
 loopStatement
-    : WHILE '(' expression ')' ( suite | statement )
-    | FOR '(' ( parallelExp | variableDef )? ';' expression? ';' expression? ')' ( suite | statement )
+    : WHILE '(' expression ')' ( suite | statement )                # Whileloop
+    | FOR '(' ( parallelExp | variableDef )? ';'
+      condition=expression? ';' step=expression? ')' statement      # Forloop
     ;
 
 jumpStatement
@@ -46,20 +48,28 @@ jumpStatement
     ;
 
 variableDef
-    : typeName Identifier ( '=' expression )? ( ',' Identifier ( '=' expression )? )*
+    : typeName initVariable ( ',' initVariable )*
+    ;
+
+initVariable
+    : Identifier ( '=' expression )?
     ;
 
 typeName
     : ( BOOL | INT | STRING | VOID )    # FundationType
     | Identifier                        # ClassType
-    | typeName ( '[' ']' )+             # ArrayType
+    | typeName brackets+                # ArrayType
     ;
 
 expression
-    : expressionLhs                                             # LhsExp
-    | '(' expression ')'                                        # PrimaryExp
+    : '(' expression ')'                                        # PrimaryExp
+    | expression '.' Identifier                                 # ClassMemberLhsExp
+    | expression '.' Identifier '(' parallelExp? ')'            # ClassMemFunctionLhsExp
+    | expression '[' expression ']'                             # ArrayElementLhsExp
+    | Identifier '(' parallelExp? ')'                           # FunctionCallLhsExp
+    | expression op=( '++' | '--' )                             # PostfixExp
+    | op=( '++' | '--' ) expression                             # PrefixLhsExp
     | op=( '-' | '!' | '~' ) expression                         # UnaryExp
-    | expressionLhs ( '++' | '--' )                             # PostfixExp
     | expression op=( '*' | '/' | '%' ) expression              # BinaryExp
     | expression op=( '+' | '-' ) expression                    # BinaryExp
     | expression op=( '<<' | '>>' ) expression                  # BinaryExp
@@ -71,9 +81,10 @@ expression
     | expression op='&&' expression                             # BinaryExp
     | expression op='||' expression                             # BinaryExp
     | expression '?' expression ':' expression                  # TernaryExp
-    | <assoc=right> expressionLhs '=' expression                # AssignExp
+    | <assoc=right> expression '=' expression                   # AssignExp
     | NEW typeName ( '(' ')' )?                                 # NewClassExp
-    | NEW typeName ( '[' expression ']' )+ ( '[' ']' )*         # NewArrayExp
+    | NEW typeName ( '[' expression ']' )+ ( brackets )*        # NewArrayExp
+    | Identifier                                                # VariableLhsExp
     | THIS                                                      # ThisPointerExp
     | DecNumber                                                 # NumberExp
     | String                                                    # StringExp
@@ -81,22 +92,12 @@ expression
     | NULL                                                      # NullExp
     ;
 
-expressionLhs
-    : '(' expressionLhs ')'                             # Primary
-    | Identifier                                        # Variable
-    | expressionLhs '.' Identifier                      # ClassMember
-    | expressionLhs '.' Identifier functionCallList     # ClassMemFunction
-    | expressionLhs '[' expression ']'                  # ArrayElement
-    | Identifier functionCallList                       # FunctionCall
-    | op=( '++' | '--' ) expressionLhs                  # Prefix
-    ;
-
-functionCallList
-    : '(' ( expression ( ',' expression )* )? ')'
-    ;
-
 parallelExp
     : expression ( ',' expression )*
+    ;
+
+brackets
+    : '['  ']'
     ;
 
 VOID : 'void' ;
