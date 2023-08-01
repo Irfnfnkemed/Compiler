@@ -7,8 +7,10 @@ import src.AST.statement.jumpStatement.JumpStatement;
 import src.AST.statement.loopStatement.LoopStatement;
 import src.AST.statement.selectStatement.SelectStatement;
 import src.AST.definition.variableDef.VariableDef;
+import src.Util.Position;
 
 public class Statement extends ASTNode {
+    public Position position;
     public Suite suite;
     public SelectStatement selectStatement;
     public LoopStatement loopStatement;

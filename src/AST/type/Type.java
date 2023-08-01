@@ -4,6 +4,7 @@ package src.AST.type;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import src.AST.ASTNode;
 import src.AST.ASTVisitor;
+import src.Util.Position;
 
 import static src.AST.type.Type.TypeEnum.*;
 
@@ -12,6 +13,7 @@ public class Type extends ASTNode {
         VOID, BOOL, INT, STRING, CLASS, NULL, UNKNOWN;
     }
 
+    public Position position;
     public TypeEnum typeEnum;
     public String typeName;
     public int dim;

@@ -17,6 +17,7 @@ import src.AST.statement.Statement;
 import src.AST.type.Type;
 import src.AST.definition.variableDef.InitVariable;
 import src.AST.definition.variableDef.VariableDef;
+import src.Util.Position;
 import src.paser.MxBaseVisitor;
 import src.paser.MxParser;
 import src.AST.expression.*;
@@ -34,6 +35,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         Program program = new Program();
+        program.position = new Position(ctx);
         program.mainDef = (MainDef) visitMainDef(ctx.mainDef());
         ctx.classDef().forEach(ele -> program.classDefList.add((ClassDef) visitClassDef(ele)));
         ctx.functionDef().forEach(ele -> program.functionDefList.add((FunctionDef) visitFunctionDef(ele)));
@@ -47,6 +49,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         MainDef mainDef = new MainDef();
+        mainDef.position = new Position(ctx);
         mainDef.suite = (Suite) visitSuite(ctx.suite());
         return mainDef;
     }
@@ -57,6 +60,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         ClassDef classDef = new ClassDef();
+        classDef.position = new Position(ctx);
         classDef.className = ctx.Identifier().getText();
         ctx.variableDef().forEach(ele -> classDef.variableDefList.add((VariableDef) visitVariableDef(ele)));
         ctx.functionDef().forEach(ele -> classDef.functionDefList.add((FunctionDef) visitFunctionDef(ele)));
@@ -69,6 +73,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         VariableDef variableDef = new VariableDef();
+        variableDef.position = new Position(ctx);
         variableDef.type = (Type) visitType(ctx.typeName());
         ctx.initVariable().forEach(ele -> variableDef.initVariablelist.add((InitVariable) visitInitVariable(ele)));
         return variableDef;
@@ -80,6 +85,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         InitVariable initVariable = new InitVariable();
+        initVariable.position = new Position(ctx);
         initVariable.variableName = ctx.Identifier().getText();
         initVariable.exp = (Expression) visitExpression(ctx.expression());
         return initVariable;
@@ -91,6 +97,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         Suite suite = new Suite();
+        suite.position = new Position(ctx);
         ctx.statement().forEach(ele -> suite.statementList.add((Statement) visitStatement(ele)));
         return suite;
     }
@@ -101,6 +108,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         Statement statement = new Statement();
+        statement.position = new Position(ctx);
         statement.parallelExp = (ParallelExp) visitParallelExp(ctx.parallelExp());
         statement.jumpStatement = (JumpStatement) visitJumpStatement(ctx.jumpStatement());
         statement.loopStatement = (LoopStatement) visitLoopStatement(ctx.loopStatement());
@@ -115,6 +123,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         FunctionDef functionDef = new FunctionDef();
+        functionDef.position = new Position(ctx);
         functionDef.type = (Type) visitType(ctx.typeName(0));
         functionDef.functionName = ctx.Identifier(0).getText();
         ctx.typeName().stream().skip(1).forEach(ele -> functionDef.parameterTypeList.add((Type) visitType(ele)));
@@ -142,8 +151,8 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("FundationType");
         Type type = new Type(ctx.VOID(), ctx.BOOL(), ctx.INT(), ctx.STRING());
+        type.position = new Position(ctx);
         return type;
     }
 
@@ -171,47 +180,50 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
+        Expression expression;
         if (ctx instanceof MxParser.VariableLhsExpContext) {
-            return visitVariableLhsExp((MxParser.VariableLhsExpContext) ctx);
+            expression = (Expression) visitVariableLhsExp((MxParser.VariableLhsExpContext) ctx);
         } else if (ctx instanceof MxParser.ThisPointerExpContext) {
-            return visitThisPointerExp((MxParser.ThisPointerExpContext) ctx);
+            expression = (Expression) visitThisPointerExp((MxParser.ThisPointerExpContext) ctx);
         } else if (ctx instanceof MxParser.NumberExpContext) {
-            return visitNumberExp((MxParser.NumberExpContext) ctx);
+            expression = (Expression) visitNumberExp((MxParser.NumberExpContext) ctx);
         } else if (ctx instanceof MxParser.StringExpContext) {
-            return visitStringExp((MxParser.StringExpContext) ctx);
+            expression = (Expression) visitStringExp((MxParser.StringExpContext) ctx);
         } else if (ctx instanceof MxParser.BoolExpContext) {
-            return visitBoolExp((MxParser.BoolExpContext) ctx);
+            expression = (Expression) visitBoolExp((MxParser.BoolExpContext) ctx);
         } else if (ctx instanceof MxParser.NullExpContext) {
-            return visitNullExp((MxParser.NullExpContext) ctx);
+            expression = (Expression) visitNullExp((MxParser.NullExpContext) ctx);
         } else if (ctx instanceof MxParser.PrimaryExpContext) {
-            return visitPrimaryExp((MxParser.PrimaryExpContext) ctx);
+            expression = (Expression) visitPrimaryExp((MxParser.PrimaryExpContext) ctx);
         } else if (ctx instanceof MxParser.ClassMemberLhsExpContext) {
-            return visitClassMemberLhsExp((MxParser.ClassMemberLhsExpContext) ctx);
+            expression = (Expression) visitClassMemberLhsExp((MxParser.ClassMemberLhsExpContext) ctx);
         } else if (ctx instanceof MxParser.ClassMemFunctionLhsExpContext) {
-            return visitClassMemFunctionLhsExp((MxParser.ClassMemFunctionLhsExpContext) ctx);
+            expression = (Expression) visitClassMemFunctionLhsExp((MxParser.ClassMemFunctionLhsExpContext) ctx);
         } else if (ctx instanceof MxParser.ArrayElementLhsExpContext) {
-            return visitArrayElementLhsExp((MxParser.ArrayElementLhsExpContext) ctx);
+            expression = (Expression) visitArrayElementLhsExp((MxParser.ArrayElementLhsExpContext) ctx);
         } else if (ctx instanceof MxParser.FunctionCallLhsExpContext) {
-            return visitFunctionCallLhsExp((MxParser.FunctionCallLhsExpContext) ctx);
+            expression = (Expression) visitFunctionCallLhsExp((MxParser.FunctionCallLhsExpContext) ctx);
         } else if (ctx instanceof MxParser.PostfixExpContext) {
-            return visitPostfixExp((MxParser.PostfixExpContext) ctx);
+            expression = (Expression) visitPostfixExp((MxParser.PostfixExpContext) ctx);
         } else if (ctx instanceof MxParser.PrefixLhsExpContext) {
-            return visitPrefixLhsExp((MxParser.PrefixLhsExpContext) ctx);
+            expression = (Expression) visitPrefixLhsExp((MxParser.PrefixLhsExpContext) ctx);
         } else if (ctx instanceof MxParser.UnaryExpContext) {
-            return visitUnaryExp((MxParser.UnaryExpContext) ctx);
+            expression = (Expression) visitUnaryExp((MxParser.UnaryExpContext) ctx);
         } else if (ctx instanceof MxParser.BinaryExpContext) {
-            return visitBinaryExp((MxParser.BinaryExpContext) ctx);
+            expression = (Expression) visitBinaryExp((MxParser.BinaryExpContext) ctx);
         } else if (ctx instanceof MxParser.TernaryExpContext) {
-            return visitTernaryExp((MxParser.TernaryExpContext) ctx);
+            expression = (Expression) visitTernaryExp((MxParser.TernaryExpContext) ctx);
         } else if (ctx instanceof MxParser.AssignExpContext) {
-            return visitAssignExp((MxParser.AssignExpContext) ctx);
+            expression = (Expression) visitAssignExp((MxParser.AssignExpContext) ctx);
         } else if (ctx instanceof MxParser.NewClassExpContext) {
-            return visitNewClassExp((MxParser.NewClassExpContext) ctx);
+            expression = (Expression) visitNewClassExp((MxParser.NewClassExpContext) ctx);
         } else if (ctx instanceof MxParser.NewArrayExpContext) {
-            return visitNewArrayExp((MxParser.NewArrayExpContext) ctx);
+            expression = (Expression) visitNewArrayExp((MxParser.NewArrayExpContext) ctx);
         } else {
             return null;
         }
+        expression.position = new Position(ctx);
+        return expression;
     }
 
     @Override
@@ -449,6 +461,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         SelectStatement selectStatement = new SelectStatement();
+        selectStatement.position = new Position(ctx);
         selectStatement.judgeExp = (Expression) visitExpression(ctx.expression());
         selectStatement.trueStmt = (Statement) visitStatement(ctx.statement(0));
         if (ctx.statement().size() == 2) {
@@ -486,28 +499,34 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
+        LoopStatement loopStatement;
         if (ctx instanceof MxParser.WhileLoopContext) {
-            return visitWhileLoop((MxParser.WhileLoopContext) ctx);
+            loopStatement = (LoopStatement) visitWhileLoop((MxParser.WhileLoopContext) ctx);
         } else if (ctx instanceof MxParser.ForLoopContext) {
-            return visitForLoop((MxParser.ForLoopContext) ctx);
+            loopStatement = (LoopStatement) visitForLoop((MxParser.ForLoopContext) ctx);
         } else {
             return null;
         }
+        loopStatement.position = new Position(ctx);
+        return loopStatement;
     }
 
     public ASTNode visitJumpStatement(MxParser.JumpStatementContext ctx) {
         if (ctx == null) {
             return null;
         }
+        JumpStatement jumpStatement;
         if (ctx instanceof MxParser.ReturnStmtContext) {
-            return visitReturnStmt((MxParser.ReturnStmtContext) ctx);
+            jumpStatement = (JumpStatement) visitReturnStmt((MxParser.ReturnStmtContext) ctx);
         } else if (ctx instanceof MxParser.BreakStmtContext) {
-            return visitBreakStmt((MxParser.BreakStmtContext) ctx);
+            jumpStatement = (JumpStatement) visitBreakStmt((MxParser.BreakStmtContext) ctx);
         } else if (ctx instanceof MxParser.ContinueStmtContext) {
-            return visitContinueStmt((MxParser.ContinueStmtContext) ctx);
+            jumpStatement = (JumpStatement) visitContinueStmt((MxParser.ContinueStmtContext) ctx);
         } else {
             return null;
         }
+        jumpStatement.position = new Position(ctx);
+        return jumpStatement;
     }
 
     @Override
@@ -519,11 +538,13 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
 
     @Override
     public ASTNode visitBreakStmt(MxParser.BreakStmtContext ctx) {
-        return new BreakStmt();
+        BreakStmt breakStmt = new BreakStmt();
+        return breakStmt;
     }
 
     @Override
     public ASTNode visitContinueStmt(MxParser.ContinueStmtContext ctx) {
-        return new ContinueStmt();
+        ContinueStmt continueStmt = new ContinueStmt();
+        return continueStmt;
     }
 }
