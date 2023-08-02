@@ -6,9 +6,4 @@ public class ClassMemFunctionLhsExp extends Expression {
     public VariableLhsExp classVariable;
     public String memberFuncName;
     public ParallelExp callList;
-
-    @Override
-    public void accept(ASTVisitor visitor) {
-
-    }
 }

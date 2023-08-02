@@ -8,8 +8,4 @@ public class NumberExp extends Expression {
     public NumberExp(String number) {
         value = Integer.parseInt(number);
     }
-
-    public void accept(ASTVisitor visitor) {
-
-    }
 }

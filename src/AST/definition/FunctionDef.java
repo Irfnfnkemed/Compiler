@@ -3,14 +3,12 @@ package src.AST.definition;
 import src.AST.ASTNode;
 import src.AST.ASTVisitor;
 import src.AST.statement.Suite;
-import src.AST.type.Type;
-import src.Util.Position;
+import src.Util.type.Type;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class FunctionDef extends ASTNode {
-    public Position position;
     public Type type;
     public String functionName;
     public List<Type> parameterTypeList;
@@ -23,6 +21,6 @@ public class FunctionDef extends ASTNode {
     }
 
     public void accept(ASTVisitor visitor) {
-
+        visitor.visit(this);
     }
 }

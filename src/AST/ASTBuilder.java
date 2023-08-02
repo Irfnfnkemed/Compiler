@@ -2,22 +2,18 @@ package src.AST;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 import src.AST.definition.ClassDef;
+import src.AST.definition.Constructor;
 import src.AST.definition.FunctionDef;
 import src.AST.definition.MainDef;
 import src.AST.statement.Suite;
-import src.AST.statement.jumpStatement.BreakStmt;
-import src.AST.statement.jumpStatement.ContinueStmt;
-import src.AST.statement.jumpStatement.JumpStatement;
-import src.AST.statement.jumpStatement.ReturnStmt;
-import src.AST.statement.loopStatement.ForLoop;
-import src.AST.statement.loopStatement.LoopStatement;
-import src.AST.statement.loopStatement.WhileLoop;
+import src.AST.statement.jumpStatement.*;
+import src.AST.statement.loopStatement.*;
 import src.AST.statement.selectStatement.SelectStatement;
 import src.AST.statement.Statement;
-import src.AST.type.Type;
+import src.Util.type.Type;
 import src.AST.definition.variableDef.InitVariable;
 import src.AST.definition.variableDef.VariableDef;
-import src.Util.Position;
+import src.Util.position.Position;
 import src.paser.MxBaseVisitor;
 import src.paser.MxParser;
 import src.AST.expression.*;
@@ -62,6 +58,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         ClassDef classDef = new ClassDef();
         classDef.position = new Position(ctx);
         classDef.className = ctx.Identifier().getText();
+        classDef.constructor = (Constructor) visitConstructor(ctx.constructor());
         ctx.variableDef().forEach(ele -> classDef.variableDefList.add((VariableDef) visitVariableDef(ele)));
         ctx.functionDef().forEach(ele -> classDef.functionDefList.add((FunctionDef) visitFunctionDef(ele)));
         return classDef;
@@ -132,48 +129,57 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         return functionDef;
     }
 
-    public ASTNode visitType(MxParser.TypeNameContext ctx) {
+    public Type visitType(MxParser.TypeNameContext ctx) {
         if (ctx == null) {
             return null;
         }
-        if (ctx instanceof MxParser.FundationTypeContext) {
-            return visitFundationType((MxParser.FundationTypeContext) ctx);
+        Type type;
+        if (ctx instanceof MxParser.FoundationTypeContext) {
+            type = FoundationType((MxParser.FoundationTypeContext) ctx);
         } else if (ctx instanceof MxParser.ClassTypeContext) {
-            return visitClassType((MxParser.ClassTypeContext) ctx);
+            type = ClassType((MxParser.ClassTypeContext) ctx);
         } else if (ctx instanceof MxParser.ArrayTypeContext) {
-            return visitArrayType((MxParser.ArrayTypeContext) ctx);
-        }
-        return null;
-    }
-
-    @Override
-    public ASTNode visitFundationType(MxParser.FundationTypeContext ctx) {
-        if (ctx == null) {
+            type = ArrayType((MxParser.ArrayTypeContext) ctx);
+        } else {
             return null;
         }
-        Type type = new Type(ctx.VOID(), ctx.BOOL(), ctx.INT(), ctx.STRING());
         type.position = new Position(ctx);
         return type;
     }
 
-    @Override
-    public ASTNode visitClassType(MxParser.ClassTypeContext ctx) {
+
+    public Type FoundationType(MxParser.FoundationTypeContext ctx) {
         if (ctx == null) {
             return null;
         }
-        System.out.println("ClassType");
-        Type type = new Type(ctx.Identifier().getSymbol().getText());
-        return type;
+        Type type = new Type();
+        if (ctx.VOID() != null) {
+            return type.setVoid();
+        } else if (ctx.BOOL() != null) {
+            return type.setBool();
+        } else if (ctx.INT() != null) {
+            return type.setInt();
+        } else if (ctx.STRING() != null) {
+            return type.setString();
+        } else {
+            return null;
+        }
     }
 
-    @Override
-    public ASTNode visitArrayType(MxParser.ArrayTypeContext ctx) {
+    public Type ClassType(MxParser.ClassTypeContext ctx) {
         if (ctx == null) {
             return null;
         }
-        System.out.println("ArrayType");
-        Type type = new Type((Type) visitType(ctx.typeName()), ctx.brackets().size());
-        return type;
+        Type type = new Type();
+        return type.setClass(ctx.Identifier().getText());
+    }
+
+    public Type ArrayType(MxParser.ArrayTypeContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
+        Type type = new Type();
+        return type.setArray((Type) visitType(ctx.typeName()), ctx.brackets().size());
     }
 
     public ASTNode visitExpression(MxParser.ExpressionContext ctx) {
@@ -531,6 +537,9 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
 
     @Override
     public ASTNode visitReturnStmt(MxParser.ReturnStmtContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
         ReturnStmt returnStmt = new ReturnStmt();
         returnStmt.returnExp = (Expression) visitExpression(ctx.expression());
         return returnStmt;
@@ -538,13 +547,31 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
 
     @Override
     public ASTNode visitBreakStmt(MxParser.BreakStmtContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
         BreakStmt breakStmt = new BreakStmt();
         return breakStmt;
     }
 
     @Override
     public ASTNode visitContinueStmt(MxParser.ContinueStmtContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
         ContinueStmt continueStmt = new ContinueStmt();
         return continueStmt;
+    }
+
+    @Override
+    public ASTNode visitConstructor(MxParser.ConstructorContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
+        Constructor constructor = new Constructor();
+        constructor.position = new Position(ctx);
+        constructor.type = visitType(ctx.typeName());
+        constructor.suite = (Suite) visitSuite(ctx.suite());
+        return constructor;
     }
 }

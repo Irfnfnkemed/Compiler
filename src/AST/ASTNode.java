@@ -1,5 +1,8 @@
 package src.AST;
 
- abstract public class ASTNode {
+import src.Util.position.Position;
+
+abstract public class ASTNode {
+     public Position position;
      abstract public void accept(ASTVisitor visitor);
 }

@@ -14,8 +14,4 @@ public class BoolExp extends Expression {
         }
     }
 
-    public void accept(ASTVisitor visitor) {
-
-    }
-
 }

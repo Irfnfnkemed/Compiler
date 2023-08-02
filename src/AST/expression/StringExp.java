@@ -5,8 +5,4 @@ import src.AST.ASTVisitor;
 public class StringExp extends Expression {
 
     public String value;
-
-    public void accept(ASTVisitor visitor) {
-
-    }
 }

@@ -5,7 +5,6 @@ import src.AST.expression.Expression;
 import src.AST.expression.ParallelExp;
 import src.AST.statement.Statement;
 import src.AST.definition.variableDef.VariableDef;
-import src.Util.Position;
 
 public class ForLoop extends LoopStatement {
     public ParallelExp parallelExp;
@@ -13,9 +12,4 @@ public class ForLoop extends LoopStatement {
     public Expression conditionExp;
     public Expression stepExp;
     public Statement stmt;
-
-    @Override
-    public void accept(ASTVisitor visitor) {
-
-    }
 }

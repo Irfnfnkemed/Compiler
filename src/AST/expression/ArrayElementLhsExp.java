@@ -5,9 +5,4 @@ import src.AST.ASTVisitor;
 public class ArrayElementLhsExp extends Expression {
     public Expression variable;
     public Expression index;
-
-    @Override
-    public void accept(ASTVisitor visitor) {
-
-    }
 }

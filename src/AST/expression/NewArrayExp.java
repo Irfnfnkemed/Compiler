@@ -1,7 +1,7 @@
 package src.AST.expression;
 
 import src.AST.ASTVisitor;
-import src.AST.type.Type;
+import src.Util.type.Type;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,10 +13,5 @@ public class NewArrayExp extends Expression {
 
     public NewArrayExp() {
         expressionList = new ArrayList<>();
-    }
-
-    @Override
-    public void accept(ASTVisitor visitor) {
-
     }
 }

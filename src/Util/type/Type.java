@@ -8,7 +8,7 @@ import src.Util.Position;
 
 import static src.AST.type.Type.TypeEnum.*;
 
-public class Type extends ASTNode {
+public class Type {
     enum TypeEnum {
         VOID, BOOL, INT, STRING, CLASS, NULL, UNKNOWN;
     }
