@@ -78,4 +78,6 @@ public interface ASTVisitor {
     public void visit(FunctionDef node);
 
     public void visit(MainDef node);
+
+    public void visit(Definition node);
 }

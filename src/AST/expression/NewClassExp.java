@@ -4,5 +4,4 @@ import src.AST.ASTVisitor;
 import src.Util.type.Type;
 
 public class NewClassExp extends Expression {
-    public Type type;
 }

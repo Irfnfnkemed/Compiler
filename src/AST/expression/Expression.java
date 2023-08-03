@@ -7,6 +7,12 @@ import src.Util.type.Type;
 public class Expression extends ASTNode {
     public Type type;
 
+    public boolean isAssign = false;
+
+    Expression() {
+        type = new Type();
+    }
+
     @Override
     public void accept(ASTVisitor visitor) {
         if (this instanceof VariableLhsExp) {

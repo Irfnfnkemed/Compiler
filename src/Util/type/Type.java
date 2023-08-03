@@ -1,15 +1,16 @@
-package src.AST.type;
+package src.Util.type;
 
 
 import org.antlr.v4.runtime.tree.TerminalNode;
-import src.AST.ASTNode;
 import src.AST.ASTVisitor;
-import src.Util.Position;
+import src.Util.position.Position;
 
-import static src.AST.type.Type.TypeEnum.*;
+import java.util.Objects;
+
+import static src.Util.type.Type.TypeEnum.*;
 
 public class Type {
-    enum TypeEnum {
+    public enum TypeEnum {
         VOID, BOOL, INT, STRING, CLASS, NULL, UNKNOWN;
     }
 
@@ -18,40 +19,85 @@ public class Type {
     public String typeName;
     public int dim;
 
-    public Type(TerminalNode Void, TerminalNode Bool, TerminalNode Int, TerminalNode String) { //基础类型
-        if (Void != null) {
-            typeEnum = VOID;
-        } else if (Bool != null) {
-            typeEnum = BOOL;
-        } else if (Int != null) {
-            typeEnum = INT;
-        } else if (String != null) {
-            typeEnum = STRING;
-        }
+    public Type() { //默认
+        typeEnum = UNKNOWN;
         typeName = "";
         dim = 0;
     }
 
-    public Type(String typeName_) { //类类型
-        typeEnum = CLASS;
-        typeName = typeName_;
-        dim = 0;
+    public Type(Type obj) { //拷贝
+        typeEnum = obj.typeEnum;
+        typeName = obj.typeName;
+        dim = obj.dim;
     }
 
-    public Type(Type typeBase, int dim_) { //数组类型
+    public Type setVoid() {
+        typeEnum = VOID;
+        return this;
+    }
+
+    public Type setInt() {
+        typeEnum = INT;
+        return this;
+    }
+
+    public Type setBool() {
+        typeEnum = BOOL;
+        return this;
+    }
+
+    public Type setString() {
+        typeEnum = STRING;
+        return this;
+    }
+
+    public Type setClass(String name) {
+        typeEnum = CLASS;
+        typeName = name;
+        return this;
+    }
+
+    public Type setNull() {
+        typeEnum = NULL;
+        return this;
+    }
+
+    public Type setArray(Type typeBase, int dim_) {
         typeEnum = typeBase.typeEnum;
         typeName = typeBase.typeName;
         dim = dim_;
+        return this;
     }
 
-    public Type(boolean empty) { //默认与空指针
-        if (empty) {
-            typeEnum = NULL;
+    public String GetType() {
+        if (!Objects.equals(typeName, "")) {
+            return typeName;
         } else {
-            typeEnum = UNKNOWN;
+            switch (typeEnum) {
+                case VOID:
+                    return "void";
+                case INT:
+                    return "int";
+                case BOOL:
+                    return "bool";
+                case STRING:
+                    return "string";
+                case CLASS:
+                    return typeName;
+                case NULL:
+                    return "null";
+                default:
+                    return "";
+            }
         }
-        typeName = "";
-        dim = 0;
+    }
+
+    public boolean isArray() {
+        return dim == 0;
+    }
+
+    public boolean isAssign() {
+        return dim > 0 || typeEnum == CLASS || typeEnum == STRING;
     }
 
     public void accept(ASTVisitor visitor) {

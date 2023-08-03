@@ -1,10 +1,7 @@
 package src.AST;
 
 import org.antlr.v4.runtime.tree.ParseTree;
-import src.AST.definition.ClassDef;
-import src.AST.definition.Constructor;
-import src.AST.definition.FunctionDef;
-import src.AST.definition.MainDef;
+import src.AST.definition.*;
 import src.AST.statement.Suite;
 import src.AST.statement.jumpStatement.*;
 import src.AST.statement.loopStatement.*;
@@ -19,10 +16,10 @@ import src.paser.MxParser;
 import src.AST.expression.*;
 
 public class ASTBuilder extends MxBaseVisitor<ASTNode> {
-    ASTNode ASTprogram;
+    public Program ASTProgram;
 
     public void build(ParseTree ctx) {
-        ASTprogram = visit(ctx);
+        ASTProgram = (Program) visit(ctx);
     }
 
     @Override
@@ -32,10 +29,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         }
         Program program = new Program();
         program.position = new Position(ctx);
-        program.mainDef = (MainDef) visitMainDef(ctx.mainDef());
-        ctx.classDef().forEach(ele -> program.classDefList.add((ClassDef) visitClassDef(ele)));
-        ctx.functionDef().forEach(ele -> program.functionDefList.add((FunctionDef) visitFunctionDef(ele)));
-        ctx.variableDef().forEach(ele -> program.variableDefList.add((VariableDef) visitVariableDef(ele)));
+        ctx.definition().forEach(ele -> program.defList.add((Definition) visitDefinition(ele)));
         return program;
     }
 
@@ -71,7 +65,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         }
         VariableDef variableDef = new VariableDef();
         variableDef.position = new Position(ctx);
-        variableDef.type = (Type) visitType(ctx.typeName());
+        variableDef.type = visitType(ctx.typeName());
         ctx.initVariable().forEach(ele -> variableDef.initVariablelist.add((InitVariable) visitInitVariable(ele)));
         return variableDef;
     }
@@ -121,7 +115,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         }
         FunctionDef functionDef = new FunctionDef();
         functionDef.position = new Position(ctx);
-        functionDef.type = (Type) visitType(ctx.typeName(0));
+        functionDef.type = visitType(ctx.typeName(0));
         functionDef.functionName = ctx.Identifier(0).getText();
         ctx.typeName().stream().skip(1).forEach(ele -> functionDef.parameterTypeList.add((Type) visitType(ele)));
         ctx.Identifier().stream().skip(1).forEach(ele -> functionDef.parameterNameList.add(ele.getText()));
@@ -179,7 +173,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         Type type = new Type();
-        return type.setArray((Type) visitType(ctx.typeName()), ctx.brackets().size());
+        return type.setArray(visitType(ctx.typeName()), ctx.brackets().size());
     }
 
     public ASTNode visitExpression(MxParser.ExpressionContext ctx) {
@@ -237,7 +231,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitFunctionCallLhsExp");
         FunctionCallLhsExp functionCallLhsExp = new FunctionCallLhsExp();
         functionCallLhsExp.functionName = ctx.Identifier().getText();
         functionCallLhsExp.callExpList = (ParallelExp) visitParallelExp(ctx.parallelExp());
@@ -249,7 +242,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitBoolExp");
         BoolExp boolExp = new BoolExp(ctx.TRUE(), ctx.FALSE());
         return boolExp;
     }
@@ -259,7 +251,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitClassMemberLhsExp");
         ClassMemberLhsExp classMemberLhsExp = new ClassMemberLhsExp();
         classMemberLhsExp.classVariable = (Expression) visitExpression(ctx.expression());
         classMemberLhsExp.memberName = ctx.Identifier().getText();
@@ -271,9 +262,8 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitNewArrayExp");
         NewArrayExp newArrayExp = new NewArrayExp();
-        newArrayExp.type = (Type) visitType(ctx.typeName());
+        newArrayExp.type = visitType(ctx.typeName());
         ctx.expression().forEach(ele -> newArrayExp.expressionList.add((Expression) visitExpression(ele)));
         newArrayExp.dim = newArrayExp.type.dim + newArrayExp.expressionList.size();
         return newArrayExp;
@@ -284,7 +274,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitStringExp");
         StringExp stringExp = new StringExp();
         stringExp.value = ctx.String().getText();
         return stringExp;
@@ -295,7 +284,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitThisPointerExp");
         ThisPointerExp thisPointerExp = new ThisPointerExp();
         return thisPointerExp;
     }
@@ -305,7 +293,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitPrefixLhsExp");
         PrefixLhsExp prefixLhsExp = new PrefixLhsExp();
         prefixLhsExp.exp = (Expression) visitExpression(ctx.expression());
         prefixLhsExp.op = ctx.op.getText();
@@ -317,7 +304,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitNullExp");
         NullExp nullExp = new NullExp();
         return nullExp;
     }
@@ -327,7 +313,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitVariableLhsExp");
         VariableLhsExp variableLhsExp = new VariableLhsExp(ctx.Identifier().getText());
         return variableLhsExp;
     }
@@ -337,7 +322,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitClassMemFunctionLhsExp");
         ClassMemberLhsExp classMemberLhsExp = new ClassMemberLhsExp();
         classMemberLhsExp.memberName = ctx.Identifier().getText();
         classMemberLhsExp.classVariable = (Expression) visitExpression(ctx.expression());
@@ -349,7 +333,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitBinaryExp");
         BinaryExp binaryExp = new BinaryExp();
         binaryExp.lhs = (Expression) visitExpression(ctx.expression(0));
         binaryExp.rhs = (Expression) visitExpression(ctx.expression(1));
@@ -362,7 +345,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitPrimaryExp");
         PrimaryExp primaryExp = new PrimaryExp();
         primaryExp.exp = (Expression) visitExpression(ctx.expression());
         return primaryExp;
@@ -373,7 +355,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitPostfixExp");
         PostfixExp postfixExp = new PostfixExp();
         postfixExp.exp = (Expression) visitExpression(ctx.expression());
         postfixExp.op = ctx.op.getText();
@@ -385,7 +366,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitAssignExp");
         AssignExp assignExp = new AssignExp();
         assignExp.lhs = (Expression) visitExpression(ctx.expression(0));
         assignExp.rhs = (Expression) visitExpression(ctx.expression(1));
@@ -397,7 +377,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitNewClassExp");
         NewClassExp newClassExp = new NewClassExp();
         return newClassExp;
     }
@@ -407,7 +386,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitTernaryExp");
         TernaryExp ternaryExp = new TernaryExp();
         ternaryExp.lhs = (Expression) visitExpression(ctx.expression(0));
         ternaryExp.mhs = (Expression) visitExpression(ctx.expression(1));
@@ -420,7 +398,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitArrayElementLhsExp");
         ArrayElementLhsExp arrayElementLhsExp = new ArrayElementLhsExp();
         arrayElementLhsExp.variable = (Expression) visitExpression(ctx.expression(0));
         arrayElementLhsExp.index = (Expression) visitExpression(ctx.expression(1));
@@ -432,7 +409,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitUnaryExp");
         UnaryExp unaryExp = new UnaryExp();
         unaryExp.exp = (Expression) visitExpression(ctx.expression());
         unaryExp.op = ctx.op.getText();
@@ -444,7 +420,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        System.out.println("visitNumberExp");
         NumberExp numberExp = new NumberExp(ctx.DecNumber().getText());
         return numberExp;
     }
@@ -452,7 +427,6 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
 
     @Override
     public ASTNode visitParallelExp(MxParser.ParallelExpContext ctx) {
-        System.out.println("visitParallelExp");
         if (ctx == null) {
             return null;
         }
@@ -573,5 +547,19 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         constructor.type = visitType(ctx.typeName());
         constructor.suite = (Suite) visitSuite(ctx.suite());
         return constructor;
+    }
+
+    @Override
+    public ASTNode visitDefinition(MxParser.DefinitionContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
+        Definition definition = new Definition();
+        definition.mainDef = (MainDef) visitMainDef(ctx.mainDef());
+        definition.classDef = (ClassDef) visitClassDef(ctx.classDef());
+        definition.functionDef = (FunctionDef) visitFunctionDef(ctx.functionDef());
+        definition.variableDef = (VariableDef) visitVariableDef(ctx.variableDef());
+        definition.position = new Position(ctx);
+        return definition;
     }
 }

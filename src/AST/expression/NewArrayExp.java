@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class NewArrayExp extends Expression {
-    public Type type;
     public List<Expression> expressionList;
     public int dim;
 
