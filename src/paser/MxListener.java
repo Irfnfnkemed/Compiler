@@ -461,4 +461,14 @@ public interface MxListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitBrackets(MxParser.BracketsContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link MxParser#bracketsWithIndex}.
+	 * @param ctx the parse tree
+	 */
+	void enterBracketsWithIndex(MxParser.BracketsWithIndexContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link MxParser#bracketsWithIndex}.
+	 * @param ctx the parse tree
+	 */
+	void exitBracketsWithIndex(MxParser.BracketsWithIndexContext ctx);
 }

@@ -30,22 +30,23 @@ public class Semantic implements ASTVisitor {
         ASTProgram = ASTProgram_;
         for (var def : ASTProgram.defList) {
             if (def.functionDef != null) {
-                globalScope.setFunction(def.functionDef.functionName, def.functionDef.type,
-                        def.functionDef.parameterTypeList, def.functionDef.position);
+                globalScope.setFunction(def.functionDef.functionName, def.functionDef.type, def.functionDef.parameterTypeList, def.functionDef.position);
             } else if (def.classDef != null) {
                 globalScope.setClassName(def.classDef.className, def.classDef.position);
                 for (var varList : def.classDef.variableDefList) {
                     varList.initVariablelist.forEach(var -> {
-                        globalScope.setClassMember(def.classDef.className, var.variableName,
-                                varList.type, var.position);
+                        globalScope.setClassMember(def.classDef.className, var.variableName, varList.type, var.position);
                     });
                 }
                 def.classDef.functionDefList.forEach(funcList -> {
-                    globalScope.setClassMethod(def.classDef.className, funcList.functionName,
-                            funcList.type, funcList.parameterTypeList, funcList.position);
+                    globalScope.setClassMethod(def.classDef.className, funcList.functionName, funcList.type, funcList.parameterTypeList, funcList.position);
                 });
             }
         }
+    }
+
+    public void check() {
+        visit(ASTProgram);
     }
 
     public void visit(Program node) {
@@ -53,7 +54,7 @@ public class Semantic implements ASTVisitor {
         for (var def : node.defList) {
             if (def.mainDef != null) {
                 if (mainExist) {
-                    throw new SemanticErrors("Duplicate main function.", def.mainDef.position);
+                    throw new SemanticErrors("[Program error] Duplicate definition of main function.", def.mainDef.position);
                 } else {
                     mainExist = true;
                 }
@@ -61,7 +62,135 @@ public class Semantic implements ASTVisitor {
             def.accept(this);
         }
         if (!mainExist) {
-            throw new SemanticErrors("No main function.", node.position);
+            throw new SemanticErrors("[Program error] Missing main function.", node.position);
+        }
+    }
+
+    public void visit(Definition node) {
+        if (node == null) {
+            return;
+        }
+        if (node.mainDef != null) {
+            node.mainDef.scope = new Scope();
+            node.mainDef.scope.isFunction = true;
+            node.mainDef.scope.returnType = new Type();
+            node.mainDef.scope.returnType.setInt();
+            node.mainDef.accept(this);
+        } else if (node.classDef != null) {
+            node.classDef.scope = new Scope();
+            node.classDef.scope.isClass = true;
+            node.classDef.scope.classType = new Type();
+            node.classDef.scope.classType.setClass(node.classDef.className);
+            node.classDef.accept(this);
+        } else if (node.functionDef != null) {
+            node.functionDef.scope = new Scope();
+            node.functionDef.scope.isFunction = true;
+            node.functionDef.accept(this);
+        } else if (node.variableDef != null) {
+            node.variableDef.scope = new Scope();
+            node.variableDef.scope.isGlobal = true;
+            node.variableDef.accept(this);
+        }
+    }
+
+    public void visit(MainDef node) {
+        if (node == null) {
+            return;
+        }
+        node.suite.scope = node.scope;
+        node.suite.accept(this);
+    }
+
+    public void visit(ClassDef node) {
+        if (node == null) {
+            return;
+        }
+        node.variableDefList.forEach(varDef -> {
+            varDef.scope = node.scope;
+            varDef.accept(this);
+        });
+        node.functionDefList.forEach(funcDef -> {
+            funcDef.scope = new Scope(node.scope);
+            funcDef.scope.isFunction = true;
+            funcDef.accept(this);
+        });
+        if (node.constructor != null) {
+            node.constructor.scope = new Scope(node.scope);
+            node.constructor.scope.isFunction = true;
+            node.constructor.scope.returnType = new Type();
+            node.constructor.scope.returnType.setVoid();
+            node.constructor.accept(this);
+        }
+    }
+
+    public void visit(Constructor node) {
+        if (node == null) {
+            return;
+        }
+        if (!node.scope.isClass) {
+            throw new SemanticErrors("[Function error] Unexpected constructor out of the class.", node.position);
+        }
+        if (!Objects.equals(node.className, node.scope.classType.typeName)) {
+            throw new SemanticErrors("[Name error] Wrong Name of the constructor.", node.position);
+        }
+        node.suite.scope = node.scope;
+        node.suite.accept(this);
+    }
+
+    public void visit(FunctionDef node) {
+        if (node == null) {
+            return;
+        }
+        if (node.type.isClass() && !globalScope.classIsExist(node.type.typeName)) {
+            throw new SemanticErrors("[Type error] Type not define.", node.type.position);
+        }
+        node.scope.returnType = new Type(node.type);
+        for (Type parameterType : node.parameterTypeList) {
+            if (parameterType.isClass() && !globalScope.classIsExist(parameterType.typeName)) {
+                throw new SemanticErrors("[Type error] Type not define.", parameterType.position);
+            }
+        }
+        for (int i = 0; i < node.parameterNameList.size(); ++i) {
+            node.scope.setVariable(node.parameterNameList.get(i), node.parameterTypeList.get(i), node.parameterTypeList.get(i).position);
+        }
+        node.body.scope = node.scope;
+        node.body.accept(this);
+        if (node.scope.notReturn && !node.scope.returnType.isVoid()) {
+            throw new SemanticErrors("[Function error] Missing return statement.", node.position);
+        }
+    }
+
+    public void visit(VariableDef node) {
+        if (node == null) {
+            return;
+        }
+        if (node.type.isClass() && !globalScope.classIsExist(node.type.typeName)) {
+            throw new SemanticErrors("[Type error] Type not define.", node.type.position);
+        }
+        if (node.type.typeEnum == Type.TypeEnum.VOID || node.type.typeEnum == Type.TypeEnum.NULL) {
+            throw new SemanticErrors("[Type error] Invalid type.", node.type.position);
+        }
+        for (var varDef : node.initVariablelist) {
+            varDef.scope = node.scope;
+            varDef.accept(this);
+            if (node.scope.isGlobal) {
+                globalScope.setVariable(varDef.variableName, varDef.type, varDef.position);
+            } else if (!(node.scope.isClass && !node.scope.isFunction)) {
+                node.scope.setVariable(varDef.variableName, varDef.type, varDef.position);
+            }
+        }
+    }
+
+    public void visit(InitVariable node) {
+        if (node == null) {
+            return;
+        }
+        if (node.exp != null) {
+            node.exp.scope = node.scope;
+            node.exp.accept(this);
+            if (!node.type.assign(node.exp.type)) {
+                throw new SemanticErrors("[Type error] Initialization type mismatch.", node.exp.position);
+            }
         }
     }
 
@@ -114,7 +243,7 @@ public class Semantic implements ASTVisitor {
         node.judgeExp.scope = node.scope;
         node.judgeExp.accept(this);
         if (!node.judgeExp.type.isBool()) {
-            throw new SemanticErrors("Invalid condition expression.", node.position);
+            throw new SemanticErrors("[Statement error] Invalid judgment expression.", node.judgeExp.position);
         }
         node.trueStmt.scope = new Scope(node.scope);
         node.trueStmt.accept(this);
@@ -122,8 +251,7 @@ public class Semantic implements ASTVisitor {
             node.falseStmt.scope = new Scope(node.scope);
             node.falseStmt.accept(this);
         }
-        if (!node.trueStmt.scope.notReturn &&
-                (node.falseStmt == null || !node.falseStmt.scope.notReturn)) {
+        if (!node.trueStmt.scope.notReturn && (node.falseStmt == null || !node.falseStmt.scope.notReturn)) {
             node.scope.notReturn = false;
         }
     }
@@ -144,7 +272,7 @@ public class Semantic implements ASTVisitor {
             node.conditionExp.scope = node.scope;
             node.conditionExp.accept(this);
             if (!node.conditionExp.type.isBool()) {
-                throw new SemanticErrors("Invalid condition expression.", node.position);
+                throw new SemanticErrors("[Statement error] Invalid judgment expression.", node.conditionExp.position);
             }
         }
         if (node.stepExp != null) {
@@ -162,7 +290,7 @@ public class Semantic implements ASTVisitor {
         node.judgeExp.scope = node.scope;
         node.judgeExp.accept(this);
         if (!node.judgeExp.type.isBool()) {
-            throw new SemanticErrors("Invalid condition expression.", node.position);
+            throw new SemanticErrors("[Statement error] Invalid judgment expression.", node.judgeExp.position);
         }
         node.stmt.scope = node.scope;
         node.stmt.accept(this);
@@ -170,128 +298,52 @@ public class Semantic implements ASTVisitor {
 
     public void visit(BreakStmt node) {
         if (!node.scope.isLoop) {
-            throw new SemanticErrors("Unexpected break.", node.position);
+            throw new SemanticErrors("[Statement error] Unexpected break statement.", node.position);
         }
     }
 
     public void visit(ContinueStmt node) {
         if (!node.scope.isLoop) {
-            throw new SemanticErrors("Unexpected continue.", node.position);
+            throw new SemanticErrors("[Statement error] Unexpected continue statement.", node.position);
         }
     }
 
     public void visit(ReturnStmt node) {
         if (!node.scope.isFunction) {
-            throw new SemanticErrors("Unexpected return.", node.position);
+            throw new SemanticErrors("[Statement error] Unexpected return.", node.position);
         }
         if (node.returnExp == null) {
             if (!node.scope.returnType.isVoid()) {
-                throw new SemanticErrors("Unmatched return type.", node.position);
+                throw new SemanticErrors("[Type error] Unmatched return type.", node.returnExp.position);
             }
         } else {
             node.returnExp.scope = node.scope;
             node.returnExp.accept(this);
             if (!node.scope.returnType.assign(node.returnExp.type)) {
-                throw new SemanticErrors("Unmatched return type.", node.position);
+                throw new SemanticErrors("[Type error] Unmatched return type.", node.returnExp.position);
             }
         }
         node.scope.notReturn = false;
     }
 
-    public void visit(ArrayElementLhsExp node) {
+    public void visit(ParallelExp node) {
         if (node == null) {
             return;
         }
-        node.variable.scope = node.scope;
-        node.variable.accept(this);
-        if (!node.variable.type.isArray() ||
-                !(node.variable instanceof PrimaryExp || node.variable instanceof VariableLhsExp ||
-                        node.variable instanceof ClassMemberLhsExp || node.variable instanceof ClassMemFunctionLhsExp ||
-                        node.variable instanceof FunctionCallLhsExp || node.variable instanceof ArrayElementLhsExp)) {
-            throw new SemanticErrors("Unexpected type in visit array element.", node.position);
+        for (var exp : node.expList) {
+            exp.scope = node.scope;
+            exp.accept(this);
         }
-        node.index.scope = node.scope;
-        node.index.accept(this);
-        if (!node.index.type.isInt()) {
-            throw new SemanticErrors("Unexpected type of array element index.", node.position);
-        }
-        node.type = new Type(node.variable.type);
-        --node.type.dim;
     }
 
-    public void visit(AssignExp node) {
+    public void visit(PrimaryExp node) {
         if (node == null) {
             return;
         }
-        node.lhs.scope = node.scope;
-        node.lhs.accept(this);
-        if (!node.lhs.isAssign) {
-            throw new SemanticErrors("Assign to right value.", node.position);
-        }
-        node.rhs.scope = node.scope;
-        node.rhs.accept(this);
-        if (!node.lhs.type.assign(node.rhs.type)) {
-            throw new SemanticErrors("Different type to assign.", node.position);
-        }
-    }
-
-    public void visit(BinaryExp node) {
-        if (node == null) {
-            return;
-        }
-        node.lhs.scope = node.scope;
-        node.lhs.accept(this);
-        node.rhs.scope = node.scope;
-        node.rhs.accept(this);
-        switch (node.op) {
-            case "+", "<", ">", "<=", ">=" -> {
-                if (node.lhs.type.isString()) {
-                    if (!node.rhs.type.isString()) {
-                        throw new SemanticErrors("Unexpected type in binary expression.", node.position);
-                    }
-                    node.type = new Type();
-                    if (Objects.equals(node.op, "+")) {
-                        node.type.setString();
-                    } else {
-                        node.type.setBool();
-                    }
-                    return;
-                }
-                if (!node.lhs.type.isInt() || !node.rhs.type.isInt()) {
-                    throw new SemanticErrors("Unexpected type in binary expression.", node.position);
-                }
-                node.type = new Type();
-                if (Objects.equals(node.op, "+")) {
-                    node.type.setInt();
-                } else {
-                    node.type.setBool();
-                }
-            }
-            case "-", "*", "/", "%", "<<", ">>", "&", "^", "|" -> {
-                if (!node.lhs.type.isInt() || !node.rhs.type.isInt()) {
-                    throw new SemanticErrors("Unexpected type in binary expression.", node.position);
-                }
-                node.type = new Type();
-                node.type.setInt();
-            }
-            case "==", "!=" -> {
-                if (!node.lhs.type.compare(node.rhs.type)) {
-                    throw new SemanticErrors("Unexpected type in binary expression.", node.position);
-                }
-                node.type = new Type();
-                node.type.setBool();
-            }
-            case "||", "&&" -> {
-                if (!node.lhs.type.isBool() || !node.rhs.type.isBool()) {
-                    throw new SemanticErrors("Unexpected type in binary expression.", node.position);
-                }
-                node.type = new Type();
-                node.type.setBool();
-            }
-        }
-    }
-
-    public void visit(BoolExp node) {
+        node.exp.scope = node.scope;
+        node.exp.accept(this);
+        node.type = new Type(node.exp.type);
+        node.isAssign = node.exp.isAssign;
     }
 
     public void visit(ClassMemberLhsExp node) {
@@ -301,11 +353,11 @@ public class Semantic implements ASTVisitor {
         node.classVariable.scope = node.scope;
         node.classVariable.accept(this);
         if (!node.classVariable.type.isClass()) {
-            throw new SemanticErrors("Unexpected visit to class member.", node.position);
+            throw new SemanticErrors("[Class error] Visit member of non class type variable.", node.position);
         }
         Type memberType = globalScope.getClassMember(node.classVariable.type.GetType(), node.memberName);
         if (memberType == null) {
-            throw new SemanticErrors("Not existed class member.", node.position);
+            throw new SemanticErrors("[Class error] Absent class member.", node.position);
         }
         node.type = new Type(memberType);
         node.isAssign = true;
@@ -320,26 +372,26 @@ public class Semantic implements ASTVisitor {
         if (!node.classVariable.type.isClass() && !node.classVariable.type.isString()) {
             if (node.classVariable.type.isArray() && Objects.equals(node.memberFuncName, "size")) {
                 if (node.callList != null) {
-                    throw new SemanticErrors("Not existed class function.", node.position);
+                    throw new SemanticErrors("[Class error] Absent class function.", node.position);
                 } else {
                     node.type = new Type();
                     node.type.setInt();
                     return;
                 }
             } else {
-                throw new SemanticErrors("Not existed class function.", node.position);
+                throw new SemanticErrors("[Class error] Absent class function.", node.position);
             }
         }
         var funcTypes = globalScope.getClassMethod(node.classVariable.type.GetType(), node.memberFuncName);
         if (funcTypes == null) {
-            throw new SemanticErrors("Not existed class function.", node.position);
+            throw new SemanticErrors("[Class error] Absent class function.", node.position);
         }
         int size = 0;
         if (node.callList != null) {
             size = node.callList.expList.size();
         }
         if (funcTypes.parameterTypes.size() != size) {
-            throw new SemanticErrors("Parameter number error.", node.position);
+            throw new SemanticErrors("[Function error] Unmatched parameter number.", node.position);
         }
         if (size != 0) {
             node.callList.scope = node.scope;
@@ -347,7 +399,7 @@ public class Semantic implements ASTVisitor {
         }
         for (int i = 0; i < funcTypes.parameterTypes.size(); ++i) {
             if (!funcTypes.parameterTypes.get(i).assign(node.callList.expList.get(i).type)) {
-                throw new SemanticErrors("Unmatched parameter type error.", node.position);
+                throw new SemanticErrors("[Type error] Unmatched parameter type.", node.callList.expList.get(i).type.position);
             }
         }
         node.type = new Type(funcTypes.type);
@@ -365,14 +417,14 @@ public class Semantic implements ASTVisitor {
             funcTypes = globalScope.getFunction(node.functionName);
         }
         if (funcTypes == null) {
-            throw new SemanticErrors("Call not existed function.", node.position);
+            throw new SemanticErrors("[Function error] Call absent function.", node.position);
         }
         int size = 0;
         if (node.callExpList != null) {
             size = node.callExpList.expList.size();
         }
         if (funcTypes.parameterTypes.size() != size) {
-            throw new SemanticErrors("Parameter number error.", node.position);
+            throw new SemanticErrors("[Function error] Unmatched parameter number.", node.position);
         }
         if (size != 0) {
             node.callExpList.scope = node.scope;
@@ -380,10 +432,100 @@ public class Semantic implements ASTVisitor {
         }
         for (int i = 0; i < funcTypes.parameterTypes.size(); ++i) {
             if (!funcTypes.parameterTypes.get(i).assign(node.callExpList.expList.get(i).type)) {
-                throw new SemanticErrors("Unmatched parameter type error.", node.position);
+                throw new SemanticErrors("[Type error] Unmatched parameter type.", node.callExpList.expList.get(i).type.position);
             }
         }
         node.type = new Type(funcTypes.type);
+    }
+
+    public void visit(ArrayElementLhsExp node) {
+        if (node == null) {
+            return;
+        }
+        node.variable.scope = node.scope;
+        node.variable.accept(this);
+        if (!node.variable.type.isArray()) {
+            throw new SemanticErrors("[Type error] Non array type.", node.position);
+        }
+        node.index.scope = node.scope;
+        node.index.accept(this);
+        if (!node.index.type.isInt()) {
+            throw new SemanticErrors("[Type error] Unexpected type of index.", node.index.position);
+        }
+        node.type = new Type(node.variable.type);
+        --node.type.dim;
+    }
+
+    public void visit(AssignExp node) {
+        if (node == null) {
+            return;
+        }
+        node.lhs.scope = node.scope;
+        node.lhs.accept(this);
+        if (!node.lhs.isAssign) {
+            throw new SemanticErrors("[Type error] Assign to right value.", node.position);
+        }
+        node.rhs.scope = node.scope;
+        node.rhs.accept(this);
+        if (!node.lhs.type.assign(node.rhs.type)) {
+            throw new SemanticErrors("[Type error] Unmatched type to assign.", node.position);
+        }
+    }
+
+    public void visit(BinaryExp node) {
+        if (node == null) {
+            return;
+        }
+        node.lhs.scope = node.scope;
+        node.lhs.accept(this);
+        node.rhs.scope = node.scope;
+        node.rhs.accept(this);
+        switch (node.op) {
+            case "+", "<", ">", "<=", ">=" -> {
+                if (node.lhs.type.isString()) {
+                    if (!node.rhs.type.isString()) {
+                        throw new SemanticErrors("[Type error] Unexpected type in binary expression.", node.position);
+                    }
+                    node.type = new Type();
+                    if (Objects.equals(node.op, "+")) {
+                        node.type.setString();
+                    } else {
+                        node.type.setBool();
+                    }
+                    return;
+                }
+                if (!node.lhs.type.isInt() || !node.rhs.type.isInt()) {
+                    throw new SemanticErrors("[Type error] Unexpected type in binary expression.", node.position);
+                }
+                node.type = new Type();
+                if (Objects.equals(node.op, "+")) {
+                    node.type.setInt();
+                } else {
+                    node.type.setBool();
+                }
+            }
+            case "-", "*", "/", "%", "<<", ">>", "&", "^", "|" -> {
+                if (!node.lhs.type.isInt() || !node.rhs.type.isInt()) {
+                    throw new SemanticErrors("[Type error] Unexpected type in binary expression.", node.position);
+                }
+                node.type = new Type();
+                node.type.setInt();
+            }
+            case "==", "!=" -> {
+                if (!node.lhs.type.compare(node.rhs.type)) {
+                    throw new SemanticErrors("[Type error] Unexpected type in binary expression.", node.position);
+                }
+                node.type = new Type();
+                node.type.setBool();
+            }
+            case "||", "&&" -> {
+                if (!node.lhs.type.isBool() || !node.rhs.type.isBool()) {
+                    throw new SemanticErrors("[Type error] Unexpected type in binary expression.", node.position);
+                }
+                node.type = new Type();
+                node.type.setBool();
+            }
+        }
     }
 
     public void visit(NewArrayExp node) {
@@ -391,16 +533,16 @@ public class Semantic implements ASTVisitor {
             return;
         }
         if (node.baseType.isArray() || node.baseType.isNull() || node.baseType.isVoid()) {
-            throw new SemanticErrors("Unexpected type in new array.", node.position);
+            throw new SemanticErrors("[Type error] Invalid new array type.", node.position);
         }
         if (node.baseType.isClass() && !globalScope.classIsExist(node.type.GetType())) {
-            throw new SemanticErrors("Class not define.", node.position);
+            throw new SemanticErrors("[Type error] Non existent type.", node.position);
         }
         node.expressionList.forEach(exp -> {
             exp.scope = node.scope;
             exp.accept(this);
             if (!exp.type.isInt()) {
-                throw new SemanticErrors("Unexpected type of array element index.", exp.position);
+                throw new SemanticErrors("[Type error] Invalid type of index.", exp.position);
             }
         });
     }
@@ -410,26 +552,10 @@ public class Semantic implements ASTVisitor {
             return;
         }
         if (node.type.isArray() || !node.type.isClass()) {
-            throw new SemanticErrors("Unexpected type in new class.", node.position);
+            throw new SemanticErrors("[Type error] Invalid type.", node.position);
         }
         if (!globalScope.classIsExist(node.type.GetType())) {
-            throw new SemanticErrors("Class not define.", node.position);
-        }
-    }
-
-    public void visit(NullExp node) {
-    }
-
-    public void visit(NumberExp node) {
-    }
-
-    public void visit(ParallelExp node) {
-        if (node == null) {
-            return;
-        }
-        for (var exp : node.expList) {
-            exp.scope = node.scope;
-            exp.accept(this);
+            throw new SemanticErrors("[Type error] Non existent type.", node.position);
         }
     }
 
@@ -440,10 +566,10 @@ public class Semantic implements ASTVisitor {
         node.exp.scope = node.scope;
         node.exp.accept(this);
         if (!node.exp.isAssign) {
-            throw new SemanticErrors("Right value error.", node.position);
+            throw new SemanticErrors("[Type error] Postfix expression on right value.", node.exp.position);
         }
         if (!node.exp.type.isInt()) {
-            throw new SemanticErrors("Invalid postfix.", node.position);
+            throw new SemanticErrors("[Type error] Invalid type in postfix expression.", node.exp.position);
         }
         node.type = new Type(node.exp.type);
     }
@@ -455,51 +581,28 @@ public class Semantic implements ASTVisitor {
         node.exp.scope = node.scope;
         node.exp.accept(this);
         if (!node.exp.isAssign) {
-            throw new SemanticErrors("Right value error.", node.position);
+            throw new SemanticErrors("[Type error] Prefix expression on right value.", node.exp.position);
         }
         if (!node.exp.type.isInt()) {
-            throw new SemanticErrors("Invalid prefix.", node.position);
+            throw new SemanticErrors("[Type error] Invalid type in prefix expression.", node.exp.position);
         }
         node.type = new Type(node.exp.type);
-    }
-
-    public void visit(PrimaryExp node) {
-        if (node == null) {
-            return;
-        }
-        node.exp.scope = node.scope;
-        node.exp.accept(this);
-        node.type = new Type(node.exp.type);
-        node.isAssign = node.exp.isAssign;
-    }
-
-    public void visit(StringExp node) {
     }
 
     public void visit(TernaryExp node) {
         node.condition.scope = node.scope;
         node.condition.accept(this);
         if (!node.condition.type.isBool()) {
-            throw new SemanticErrors("Invalid condition expression.", node.position);
+            throw new SemanticErrors("[Statement error] Invalid judgement expression.", node.condition.position);
         }
         node.trueExp.scope = node.scope;
         node.trueExp.accept(this);
         node.falseExp.scope = node.scope;
         node.falseExp.accept(this);
         if (!node.trueExp.type.compare(node.falseExp.type)) {
-            throw new SemanticErrors("Unmatched type of ternary expression.", node.position);
+            throw new SemanticErrors("[Type error] Unmatched type of ternary expression.", node.trueExp.position);
         }
         node.type = new Type(Type.getCommon(node.trueExp.type, node.falseExp.type));
-    }
-
-    public void visit(ThisPointerExp node) {
-        if (node == null) {
-            return;
-        }
-        if (!node.scope.isClass) {
-            throw new SemanticErrors("Invalid this pointer.", node.position);
-        }
-        node.type = new Type(node.scope.classType);
     }
 
     public void visit(UnaryExp node) {
@@ -510,11 +613,11 @@ public class Semantic implements ASTVisitor {
         node.exp.accept(this);
         if (Objects.equals(node.op, "!")) {
             if (!node.exp.type.isBool()) {
-                throw new SemanticErrors("Invalid op:" + node.op + ".", node.position);
+                throw new SemanticErrors("[Type error] Invalid type in unary expression", node.exp.position);
             }
         } else {
             if (!node.exp.type.isInt()) {
-                throw new SemanticErrors("Invalid op:" + node.op + ".", node.position);
+                throw new SemanticErrors("[Type error] Invalid type in unary expression", node.exp.position);
             }
         }
         node.type = new Type(node.exp.type);
@@ -534,138 +637,32 @@ public class Semantic implements ASTVisitor {
             }
         }
         if (typeTmp == null) {
-            throw new SemanticErrors("Variable not define.", node.position);
+            throw new SemanticErrors("[Name error] Not defined variable", node.position);
         }
         node.type = new Type(typeTmp);
         node.isAssign = true;
     }
 
-    public void visit(InitVariable node) {
-        if (node == null) {
-            return;
-        }
-        if (node.exp != null) {
-            node.exp.scope = node.scope;
-            node.exp.accept(this);
-            if (!node.type.assign(node.exp.type)) {
-                throw new SemanticErrors("Wrong type to init.", node.position);
-            }
-        }
-    }
-
-    public void visit(VariableDef node) {
-        if (node == null) {
-            return;
-        }
-        if (node.type.isClass() && !globalScope.classIsExist(node.type.typeName)) {
-            throw new SemanticErrors("Type not define.", node.position);
-        }
-        if (node.type.typeEnum == Type.TypeEnum.VOID || node.type.typeEnum == Type.TypeEnum.NULL) {
-            throw new SemanticErrors("Invalid type.", node.position);
-        }
-        for (var varDef : node.initVariablelist) {
-            varDef.scope = node.scope;
-            varDef.accept(this);
-            if (node.scope.isGlobal) {
-                globalScope.setVariable(varDef.variableName, varDef.type, varDef.position);
-            } else if (!(node.scope.isClass && !node.scope.isFunction)) {
-                node.scope.setVariable(varDef.variableName, varDef.type, varDef.position);
-            }
-        }
-    }
-
-    public void visit(ClassDef node) {
-        if (node == null) {
-            return;
-        }
-        node.variableDefList.forEach(varDef -> {
-            varDef.scope = node.scope;
-            varDef.accept(this);
-        });
-        node.functionDefList.forEach(funcDef -> {
-            funcDef.scope = new Scope(node.scope);
-            funcDef.scope.isFunction = true;
-            funcDef.accept(this);
-        });
-        if (node.constructor != null) {
-            node.constructor.scope = new Scope(node.scope);
-            node.constructor.scope.isFunction = true;
-            node.constructor.scope.returnType = new Type();
-            node.constructor.scope.returnType.setVoid();
-            node.constructor.accept(this);
-        }
-    }
-
-    public void visit(Constructor node) {
+    public void visit(ThisPointerExp node) {
         if (node == null) {
             return;
         }
         if (!node.scope.isClass) {
-            throw new SemanticErrors("Unexpected constructor.", node.type.position);
+            throw new SemanticErrors("[Statement] Invalid this pointer.", node.position);
         }
-        if (!Objects.equals(node.type.typeName, node.scope.classType.typeName)) {
-            throw new SemanticErrors("Wrong type of constructor.", node.type.position);
-        }
-        node.suite.scope = node.scope;
-        node.suite.accept(this);
+        node.type = new Type(node.scope.classType);
     }
 
-    public void visit(FunctionDef node) {
-        if (node == null) {
-            return;
-        }
-        if (node.type.isClass() && !globalScope.classIsExist(node.type.typeName)) {
-            throw new SemanticErrors("Type not define.", node.type.position);
-        }
-        node.scope.returnType = new Type(node.type);
-        for (Type parameterType : node.parameterTypeList) {
-            if (parameterType.isClass() && !globalScope.classIsExist(parameterType.typeName)) {
-                throw new SemanticErrors("Type not define.", parameterType.position);
-            }
-        }
-        for (int i = 0; i < node.parameterNameList.size(); ++i) {
-            node.scope.setVariable(node.parameterNameList.get(i),
-                    node.parameterTypeList.get(i), node.parameterTypeList.get(i).position);
-        }
-        node.body.scope = node.scope;
-        node.body.accept(this);
-        if (node.scope.notReturn && !node.scope.returnType.isVoid()) {
-            throw new SemanticErrors("Missing return.", node.position);
-        }
+    public void visit(BoolExp node) {
     }
 
-    public void visit(MainDef node) {
-        if (node == null) {
-            return;
-        }
-        node.suite.scope = node.scope;
-        node.suite.accept(this);
+    public void visit(NumberExp node) {
     }
 
-    public void visit(Definition node) {
-        if (node == null) {
-            return;
-        }
-        if (node.mainDef != null) {
-            node.mainDef.scope = new Scope();
-            node.mainDef.scope.isFunction = true;
-            node.mainDef.scope.returnType = new Type();
-            node.mainDef.scope.returnType.setInt();
-            node.mainDef.accept(this);
-        } else if (node.classDef != null) {
-            node.classDef.scope = new Scope();
-            node.classDef.scope.isClass = true;
-            node.classDef.scope.classType = new Type();
-            node.classDef.scope.classType.setClass(node.classDef.className);
-            node.classDef.accept(this);
-        } else if (node.functionDef != null) {
-            node.functionDef.scope = new Scope();
-            node.functionDef.scope.isFunction = true;
-            node.functionDef.accept(this);
-        } else if (node.variableDef != null) {
-            node.variableDef.scope = new Scope();
-            node.variableDef.scope.isGlobal = true;
-            node.variableDef.accept(this);
-        }
+    public void visit(StringExp node) {
     }
+
+    public void visit(NullExp node) {
+    }
+
 }

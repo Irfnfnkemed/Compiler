@@ -1,6 +1,5 @@
 package src.AST.definition.variableDef;
 
-import src.AST.ASTNode;
 import src.AST.ASTVisitor;
 import src.AST.definition.Definition;
 import src.Util.type.Type;

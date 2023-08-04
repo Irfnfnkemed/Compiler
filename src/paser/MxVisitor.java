@@ -277,4 +277,10 @@ public interface MxVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitBrackets(MxParser.BracketsContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link MxParser#bracketsWithIndex}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBracketsWithIndex(MxParser.BracketsWithIndexContext ctx);
 }

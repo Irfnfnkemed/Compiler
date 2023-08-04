@@ -39,7 +39,7 @@ statement
     ;
 
 constructor
-    : typeName '(' ')' suite
+    : Identifier '(' ')' suite
     ;
 
 selectStatement
@@ -93,7 +93,7 @@ expression
     | expression op='||' expression                             # BinaryExp
     | <assoc=right> expression '?' expression ':' expression    # TernaryExp
     | <assoc=right> expression '=' expression                   # AssignExp
-    | NEW typeName ( '[' expression ']' )+ ( brackets )*        # NewArrayExp
+    | NEW typeName ( bracketsWithIndex )+                       # NewArrayExp
     | NEW typeName ( '(' ')' )?                                 # NewClassExp
     | Identifier                                                # VariableLhsExp
     | THIS                                                      # ThisPointerExp
@@ -107,8 +107,13 @@ parallelExp
     : expression ( ',' expression )*
     ;
 
+
 brackets
-    : '['  ']'
+    : '[' ']'
+    ;
+
+bracketsWithIndex
+    : '[' expression? ']'
     ;
 
 VOID : 'void' ;

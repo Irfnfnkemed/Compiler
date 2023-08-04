@@ -1,7 +1,5 @@
 package src.AST.expression;
 
-import src.Util.type.Type;
-
 public class VariableLhsExp extends Expression {
     public String variableName;
 

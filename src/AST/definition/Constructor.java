@@ -6,7 +6,7 @@ import src.AST.statement.Suite;
 import src.Util.type.Type;
 
 public class Constructor extends ASTNode {
-    public Type type;
+    public String className;
     public Suite suite;
 
     @Override

@@ -492,6 +492,18 @@ public class MxBaseListener implements MxListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitBrackets(MxParser.BracketsContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterBracketsWithIndex(MxParser.BracketsWithIndexContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitBracketsWithIndex(MxParser.BracketsWithIndexContext ctx) { }
 
 	/**
 	 * {@inheritDoc}
