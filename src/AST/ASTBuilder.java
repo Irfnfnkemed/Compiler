@@ -66,7 +66,11 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         VariableDef variableDef = new VariableDef();
         variableDef.position = new Position(ctx);
         variableDef.type = visitType(ctx.typeName());
-        ctx.initVariable().forEach(ele -> variableDef.initVariablelist.add((InitVariable) visitInitVariable(ele)));
+        ctx.initVariable().forEach(ele -> {
+            var varInit = (InitVariable) visitInitVariable(ele);
+            varInit.type = new Type(variableDef.type);
+            variableDef.initVariablelist.add(varInit);
+        });
         return variableDef;
     }
 
@@ -100,6 +104,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         }
         Statement statement = new Statement();
         statement.position = new Position(ctx);
+        statement.suite=(Suite)visitSuite(ctx.suite());
         statement.parallelExp = (ParallelExp) visitParallelExp(ctx.parallelExp());
         statement.jumpStatement = (JumpStatement) visitJumpStatement(ctx.jumpStatement());
         statement.loopStatement = (LoopStatement) visitLoopStatement(ctx.loopStatement());
@@ -243,6 +248,8 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         BoolExp boolExp = new BoolExp(ctx.TRUE(), ctx.FALSE());
+        boolExp.type = new Type();
+        boolExp.type.setBool();
         return boolExp;
     }
 
@@ -254,6 +261,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         ClassMemberLhsExp classMemberLhsExp = new ClassMemberLhsExp();
         classMemberLhsExp.classVariable = (Expression) visitExpression(ctx.expression());
         classMemberLhsExp.memberName = ctx.Identifier().getText();
+        classMemberLhsExp.isAssign = true;
         return classMemberLhsExp;
     }
 
@@ -263,9 +271,10 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         NewArrayExp newArrayExp = new NewArrayExp();
-        newArrayExp.type = visitType(ctx.typeName());
+        newArrayExp.baseType = visitType(ctx.typeName());
         ctx.expression().forEach(ele -> newArrayExp.expressionList.add((Expression) visitExpression(ele)));
-        newArrayExp.dim = newArrayExp.type.dim + newArrayExp.expressionList.size();
+        newArrayExp.type = new Type(newArrayExp.baseType);
+        newArrayExp.type.dim = newArrayExp.baseType.dim + ctx.brackets().size() + newArrayExp.expressionList.size();
         return newArrayExp;
     }
 
@@ -276,6 +285,8 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         }
         StringExp stringExp = new StringExp();
         stringExp.value = ctx.String().getText();
+        stringExp.type = new Type();
+        stringExp.type.setString();
         return stringExp;
     }
 
@@ -305,6 +316,8 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         NullExp nullExp = new NullExp();
+        nullExp.type = new Type();
+        nullExp.type.setNull();
         return nullExp;
     }
 
@@ -322,10 +335,11 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         if (ctx == null) {
             return null;
         }
-        ClassMemberLhsExp classMemberLhsExp = new ClassMemberLhsExp();
-        classMemberLhsExp.memberName = ctx.Identifier().getText();
-        classMemberLhsExp.classVariable = (Expression) visitExpression(ctx.expression());
-        return classMemberLhsExp;
+        ClassMemFunctionLhsExp classMemFunctionLhsExp = new ClassMemFunctionLhsExp();
+        classMemFunctionLhsExp.classVariable = (Expression) visitExpression(ctx.expression());
+        classMemFunctionLhsExp.memberFuncName = ctx.Identifier().getText();
+        classMemFunctionLhsExp.callList = (ParallelExp) visitParallelExp(ctx.parallelExp());
+        return classMemFunctionLhsExp;
     }
 
     @Override
@@ -347,6 +361,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         }
         PrimaryExp primaryExp = new PrimaryExp();
         primaryExp.exp = (Expression) visitExpression(ctx.expression());
+        primaryExp.isAssign = primaryExp.exp.isAssign;
         return primaryExp;
     }
 
@@ -378,6 +393,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         NewClassExp newClassExp = new NewClassExp();
+        newClassExp.type = (Type) visitType(ctx.typeName());
         return newClassExp;
     }
 
@@ -387,9 +403,9 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         TernaryExp ternaryExp = new TernaryExp();
-        ternaryExp.lhs = (Expression) visitExpression(ctx.expression(0));
-        ternaryExp.mhs = (Expression) visitExpression(ctx.expression(1));
-        ternaryExp.rhs = (Expression) visitExpression(ctx.expression(2));
+        ternaryExp.condition = (Expression) visitExpression(ctx.expression(0));
+        ternaryExp.trueExp = (Expression) visitExpression(ctx.expression(1));
+        ternaryExp.falseExp = (Expression) visitExpression(ctx.expression(2));
         return ternaryExp;
     }
 
@@ -401,6 +417,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
         ArrayElementLhsExp arrayElementLhsExp = new ArrayElementLhsExp();
         arrayElementLhsExp.variable = (Expression) visitExpression(ctx.expression(0));
         arrayElementLhsExp.index = (Expression) visitExpression(ctx.expression(1));
+        arrayElementLhsExp.isAssign = true;
         return arrayElementLhsExp;
     }
 
@@ -421,6 +438,8 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         NumberExp numberExp = new NumberExp(ctx.DecNumber().getText());
+        numberExp.type = new Type();
+        numberExp.type.setInt();
         return numberExp;
     }
 

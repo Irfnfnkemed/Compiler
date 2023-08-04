@@ -1,8 +1,5 @@
 package src.Util.type;
 
-
-import org.antlr.v4.runtime.tree.TerminalNode;
-import src.AST.ASTVisitor;
 import src.Util.position.Position;
 
 import java.util.Objects;
@@ -73,34 +70,73 @@ public class Type {
         if (!Objects.equals(typeName, "")) {
             return typeName;
         } else {
-            switch (typeEnum) {
-                case VOID:
-                    return "void";
-                case INT:
-                    return "int";
-                case BOOL:
-                    return "bool";
-                case STRING:
-                    return "string";
-                case CLASS:
-                    return typeName;
-                case NULL:
-                    return "null";
-                default:
-                    return "";
-            }
+            return switch (typeEnum) {
+                case VOID -> "void";
+                case INT -> "int";
+                case BOOL -> "bool";
+                case STRING -> "string";
+                case CLASS -> typeName;
+                case NULL -> "null";
+                default -> "";
+            };
         }
     }
 
     public boolean isArray() {
-        return dim == 0;
+        return dim > 0;
     }
 
-    public boolean isAssign() {
-        return dim > 0 || typeEnum == CLASS || typeEnum == STRING;
+    public boolean isInt() {
+        return !isArray() && typeEnum == INT;
     }
 
-    public void accept(ASTVisitor visitor) {
+    public boolean isBool() {
+        return !isArray() && typeEnum == BOOL;
+    }
 
+    public boolean isString() {
+        return !isArray() && typeEnum == STRING;
+    }
+
+    public boolean isVoid() {
+        return !isArray() && typeEnum == VOID;
+    }
+
+    public boolean isClass() {
+        return !isArray() && typeEnum == CLASS;
+    }
+
+    public boolean isNull() {
+        return !isArray() && typeEnum == NULL;
+    }
+
+    public boolean assign(Type type) {
+        if (typeEnum == NULL) {
+            return type.typeEnum == CLASS || type.dim > 0 || type.typeEnum == NULL;
+        } else if (type.typeEnum == NULL) {
+            return typeEnum == CLASS || dim > 0 || typeEnum == NULL;
+        } else {
+            return typeEnum == type.typeEnum && dim == type.dim && Objects.equals(typeName, type.typeName);
+        }
+    }
+
+    public boolean compare(Type type) {
+        if (typeEnum == NULL) {
+            return type.typeEnum == CLASS || type.dim > 0 || type.typeEnum == NULL;
+        } else if (type.typeEnum == NULL) {
+            return typeEnum == CLASS || dim > 0 || typeEnum == NULL;
+        } else if (type.dim > 0) {
+            return false;
+        } else {
+            return typeEnum == type.typeEnum && Objects.equals(typeName, type.typeName);
+        }
+    }
+
+    public static Type getCommon(Type typeLhs, Type typeRhs) {
+        if (typeLhs.isNull()) {
+            return typeRhs;
+        } else {
+            return typeLhs;
+        }
     }
 }

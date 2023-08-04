@@ -57,6 +57,9 @@ public class GlobalScope extends Scope {
         if (function.containsKey(className)) {
             throw new SemanticErrors("Duplicate variable name and function name.", position);
         }
+        if (getClassMethod(className, variableName) != null) {
+            throw new SemanticErrors("Duplicate class member name and function name.", position);
+        }
         var classMembers = classMember.get(className);
         if (classMembers != null) {
             var classMem = classMembers.get(variableName);
@@ -75,6 +78,9 @@ public class GlobalScope extends Scope {
     public void setClassMethod(String className, String methodName, Type returnType,
                                List<Type> parameterTypes, Position position) {
         var classMethods = classMethod.get(className);
+        if (getClassMember(className, methodName) != null) {
+            throw new SemanticErrors("Duplicate class member name and function name.", position);
+        }
         if (classMethods != null) {
             var classMeth = classMethods.get(methodName);
             if (classMeth != null) {

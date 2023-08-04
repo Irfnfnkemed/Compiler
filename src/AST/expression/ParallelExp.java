@@ -2,8 +2,6 @@ package src.AST.expression;
 
 import src.AST.ASTNode;
 import src.AST.ASTVisitor;
-import src.AST.expression.Expression;
-import src.Util.type.Type;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -18,9 +18,14 @@ public class Scope {
     }
 
     public HashMap<String, Variable> variable;
+
+    public boolean isGlobal = false;
+    public boolean isClass = false;
     public boolean isFunction = false;
     public boolean isLoop = false;
-    public Type returnType;//用于isFunction为true
+    public boolean notReturn = true;//用于isFunction为true，表示函数可能还未返回
+    public Type returnType;//用于isFunction为true，处理return
+    public Type classType;//用于isClass为true，处理this
 
     public Scope() {
         variable = new HashMap<>();
@@ -31,8 +36,14 @@ public class Scope {
         fatherScope.variable.forEach((key, value) -> {
             variable.put(key, new Variable(new Type(value.type), false));
         });
+        isGlobal = fatherScope.isGlobal;
+        isClass = fatherScope.isClass;
         isFunction = fatherScope.isFunction;
         isLoop = fatherScope.isLoop;
+        notReturn = fatherScope.notReturn;
+        if (fatherScope.isClass) {
+            classType = new Type(fatherScope.classType);
+        }
         if (fatherScope.isFunction) {
             returnType = new Type(fatherScope.returnType);
         }

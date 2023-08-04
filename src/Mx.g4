@@ -1,8 +1,14 @@
 grammar Mx;
 
 program
-    : ( classDef | functionDef | variableDef ';' )* mainDef
-      ( classDef | functionDef | variableDef ';' )* EOF
+    : definition+ EOF?
+    ;
+
+definition
+    : classDef
+    | functionDef
+    | variableDef ';'
+    | mainDef
     ;
 
 mainDef
@@ -10,7 +16,8 @@ mainDef
     ;
 
 classDef
-    : CLASS Identifier '{' ( variableDef ';' | functionDef )* '}' ';'
+    : CLASS Identifier '{' ( variableDef ';' | functionDef )* constructor?
+      ( variableDef ';' | functionDef )* '}' ';'
     ;
 
 functionDef
@@ -29,6 +36,10 @@ statement
     | variableDef ';'
     | parallelExp ';'
     | ';'
+    ;
+
+constructor
+    : typeName '(' ')' suite
     ;
 
 selectStatement
@@ -56,7 +67,7 @@ initVariable
     ;
 
 typeName
-    : ( BOOL | INT | STRING | VOID )    # FundationType
+    : ( BOOL | INT | STRING | VOID )    # FoundationType
     | Identifier                        # ClassType
     | typeName brackets+                # ArrayType
     ;
@@ -80,10 +91,10 @@ expression
     | expression op='|' expression                              # BinaryExp
     | expression op='&&' expression                             # BinaryExp
     | expression op='||' expression                             # BinaryExp
-    | expression '?' expression ':' expression                  # TernaryExp
+    | <assoc=right> expression '?' expression ':' expression    # TernaryExp
     | <assoc=right> expression '=' expression                   # AssignExp
-    | NEW typeName ( '(' ')' )?                                 # NewClassExp
     | NEW typeName ( '[' expression ']' )+ ( brackets )*        # NewArrayExp
+    | NEW typeName ( '(' ')' )?                                 # NewClassExp
     | Identifier                                                # VariableLhsExp
     | THIS                                                      # ThisPointerExp
     | DecNumber                                                 # NumberExp

@@ -6,6 +6,7 @@ import src.Util.type.Type;
 import src.AST.expression.Expression;
 
 public class InitVariable extends ASTNode {
+    public Type type;
     public String variableName;
     public Expression exp;
     @Override
