@@ -15,18 +15,23 @@ import src.AST.statement.loopStatement.ForLoop;
 import src.AST.statement.loopStatement.WhileLoop;
 import src.AST.statement.selectStatement.SelectStatement;
 import src.IR.instruction.*;
+import src.IR.instruction.Binary;
 import src.IR.statement.FuncDef;
 import src.IR.statement.GlobalVarDef;
-
-import java.util.Objects;
+import src.Util.type.Type;
 
 public class IRBuilder implements ASTVisitor {
     public IRProgram irProgram;
+    public FuncDef funcMain;
     public IRNode now;
     public int anonymousVar = 0;
 
     public IRBuilder(Program node) {
         irProgram = new IRProgram();
+        funcMain = new FuncDef();
+        funcMain.type = new Type();
+        funcMain.type.setInt();
+        funcMain.functionName = "@main";
         visit(node);
     }
 
@@ -54,7 +59,15 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(MainDef node) {
-
+        anonymousVar = 0;
+        irProgram.push(funcMain);
+        var nowTmp = now;
+        now = funcMain;
+        node.suite.accept(this);
+        if (node.scope.notReturn) {
+            funcMain.push(new Ret(0));
+        }
+        now = nowTmp;
     }
 
     @Override
@@ -77,11 +90,15 @@ public class IRBuilder implements ASTVisitor {
         funcDef.type = node.type;
         funcDef.functionName = "@" + node.functionName;
         for (int i = 0; i < node.parameterNameList.size(); ++i) {
-            funcDef.push(node.parameterTypeList.get(i), node.parameterNameList.get(i));
+            funcDef.pushPara(node.parameterTypeList.get(i));
+            var varName = var(node.parameterNameList.get(i), node.parameterTypeList.get(i).position.line,
+                    node.parameterTypeList.get(i).position.column);
+            funcDef.push(new Alloca(node.parameterTypeList.get(i), varName));
+            funcDef.push(new Store(node.type, "%" + anonymousVar++, varName));
         }
         node.body.accept(this);
         if (funcDef.type.isVoid()) {
-            funcDef.push(new Ret());
+            funcDef.push(new Ret(funcDef.type));
         }
         now = nowTmp;
     }
@@ -111,14 +128,14 @@ public class IRBuilder implements ASTVisitor {
                     globalVarDef.funcDef.push(
                             new Store(node.type, ((Exp) now).popVar(), "@" + node.variableName));
                     globalVarDef.funcDef.push(new Ret());
+                    funcMain.push(new Call("@init-" + node.variableName));
                 }
             } else {
                 globalVarDef.value = 0;
             }
         } else {
-            Alloca alloca = new Alloca(node.type,
-                    var(node.variableName, node.position.line, node.position.column));
-            ((FuncDef) now).push(alloca);
+            ((FuncDef) now).push(new Alloca(node.type,
+                    var(node.variableName, node.position.line, node.position.column)));
             if (node.exp != null) {
                 Exp exp = new Exp(((FuncDef) now));
                 now = exp;
@@ -190,7 +207,18 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(ReturnStmt node) {
-
+        Ret ret = new Ret(node.returnExp.type);
+        var nowTmp = now;
+        Exp exp = new Exp((FuncDef) now);
+        now = exp;
+        node.returnExp.accept(this);
+        if (exp.isConst) {
+            ret.retValue = (int) exp.popValue();
+        } else {
+            ret.retVar = exp.popVar();
+        }
+        now = nowTmp;
+        ((FuncDef) now).push(ret);
     }
 
     @Override
@@ -215,7 +243,23 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(FunctionCallLhsExp node) {
-
+        Call call = new Call("@" + node.functionName);
+        if (node.callExpList != null) {
+            node.callExpList.expList.forEach(para -> {
+                para.accept(this);
+                if (((Exp) now).isOperandConst()) {
+                    call.set(para.type, ((Exp) now).popValue());
+                } else {
+                    call.set(para.type, ((Exp) now).popVar());
+                }
+            });
+        }
+        call.type = node.type;
+        if (!node.type.isVoid()) {
+            call.resultVar = "%" + anonymousVar;
+        }
+        ((Exp) now).set("%" + anonymousVar++);
+        ((Exp) now).push(call);
     }
 
     @Override
@@ -232,26 +276,39 @@ public class IRBuilder implements ASTVisitor {
     public void visit(BinaryExp node) {
         node.lhs.accept(this);
         node.rhs.accept(this);
-        if (Objects.equals(node.op, "+")) {
-            if (((Exp) now).isConst) {
-                ((Exp) now).set(((Exp) now).popValue() + ((Exp) now).popValue());
-            } else {
-                Add add = new Add();
-                if (((Exp) now).isOperandConst()) {
-                    add.set(((Exp) now).popValue());
-                } else {
-                    add.set(((Exp) now).popVar());
+        if (((Exp) now).isConst) {
+            switch (node.op) {
+                case "+" -> ((Exp) now).set(((Exp) now).popValue() + ((Exp) now).popValue());
+                case "-" -> ((Exp) now).set(-((Exp) now).popValue() + ((Exp) now).popValue());
+                case "*" -> ((Exp) now).set(((Exp) now).popValue() * ((Exp) now).popValue());
+                case "/" -> {
+                    long tmp = ((Exp) now).popValue();
+                    ((Exp) now).set(((Exp) now).popValue() / tmp);
                 }
-                if (((Exp) now).isOperandConst()) {
-                    add.set(((Exp) now).popValue());
-                } else {
-                    add.set(((Exp) now).popVar());
+                case "%" -> {
+                    long tmp = ((Exp) now).popValue();
+                    ((Exp) now).set(((Exp) now).popValue() % tmp);
                 }
-                add.output = "%" + anonymousVar;
-                ((Exp) now).set("%" + anonymousVar++);
-                ((Exp) now).push(add);
+                /////////////
             }
+        } else {
+            Binary binary = new Binary();
+            binary.op = node.op;
+            if (((Exp) now).isOperandConst()) {
+                binary.set(((Exp) now).popValue());
+            } else {
+                binary.set(((Exp) now).popVar());
+            }
+            if (((Exp) now).isOperandConst()) {
+                binary.set(((Exp) now).popValue());
+            } else {
+                binary.set(((Exp) now).popVar());
+            }
+            binary.output = "%" + anonymousVar;
+            ((Exp) now).set("%" + anonymousVar++);
+            ((Exp) now).push(binary);
         }
+
     }
 
     @Override

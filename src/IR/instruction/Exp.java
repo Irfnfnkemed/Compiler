@@ -19,8 +19,8 @@ public class Exp extends Instruction {
     public Exp(FuncDef funcDef_) {
         funcDef = funcDef_;
         expCateStack = new Stack<>();
-        varNameStack = new Stack<>();
         constValueStack = new Stack<>();
+        varNameStack = new Stack<>();
     }
 
     public void set(long value) {
@@ -50,5 +50,12 @@ public class Exp extends Instruction {
 
     public void push(Instruction instruction) {
         funcDef.push(instruction);
+    }
+
+    public void reset() {
+        isConst = true;
+        expCateStack.clear();
+        varNameStack.clear();
+        constValueStack.clear();
     }
 }

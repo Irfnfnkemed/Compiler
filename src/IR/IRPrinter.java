@@ -1,12 +1,11 @@
 package src.IR;
 
 import src.IR.instruction.*;
+import src.IR.instruction.Binary;
 import src.IR.statement.FuncDef;
 import src.IR.statement.GlobalVarDef;
 import src.IR.statement.IRStatement;
 import src.Util.type.Type;
-
-import java.util.List;
 
 public class IRPrinter {
     public IRProgram irProgram;
@@ -36,8 +35,10 @@ public class IRPrinter {
             print((Load) instruction);
         } else if (instruction instanceof Ret) {
             print((Ret) instruction);
-        } else if (instruction instanceof Add) {
-            print((Add) instruction);
+        } else if (instruction instanceof Binary) {
+            print((Binary) instruction);
+        } else if (instruction instanceof Call) {
+            print((Call) instruction);
         }
     }
 
@@ -87,37 +88,83 @@ public class IRPrinter {
     public void print(Ret ret) {
         printOut("ret ");
         printType(ret.type);
-        /////////////////////////////
+        System.out.print(' ');
+        if (ret.type != null && !ret.type.isVoid()) {
+            if (ret.retVar == null) {
+                if (ret.type.isInt()) {
+                    System.out.print(ret.retValue);
+                } else if (ret.type.isBool()) {
+                    System.out.print(ret.retValue == 1);
+                }
+            } else {
+                System.out.print(ret.retVar);
+            }
+        }
         System.out.print('\n');
     }
 
-    public void print(Add add) {
-        printOut(add.output, " = add i32 ");
-        if (add.operandLeft == null) {
-            System.out.print(add.valueLeft);
-        } else {
-            System.out.print(add.operandLeft);
+    public void print(Binary binary) {
+        switch (binary.op) {
+            case "+" -> printOut(binary.output, " = add i32 ");
+            case "-" -> printOut(binary.output, " = sub i32 ");
+            case "*" -> printOut(binary.output, " = mul i32 ");
+            case "/" -> printOut(binary.output, " = sdiv i32 ");
+            case "%" -> printOut(binary.output, " = srem i32 ");
         }
-        System.out.print(' ');
-        if (add.operandRight == null) {
-            System.out.print(add.valueRight);
+        if (binary.operandLeft == null) {
+            System.out.print(binary.valueLeft);
         } else {
-            System.out.print(add.operandRight);
+            System.out.print(binary.operandLeft);
+        }
+        System.out.print(", ");
+        if (binary.operandRight == null) {
+            System.out.print(binary.valueRight);
+        } else {
+            System.out.print(binary.operandRight);
         }
         System.out.print('\n');
+    }
+
+    public void print(Call call) {
+        if (call.type == null || call.type.isVoid()) {
+            System.out.print("call void");
+        } else {
+            printOut(call.resultVar, " = call ");
+            printType(call.type);
+        }
+        printOut(" ", call.functionName, "(");
+        int tmpVar = call.varNameList.size() - 1;
+        int tmpConst = call.constValueList.size() - 1;
+        Type typeTmp;
+        for (int i = 0; i < call.callTypeList.size(); ++i) {
+            typeTmp = call.callTypeList.get(i);
+            printType(typeTmp);
+            if (call.callCateList.get(i) == Call.callCate.VAR) {
+                printOut(" ", call.varNameList.get(tmpVar--));
+            } else if (call.callCateList.get(i) == Call.callCate.CONST) {
+                System.out.print(" ");
+                if (typeTmp.isInt()) {
+                    System.out.print(call.constValueList.get(tmpConst--));
+                } else if (typeTmp.isBool()) {
+                    System.out.print(call.constValueList.get(tmpConst--) == 1);
+                }
+            }
+            if (i != call.callTypeList.size() - 1) {
+                System.out.print(", ");
+            }
+        }
+        System.out.print(")\n");
     }
 
     public void print(FuncDef funcDef) {
-        System.out.print("define ");
+        System.out.print("\ndefine ");
         printType(funcDef.type);
         printOut(" ", funcDef.functionName, "(");
-        if (funcDef.parameterNameList != null) {
-            for (int i = 0; i < funcDef.parameterNameList.size(); ++i) {
-                printType(funcDef.parameterTypeList.get(i));
-                printOut(" ", funcDef.parameterNameList.get(i));
-                if (i != funcDef.parameterNameList.size() - 1) {
-                    System.out.print(", ");
-                }
+        for (int i = 0; i < funcDef.parameterTypeList.size(); ++i) {
+            printType(funcDef.parameterTypeList.get(i));
+            printOut(" %" + i);
+            if (i != funcDef.parameterTypeList.size() - 1) {
+                System.out.print(", ");
             }
         }
         System.out.print(") {\nentry:\n");
@@ -129,7 +176,9 @@ public class IRPrinter {
     }
 
     public void printType(Type type) {
-        if (type.isInt()) {
+        if (type == null) {
+            System.out.print("void");
+        } else if (type.isInt()) {
             System.out.print("i32");
         } else if (type.isBool()) {
             System.out.print("i1");

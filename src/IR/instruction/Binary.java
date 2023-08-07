@@ -1,8 +1,11 @@
 package src.IR.instruction;
 
-public class Add extends Instruction {
+import src.IR.instruction.Instruction;
+
+public class Binary extends Instruction {
     public String operandLeft, operandRight, output;
     public long valueLeft, valueRight;
+    public String op;
 
     private boolean onRight = true;
 
