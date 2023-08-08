@@ -5,18 +5,13 @@ import src.Util.type.Type;
 
 public class Ret extends Instruction {
     public Type type;
-    public String retVar;
-    public int retValue;
+    public String var;
 
-    public Ret() {}
-
-    public Ret(int value) {
-        type = new Type();
-        type.setInt();
-        retValue = value;
+    public Ret() {
     }
 
-    public Ret(Type type_) {
+    public Ret(Type type_, String var_) {
+        var = var_;
         type = type_;
     }
 

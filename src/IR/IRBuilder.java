@@ -25,6 +25,7 @@ public class IRBuilder implements ASTVisitor {
     public FuncDef funcMain;
     public IRNode now;
     public int anonymousVar = 0;
+    public int anonymousLabel = 0;
 
     public IRBuilder(Program node) {
         irProgram = new IRProgram();
@@ -59,14 +60,22 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(MainDef node) {
-        anonymousVar = 0;
+        Type type = new Type();
+        type.setInt();
+        funcMain.push(new Alloca(type, "%0"));
+        funcMain.push(new Store(type, 0, "%0"));
+        anonymousVar = 1;
+        anonymousLabel = 0;
         irProgram.push(funcMain);
         var nowTmp = now;
         now = funcMain;
         node.suite.accept(this);
         if (node.scope.notReturn) {
-            funcMain.push(new Ret(0));
+            funcMain.push(new Br("%returnLabel"));
         }
+        funcMain.push(new Label("returnLabel"));
+        funcMain.push(new Load(type, "%" + anonymousVar, "%0"));
+        funcMain.push(new Ret(type, "%" + anonymousVar));
         now = nowTmp;
     }
 
@@ -82,7 +91,10 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(FunctionDef node) {
-        anonymousVar = 0;
+        funcMain.push(new Alloca(node.type, "%0"));
+        funcMain.push(new Store(node.type, 0, "%0"));
+        anonymousVar = 1;
+        anonymousLabel = 0;
         var nowTmp = now;
         FuncDef funcDef = new FuncDef();
         ((IRProgram) now).push(funcDef);
@@ -97,9 +109,12 @@ public class IRBuilder implements ASTVisitor {
             funcDef.push(new Store(node.type, "%" + anonymousVar++, varName));
         }
         node.body.accept(this);
-        if (funcDef.type.isVoid()) {
-            funcDef.push(new Ret(funcDef.type));
+        if (node.scope.notReturn) {
+            funcDef.push(new Br("%returnLabel"));
         }
+        funcDef.push(new Label("returnLabel"));
+        funcMain.push(new Load(node.type, "%" + anonymousVar, "%0"));
+        funcMain.push(new Ret(node.type, "%" + anonymousVar));
         now = nowTmp;
     }
 
@@ -157,7 +172,9 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(Suite node) {
-        node.statementList.forEach(stmt -> stmt.accept(this));
+        for (var stmt : node.statementList) {
+            stmt.accept(this);
+        }
     }
 
     @Override
@@ -182,7 +199,46 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(SelectStatement node) {
-
+        var nowTmp = now;
+        Exp exp = new Exp((FuncDef) now);
+        now = exp;
+        node.judgeExp.accept(this);
+        now = nowTmp;
+        if (exp.isConst) {
+            if (exp.popValue() == 1) {
+                node.trueStmt.accept(this);
+            } else {
+                node.falseStmt.accept(this);
+            }
+        } else {
+            int tmp = anonymousLabel;
+            ++anonymousLabel;
+            if (node.falseStmt == null ||
+                    (node.falseStmt.suite != null && node.falseStmt.suite.statementList.size() == 0)) {
+                ((FuncDef) now).push(new Br(exp.popVar(), "%trueLabel-" + tmp, "%toLabel-" + tmp));
+                ((FuncDef) now).push(new Label("trueLabel-" + tmp));
+                node.trueStmt.accept(this);
+                if (node.trueStmt.scope.notReturn) {
+                    ((FuncDef) now).push(new Br("%toLabel-" + tmp));
+                }
+                ((FuncDef) now).push(new Label("toLabel-" + tmp));
+            } else {
+                ((FuncDef) now).push(new Br(exp.popVar(), "%trueLabel-" + tmp, "%falseLabel-" + tmp));
+                ((FuncDef) now).push(new Label("trueLabel-" + tmp));
+                node.trueStmt.accept(this);
+                if (node.trueStmt.scope.notReturn) {
+                    ((FuncDef) now).push(new Br("%toLabel-" + tmp));
+                }
+                ((FuncDef) now).push(new Label("falseLabel-" + tmp));
+                node.falseStmt.accept(this);
+                if (node.falseStmt.scope.notReturn) {
+                    ((FuncDef) now).push(new Br("%toLabel-" + tmp));
+                }
+                if (node.trueStmt.scope.notReturn || node.falseStmt.scope.notReturn) {
+                    ((FuncDef) now).push(new Label("toLabel-" + tmp));
+                }
+            }
+        }
     }
 
     @Override
@@ -207,18 +263,22 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(ReturnStmt node) {
-        Ret ret = new Ret(node.returnExp.type);
-        var nowTmp = now;
-        Exp exp = new Exp((FuncDef) now);
-        now = exp;
-        node.returnExp.accept(this);
-        if (exp.isConst) {
-            ret.retValue = (int) exp.popValue();
-        } else {
-            ret.retVar = exp.popVar();
+        if (node.returnExp != null) {
+            var nowTmp = now;
+            Exp exp = new Exp((FuncDef) now);
+            now = exp;
+            node.returnExp.accept(this);
+            String toVar;
+            now = nowTmp;
+            Store store;
+            if (exp.isConst) {
+                store = new Store(node.returnExp.type, exp.popValue(), "%0");
+            } else {
+                store = new Store(node.returnExp.type, exp.popVar(), "%0");
+            }
+            ((FuncDef) now).push(store);
         }
-        now = nowTmp;
-        ((FuncDef) now).push(ret);
+        ((FuncDef) now).push(new Br("%returnLabel"));
     }
 
     @Override

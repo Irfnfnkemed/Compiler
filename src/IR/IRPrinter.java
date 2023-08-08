@@ -27,18 +27,25 @@ public class IRPrinter {
     }
 
     private void print(Instruction instruction) {
-        if (instruction instanceof Alloca) {
-            print((Alloca) instruction);
-        } else if (instruction instanceof Store) {
-            print((Store) instruction);
-        } else if (instruction instanceof Load) {
-            print((Load) instruction);
-        } else if (instruction instanceof Ret) {
-            print((Ret) instruction);
-        } else if (instruction instanceof Binary) {
-            print((Binary) instruction);
-        } else if (instruction instanceof Call) {
-            print((Call) instruction);
+        if (instruction instanceof Label) {
+            print((Label) instruction);
+        } else {
+            System.out.print("    ");
+            if (instruction instanceof Alloca) {
+                print((Alloca) instruction);
+            } else if (instruction instanceof Store) {
+                print((Store) instruction);
+            } else if (instruction instanceof Load) {
+                print((Load) instruction);
+            } else if (instruction instanceof Ret) {
+                print((Ret) instruction);
+            } else if (instruction instanceof Binary) {
+                print((Binary) instruction);
+            } else if (instruction instanceof Call) {
+                print((Call) instruction);
+            } else if (instruction instanceof Br) {
+                print((Br) instruction);
+            }
         }
     }
 
@@ -71,7 +78,7 @@ public class IRPrinter {
             if (store.type.isInt()) {
                 System.out.print(store.value);
             } else if (store.type.isBool()) {
-                System.out.print(store.value == 0);
+                System.out.print(store.value == 1);
             }
         } else {
             System.out.print(store.valueVar);
@@ -88,19 +95,7 @@ public class IRPrinter {
     public void print(Ret ret) {
         printOut("ret ");
         printType(ret.type);
-        System.out.print(' ');
-        if (ret.type != null && !ret.type.isVoid()) {
-            if (ret.retVar == null) {
-                if (ret.type.isInt()) {
-                    System.out.print(ret.retValue);
-                } else if (ret.type.isBool()) {
-                    System.out.print(ret.retValue == 1);
-                }
-            } else {
-                System.out.print(ret.retVar);
-            }
-        }
-        System.out.print('\n');
+        printOut(" ", ret.var, "\n");
     }
 
     public void print(Binary binary) {
@@ -156,6 +151,19 @@ public class IRPrinter {
         System.out.print(")\n");
     }
 
+    public void print(Label label) {
+        System.out.print(label.labelName);
+        System.out.print(":\n");
+    }
+
+    public void print(Br br) {
+        if (br.condition == null) {
+            printOut("br label ", br.trueLabel, "\n");
+        } else {
+            printOut("br i1 ", br.condition, ", label ", br.trueLabel, ", label ", br.falseLabel, "\n");
+        }
+    }
+
     public void print(FuncDef funcDef) {
         System.out.print("\ndefine ");
         printType(funcDef.type);
@@ -168,10 +176,7 @@ public class IRPrinter {
             }
         }
         System.out.print(") {\nentry:\n");
-        funcDef.irList.forEach(instruction -> {
-            System.out.print("    ");
-            print(instruction);
-        });
+        funcDef.irList.forEach(this::print);
         System.out.print("}\n");
     }
 
