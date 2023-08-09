@@ -20,6 +20,8 @@ import src.IR.statement.FuncDef;
 import src.IR.statement.GlobalVarDef;
 import src.Util.type.Type;
 
+import java.util.Objects;
+
 public class IRBuilder implements ASTVisitor {
     public IRProgram irProgram;
     public FuncDef funcMain;
@@ -62,6 +64,7 @@ public class IRBuilder implements ASTVisitor {
     public void visit(MainDef node) {
         Type type = new Type();
         type.setInt();
+        funcMain.push(new Label("entry"));
         funcMain.push(new Alloca(type, "%0"));
         funcMain.push(new Store(type, 0, "%0"));
         anonymousVar = 1;
@@ -97,6 +100,7 @@ public class IRBuilder implements ASTVisitor {
         anonymousLabel = 0;
         var nowTmp = now;
         FuncDef funcDef = new FuncDef();
+        funcDef.push(new Label("entry"));
         ((IRProgram) now).push(funcDef);
         now = funcDef;
         funcDef.type = node.type;
@@ -192,6 +196,9 @@ public class IRBuilder implements ASTVisitor {
                     break;
                 }
             }
+            if (!((FuncDef) now).notReturn) {
+                break;
+            }
         }
     }
 
@@ -242,18 +249,6 @@ public class IRBuilder implements ASTVisitor {
                 }
                 ((FuncDef) now).push(new Label("toLabel-" + tmp));
                 ((FuncDef) now).popIf();
-                if (((FuncDef) now).getLoop() != null && !((FuncDef) now).isIf()) {
-                    var tmpLoop = ((FuncDef) now).getLoop();
-                    if (tmpIf.trueReturn) {
-                        tmpLoop.loopReturn = true;
-                    }
-                    if (tmpIf.trueBreak) {
-                        tmpLoop.loopBreak = true;
-                    }
-                    if (tmpIf.trueContinue) {
-                        tmpLoop.loopContinue = true;
-                    }
-                }
             } else {
                 ((FuncDef) now).push(new Br(exp.popVar(), "%trueLabel-" + tmp, "%falseLabel-" + tmp));
                 ((FuncDef) now).push(new Label("trueLabel-" + tmp));
@@ -273,50 +268,21 @@ public class IRBuilder implements ASTVisitor {
                 ((FuncDef) now).popIf();
                 if (((FuncDef) now).getLoop() != null && !((FuncDef) now).isIf()) {
                     var tmpLoop = ((FuncDef) now).getLoop();
-                    if (tmpIf.trueReturn || tmpIf.falseReturn) {
-                        tmpLoop.loopReturn = true;
-                    }
-                    if (tmpIf.trueBreak || tmpIf.falseBreak) {
-                        tmpLoop.loopBreak = true;
-                    }
-                    if (tmpIf.trueContinue || tmpIf.falseContinue) {
-                        tmpLoop.loopContinue = true;
-                    }
                     if (tmpIf.trueJump && tmpIf.falseJump) {
                         tmpLoop.jump = true;
                     }
-                    if ((tmpIf.trueBreak || tmpIf.trueReturn) && (tmpIf.falseBreak || tmpIf.falseReturn)) {
-                        tmpLoop.jumpStep = false;
-                    }
                 } else if (((FuncDef) now).getIf() != null && ((FuncDef) now).isIf()) {
                     var tmpIfPre = ((FuncDef) now).getIf();
-                    if (tmpIf.trueReturn || tmpIf.falseReturn) {
-                        if (tmpIfPre.onTrue) {
-                            tmpIfPre.trueReturn = true;
-                        } else {
-                            tmpIfPre.falseReturn = true;
-                        }
-                    }
-                    if (tmpIf.trueBreak || tmpIf.falseBreak) {
-                        if (tmpIfPre.onTrue) {
-                            tmpIfPre.trueBreak = true;
-                        } else {
-                            tmpIfPre.falseBreak = true;
-                        }
-                    }
-                    if (tmpIf.trueContinue || tmpIf.falseContinue) {
-                        if (tmpIfPre.onTrue) {
-                            tmpIfPre.trueContinue = true;
-                        } else {
-                            tmpIfPre.falseContinue = true;
-                        }
-                    }
                     if (tmpIf.trueJump && tmpIf.falseJump) {
                         if (tmpIfPre.onTrue) {
                             tmpIfPre.trueJump = true;
                         } else {
                             tmpIfPre.falseJump = true;
                         }
+                    }
+                } else {
+                    if (tmpIf.trueNotReturn && tmpIf.falseNotReturn) {
+                        ((FuncDef) now).notReturn = false;
                     }
                 }
             }
@@ -351,74 +317,48 @@ public class IRBuilder implements ASTVisitor {
                 } else {
                     ((FuncDef) now).push(new Br(to));
                 }
+            } else {
+                ((FuncDef) now).push(new Br(exp.popVar(), body, to));
             }
-            ((FuncDef) now).push(new Br(exp.popVar(), body, to));
         } else {
             ((FuncDef) now).push(new Br(body));
         }
         ((FuncDef) now).push(new Label(body.substring(1)));
-        node.stmt.accept(this);
+        if (node.stmt != null) {
+            node.stmt.accept(this);
+        }
         if (!tmp.jump) {
             ((FuncDef) now).push(new Br(step));
         }
-        if (!(tmp.jump && !tmp.loopContinue)) {
-            ((FuncDef) now).push(new Label(step.substring(1)));
-            if (node.stepExp != null) {
-                node.stepExp.accept(this);
-            }
-            ((FuncDef) now).push(new Br(condition));
+        ((FuncDef) now).push(new Label(step.substring(1)));
+        if (node.stepExp != null) {
+            node.stepExp.accept(this);
         }
-        if (!(tmp.loopReturn && !tmp.loopBreak && !tmp.loopContinue)) {
-            if (!tmp.jumpStep && !tmp.loopReturn) {
-                ((FuncDef) now).push(new Br(to));
-            }
-            ((FuncDef) now).push(new Label(to.substring(1)));
-        }
+        ((FuncDef) now).push(new Br(condition));
+        ((FuncDef) now).push(new Label(to.substring(1)));
         ((FuncDef) now).popLoop();
-        if (((FuncDef) now).getIf() != null && ((FuncDef) now).isIf()) {
-            var tmpIf = ((FuncDef) now).getIf();
-            if (tmp.loopReturn) {
-                if (tmpIf.onTrue) {
-                    tmpIf.trueReturn = true;
-                    if (!tmp.loopContinue && !tmp.loopBreak) {
-                        tmpIf.trueJump = true;
-                    }
-                } else {
-                    tmpIf.falseReturn = true;
-                    if (!tmp.loopContinue && !tmp.loopBreak) {
-                        tmpIf.falseJump = true;
-                    }
-                }
-            }
-        } else if (((FuncDef) now).getLoop() != null && !((FuncDef) now).isIf()) {
-            var tmpLoop = ((FuncDef) now).getLoop();
-            if (tmp.loopReturn && !tmp.loopContinue && !tmp.loopBreak) {
-                tmpLoop.loopReturn = true;
-                tmpLoop.jump = true;
-                tmpLoop.jumpStep = false;
-            }
-        }
     }
 
     @Override
     public void visit(WhileLoop node) {
-
+        ForLoop forLoop = new ForLoop();
+        forLoop.conditionExp = node.judgeExp;
+        forLoop.stmt = node.stmt;
+        forLoop.scope = node.scope;
+        forLoop.position = node.position;
+        forLoop.accept(this);
     }
 
     @Override
     public void visit(BreakStmt node) {
         ((FuncDef) now).push(new Br(var("loopTo", node.scope.loopPos.line, node.scope.loopPos.column)));
         if (((FuncDef) now).getLoop() != null && !((FuncDef) now).isIf()) {
-            ((FuncDef) now).getLoop().loopBreak = true;
             ((FuncDef) now).getLoop().jump = true;
-            ((FuncDef) now).getLoop().jumpStep = false;
         } else if (((FuncDef) now).getIf() != null && ((FuncDef) now).isIf()) {
             var tmp = ((FuncDef) now).getIf();
             if (tmp.onTrue) {
-                tmp.trueBreak = true;
                 tmp.trueJump = true;
             } else {
-                tmp.falseBreak = true;
                 tmp.falseJump = true;
             }
         }
@@ -428,15 +368,12 @@ public class IRBuilder implements ASTVisitor {
     public void visit(ContinueStmt node) {
         ((FuncDef) now).push(new Br(var("loopStep", node.scope.loopPos.line, node.scope.loopPos.column)));
         if (((FuncDef) now).getLoop() != null && !((FuncDef) now).isIf()) {
-            ((FuncDef) now).getLoop().loopContinue = true;
             ((FuncDef) now).getLoop().jump = true;
         } else if (((FuncDef) now).getIf() != null && ((FuncDef) now).isIf()) {
             var tmp = ((FuncDef) now).getIf();
             if (tmp.onTrue) {
-                tmp.trueContinue = true;
                 tmp.trueJump = true;
             } else {
-                tmp.falseContinue = true;
                 tmp.falseJump = true;
             }
         }
@@ -461,29 +398,32 @@ public class IRBuilder implements ASTVisitor {
         }
         ((FuncDef) now).push(new Br("%returnLabel"));
         if (((FuncDef) now).getLoop() != null && !((FuncDef) now).isIf()) {
-            ((FuncDef) now).getLoop().loopReturn = true;
             ((FuncDef) now).getLoop().jump = true;
-            ((FuncDef) now).getLoop().jumpStep = false;
         } else if (((FuncDef) now).getIf() != null && ((FuncDef) now).isIf()) {
             var tmp = ((FuncDef) now).getIf();
             if (tmp.onTrue) {
-                tmp.trueReturn = true;
                 tmp.trueJump = true;
+                tmp.trueNotReturn = false;
             } else {
-                tmp.falseReturn = true;
                 tmp.falseJump = true;
+                tmp.falseNotReturn = false;
             }
+        } else {
+            ((FuncDef) now).notReturn = false;
         }
     }
 
     @Override
     public void visit(ParallelExp node) {
-
+        var nowTmp = now;
+        now = new Exp((FuncDef) now);
+        node.expList.forEach(expression -> expression.accept(this));
+        now = nowTmp;
     }
 
     @Override
     public void visit(PrimaryExp node) {
-
+        node.exp.accept(this);
     }
 
     @Override
@@ -578,12 +518,39 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(PostfixExp node) {
-
+        node.exp.accept(this);
+        Binary binary = new Binary();
+        if (Objects.equals(node.op, "++")) {
+            binary.op = "+";
+        } else {
+            binary.op = "-";
+        }
+        Type type = new Type();
+        type.setInt();
+        binary.set(1);
+        binary.set(((Exp) now).getVar());
+        binary.output = "%" + anonymousVar;
+        ((Exp) now).push(binary);
+        ((Exp) now).push(new Store(type, "%" + anonymousVar++, ((Exp) now).lhsVar));
     }
 
     @Override
     public void visit(PrefixLhsExp node) {
-
+        node.exp.accept(this);
+        Binary binary = new Binary();
+        if (Objects.equals(node.op, "++")) {
+            binary.op = "+";
+        } else {
+            binary.op = "-";
+        }
+        Type type = new Type();
+        type.setInt();
+        binary.set(1);
+        binary.set(((Exp) now).popVar());
+        binary.output = "%" + anonymousVar;
+        ((Exp) now).set("%" + anonymousVar);
+        ((Exp) now).push(binary);
+        ((Exp) now).push(new Store(type, "%" + anonymousVar++, ((Exp) now).lhsVar));
     }
 
     @Override
@@ -602,6 +569,7 @@ public class IRBuilder implements ASTVisitor {
         ((Exp) now).push(new Load(node.type, "%" + anonymousVar,
                 var(node.variableName, node.line, node.column)));
         anonymousVar++;
+        ((Exp) now).lhsVar = var(node.variableName, node.line, node.column);
     }
 
     @Override

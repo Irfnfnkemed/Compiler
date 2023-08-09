@@ -1,10 +1,12 @@
-package src.IR.instruction;
+package src.IR;
 
+import src.IR.IRNode;
+import src.IR.instruction.Instruction;
 import src.IR.statement.FuncDef;
 
 import java.util.Stack;
 
-public class Exp extends Instruction {
+public class Exp extends IRNode {
     public enum expCate {
         VarName, ConstValue;
     }
@@ -15,6 +17,7 @@ public class Exp extends Instruction {
     public Stack<Long> constValueStack;
 
     public FuncDef funcDef;
+    public String lhsVar;
 
     public Exp(FuncDef funcDef_) {
         funcDef = funcDef_;
@@ -41,6 +44,14 @@ public class Exp extends Instruction {
     public String popVar() {
         expCateStack.pop();
         return varNameStack.pop();
+    }
+
+    public String getVar() {
+        return varNameStack.peek();
+    }
+
+    public long getValue() {
+        return constValueStack.peek();
     }
 
     public long popValue() {

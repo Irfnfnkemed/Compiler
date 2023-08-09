@@ -175,7 +175,7 @@ public class IRPrinter {
                 System.out.print(", ");
             }
         }
-        System.out.print(") {\nentry:\n");
+        System.out.print(") {\n");
         funcDef.irList.forEach(this::print);
         System.out.print("}\n");
     }

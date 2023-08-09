@@ -11,23 +11,15 @@ import java.util.Stack;
 
 public class FuncDef extends IRStatement {
     public static class ifStatus {
-        public boolean trueReturn = false;
-        public boolean trueBreak = false;
-        public boolean trueContinue = false;
         public boolean trueJump = false;
-        public boolean falseReturn = false;
-        public boolean falseBreak = false;
-        public boolean falseContinue = false;
+        public boolean trueNotReturn = true;
         public boolean falseJump = false;
+        public boolean falseNotReturn = true;
         public boolean onTrue = true;
     }
 
     public static class loopStatus {
-        public boolean loopReturn = false;
-        public boolean loopBreak = false;
-        public boolean loopContinue = false;
         public boolean jump = false;
-        public boolean jumpStep = true;
     }
 
     public Type type;
@@ -39,6 +31,8 @@ public class FuncDef extends IRStatement {
     public Stack<loopStatus> loopStatusStack;
 
     public Stack<Boolean> ifAndLoopOrder;//true为if，反之为loop
+
+    public boolean notReturn = true;
 
 
     public FuncDef() {
