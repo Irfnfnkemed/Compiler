@@ -14,18 +14,12 @@ public class FuncDef extends IRStatement {
         public boolean trueReturn = false;
         public boolean trueBreak = false;
         public boolean trueContinue = false;
+        public boolean trueJump = false;
         public boolean falseReturn = false;
         public boolean falseBreak = false;
         public boolean falseContinue = false;
+        public boolean falseJump = false;
         public boolean onTrue = true;
-
-        public boolean trueJump() {
-            return trueReturn || trueBreak || trueContinue;
-        }
-
-        public boolean falseJump() {
-            return falseReturn || falseBreak || falseContinue;
-        }
     }
 
     public static class loopStatus {
@@ -33,6 +27,7 @@ public class FuncDef extends IRStatement {
         public boolean loopBreak = false;
         public boolean loopContinue = false;
         public boolean jump = false;
+        public boolean jumpStep = true;
     }
 
     public Type type;
