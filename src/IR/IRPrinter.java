@@ -5,6 +5,7 @@ import src.IR.instruction.Binary;
 import src.IR.statement.FuncDef;
 import src.IR.statement.GlobalVarDef;
 import src.IR.statement.IRStatement;
+import src.Util.type.IRType;
 import src.Util.type.Type;
 
 public class IRPrinter {
@@ -66,18 +67,18 @@ public class IRPrinter {
 
     public void print(Alloca alloca) {
         printOut(alloca.varName, " = alloca ");
-        printType(alloca.type);
+        printType(alloca.irType);
         System.out.print('\n');
     }
 
     public void print(Store store) {
         System.out.print("store ");
-        printType(store.type);
+        printType(store.irType);
         System.out.print(' ');
         if (store.valueVar == null) {
-            if (store.type.isInt()) {
+            if (store.irType.unitSize == 32) {///
                 System.out.print(store.value);
-            } else if (store.type.isBool()) {
+            } else if (store.irType.unitSize == 1) {
                 System.out.print(store.value == 1);
             }
         } else {
@@ -88,13 +89,13 @@ public class IRPrinter {
 
     public void print(Load load) {
         printOut(load.toVarName, " = load ");
-        printType(load.type);
+        printType(load.irType);
         printOut(", ptr ", load.fromPointer, "\n");
     }
 
     public void print(Ret ret) {
         printOut("ret ");
-        printType(ret.type);
+        printType(ret.irType);
         printOut(" ", ret.var, "\n");
     }
 
@@ -121,16 +122,16 @@ public class IRPrinter {
     }
 
     public void print(Call call) {
-        if (call.type == null || call.type.isVoid()) {
+        if (call.irType == null || call.irType.unitSize == -1) {
             System.out.print("call void");
         } else {
             printOut(call.resultVar, " = call ");
-            printType(call.type);
+            printType(call.irType);
         }
         printOut(" ", call.functionName, "(");
         int tmpVar = call.varNameList.size() - 1;
         int tmpConst = call.constValueList.size() - 1;
-        Type typeTmp;
+        IRType typeTmp;
         for (int i = 0; i < call.callTypeList.size(); ++i) {
             typeTmp = call.callTypeList.get(i);
             printType(typeTmp);
@@ -138,9 +139,9 @@ public class IRPrinter {
                 printOut(" ", call.varNameList.get(tmpVar--));
             } else if (call.callCateList.get(i) == Call.callCate.CONST) {
                 System.out.print(" ");
-                if (typeTmp.isInt()) {
+                if (typeTmp.unitSize == 32) {
                     System.out.print(call.constValueList.get(tmpConst--));
-                } else if (typeTmp.isBool()) {
+                } else if (typeTmp.unitSize == 1) {
                     System.out.print(call.constValueList.get(tmpConst--) == 1);
                 }
             }
@@ -166,7 +167,7 @@ public class IRPrinter {
 
     public void print(FuncDef funcDef) {
         System.out.print("\ndefine ");
-        printType(funcDef.type);
+        printType(funcDef.irType);
         printOut(" ", funcDef.functionName, "(");
         for (int i = 0; i < funcDef.parameterTypeList.size(); ++i) {
             printType(funcDef.parameterTypeList.get(i));
@@ -180,15 +181,11 @@ public class IRPrinter {
         System.out.print("}\n");
     }
 
-    public void printType(Type type) {
-        if (type == null) {
+    public void printType(IRType irType) {
+        if (irType.unitSize == -1) {
             System.out.print("void");
-        } else if (type.isInt()) {
-            System.out.print("i32");
-        } else if (type.isBool()) {
-            System.out.print("i1");
-        } else if (type.isVoid()) {
-            System.out.print("void");
+        } else {
+            System.out.print("i" + irType.unitSize);
         }
     }
 

@@ -1,14 +1,14 @@
 package src.IR.instruction;
 
-import src.IR.IRNode;
+import src.Util.type.IRType;
 import src.Util.type.Type;
 
 public class Alloca extends Instruction {
-    public Type type;
+    public IRType irType;
     public String varName;
 
     public Alloca(Type type_, String varName_) {
-        type = type_;
+        irType = new IRType(type_);
         varName = varName_;
     }
 }

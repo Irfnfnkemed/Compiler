@@ -8,12 +8,15 @@ import java.util.HashMap;
 
 public class Scope {
     public static class Variable {
-        Type type;
-        boolean cover;//最多覆盖一次
+        public Type type;
+        public boolean cover;//最多覆盖一次
+        public int line = 0, column = 0;//位置，方便IR处理局部变量覆盖
 
-        Variable(Type type_, boolean cover_) {
+        Variable(Type type_, boolean cover_, int line_, int column_) {
             type = type_;
             cover = cover_;
+            line = line_;
+            column = column_;
         }
     }
 
@@ -22,7 +25,7 @@ public class Scope {
     public boolean isGlobal = false;
     public boolean isClass = false;
     public boolean isFunction = false;
-    public boolean isLoop = false;
+    public Position loopPos = null;
     public boolean notReturn = true;//用于isFunction为true，表示函数可能还未返回
     public Type returnType;//用于isFunction为true，处理return
     public Type classType;//用于isClass为true，处理this
@@ -34,12 +37,12 @@ public class Scope {
     public Scope(Scope fatherScope) { //从父作用域构造出子作用域
         variable = new HashMap<>();
         fatherScope.variable.forEach((key, value) -> {
-            variable.put(key, new Variable(new Type(value.type), false));
+            variable.put(key, new Variable(new Type(value.type), false, value.line, value.column));
         });
         isGlobal = fatherScope.isGlobal;
         isClass = fatherScope.isClass;
+        loopPos = fatherScope.loopPos;
         isFunction = fatherScope.isFunction;
-        isLoop = fatherScope.isLoop;
         notReturn = fatherScope.notReturn;
         if (fatherScope.isClass) {
             classType = new Type(fatherScope.classType);
@@ -72,16 +75,11 @@ public class Scope {
         if (variable.containsKey(variableName) && variable.get(variableName).cover) {
             throw new SemanticErrors("Duplicate definition of variable.", position);
         } else {
-            variable.put(variableName, new Variable(new Type(variableType), true));//覆盖或者添加
+            variable.put(variableName, new Variable(new Type(variableType), true, position.line, position.column));//覆盖或者添加
         }
     }
 
-    public Type getVariable(String variableName) {
-        Variable var = variable.get(variableName);
-        if (var != null) {
-            return var.type;
-        } else {
-            return null;
-        }
+    public Variable getVariable(String variableName) {
+        return variable.get(variableName);
     }
 }

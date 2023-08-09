@@ -3,6 +3,7 @@ package src.IR.statement;
 import src.AST.expression.ParallelExp;
 import src.IR.instruction.Instruction;
 import src.Util.position.Position;
+import src.Util.type.IRType;
 import src.Util.type.Type;
 
 import java.util.ArrayList;
@@ -22,9 +23,9 @@ public class FuncDef extends IRStatement {
         public boolean jump = false;
     }
 
-    public Type type;
+    public IRType irType;
     public String functionName;
-    public List<Type> parameterTypeList;
+    public List<IRType> parameterTypeList;
     public List<Instruction> irList;
 
     public Stack<ifStatus> ifStatusStack;
@@ -44,7 +45,7 @@ public class FuncDef extends IRStatement {
     }
 
     public void pushPara(Type parameterType) {
-        parameterTypeList.add(parameterType);
+        parameterTypeList.add(new IRType(parameterType));
     }
 
     public void push(Instruction instruction) {

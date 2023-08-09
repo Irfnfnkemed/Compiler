@@ -18,6 +18,7 @@ import src.IR.instruction.*;
 import src.IR.instruction.Binary;
 import src.IR.statement.FuncDef;
 import src.IR.statement.GlobalVarDef;
+import src.Util.type.IRType;
 import src.Util.type.Type;
 
 import java.util.Objects;
@@ -32,8 +33,7 @@ public class IRBuilder implements ASTVisitor {
     public IRBuilder(Program node) {
         irProgram = new IRProgram();
         funcMain = new FuncDef();
-        funcMain.type = new Type();
-        funcMain.type.setInt();
+        funcMain.irType = new IRType(32);
         funcMain.functionName = "@main";
         visit(node);
     }
@@ -103,7 +103,7 @@ public class IRBuilder implements ASTVisitor {
         funcDef.push(new Label("entry"));
         ((IRProgram) now).push(funcDef);
         now = funcDef;
-        funcDef.type = node.type;
+        funcDef.irType = new IRType(node.type);
         funcDef.functionName = "@" + node.functionName;
         for (int i = 0; i < node.parameterNameList.size(); ++i) {
             funcDef.pushPara(node.parameterTypeList.get(i));
@@ -280,8 +280,15 @@ public class IRBuilder implements ASTVisitor {
                             tmpIfPre.falseJump = true;
                         }
                     }
+                    if (!tmpIf.trueNotReturn && !tmpIf.falseNotReturn) {
+                        if (tmpIfPre.onTrue) {
+                            tmpIfPre.trueNotReturn = false;
+                        } else {
+                            tmpIfPre.falseNotReturn = false;
+                        }
+                    }
                 } else {
-                    if (tmpIf.trueNotReturn && tmpIf.falseNotReturn) {
+                    if (!tmpIf.trueNotReturn && !tmpIf.falseNotReturn) {
                         ((FuncDef) now).notReturn = false;
                     }
                 }
@@ -386,7 +393,6 @@ public class IRBuilder implements ASTVisitor {
             Exp exp = new Exp((FuncDef) now);
             now = exp;
             node.returnExp.accept(this);
-            String toVar;
             now = nowTmp;
             Store store;
             if (exp.isConst) {
@@ -449,7 +455,7 @@ public class IRBuilder implements ASTVisitor {
                 }
             });
         }
-        call.type = node.type;
+        call.irType = new IRType(node.type);
         if (!node.type.isVoid()) {
             call.resultVar = "%" + anonymousVar;
         }

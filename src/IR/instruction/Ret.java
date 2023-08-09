@@ -1,10 +1,11 @@
 package src.IR.instruction;
 
 import src.IR.IRNode;
+import src.Util.type.IRType;
 import src.Util.type.Type;
 
 public class Ret extends Instruction {
-    public Type type;
+    public IRType irType;
     public String var;
 
     public Ret() {
@@ -12,7 +13,7 @@ public class Ret extends Instruction {
 
     public Ret(Type type_, String var_) {
         var = var_;
-        type = type_;
+        irType = new IRType(type_);
     }
 
 }

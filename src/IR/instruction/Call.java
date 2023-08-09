@@ -1,10 +1,9 @@
 package src.IR.instruction;
 
-import org.stringtemplate.v4.ST;
+import src.Util.type.IRType;
 import src.Util.type.Type;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.List;
 
 public class Call extends Instruction {
@@ -12,10 +11,10 @@ public class Call extends Instruction {
         VAR, CONST
     }
 
-    public Type type;
+    public IRType irType;
     public String functionName;
 
-    public List<Type> callTypeList;
+    public List<IRType> callTypeList;
 
     public List<callCate> callCateList;
     public List<String> varNameList;
@@ -31,13 +30,13 @@ public class Call extends Instruction {
     }
 
     public void set(Type type, String anonymousVar) {
-        callTypeList.add(type);
+        callTypeList.add(new IRType(type));
         callCateList.add(callCate.VAR);
         varNameList.add(anonymousVar);
     }
 
     public void set(Type type, long value) {
-        callTypeList.add(type);
+        callTypeList.add(new IRType(type));
         callCateList.add(callCate.CONST);
         constValueList.add(value);
     }

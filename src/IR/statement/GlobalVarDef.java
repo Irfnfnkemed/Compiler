@@ -1,5 +1,6 @@
 package src.IR.statement;
 
+import src.Util.type.IRType;
 import src.Util.type.Type;
 
 public class GlobalVarDef extends IRStatement {
@@ -11,8 +12,7 @@ public class GlobalVarDef extends IRStatement {
 
     public void setFuncDef() {
         funcDef = new FuncDef();
-        funcDef.type = new Type();
-        funcDef.type.setVoid();
+        funcDef.irType = new IRType(-1);
         funcDef.functionName = "@init-" + varName.substring(1);
     }
 }
