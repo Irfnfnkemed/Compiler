@@ -12,7 +12,7 @@ public class GlobalVarDef extends IRStatement {
 
     public void setFuncDef() {
         funcDef = new FuncDef();
-        funcDef.irType = new IRType(-1);
+        funcDef.irType = new IRType("void");
         funcDef.functionName = "@init-" + varName.substring(1);
     }
 }

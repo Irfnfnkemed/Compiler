@@ -33,7 +33,7 @@ public class IRBuilder implements ASTVisitor {
     public IRBuilder(Program node) {
         irProgram = new IRProgram();
         funcMain = new FuncDef();
-        funcMain.irType = new IRType(32);
+        funcMain.irType = new IRType("i32");
         funcMain.functionName = "@main";
         visit(node);
     }
@@ -470,7 +470,13 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(AssignExp node) {
-
+        node.lhs.accept(this);
+        node.rhs.accept(this);
+        if (((Exp) now).isOperandConst()) {
+            ((Exp) now).push(new Store(node.rhs.type, ((Exp) now).popValue(), ((Exp) now).lhsVar));
+        } else {
+            ((Exp) now).push(new Store(node.rhs.type, ((Exp) now).popVar(), ((Exp) now).lhsVar));
+        }
     }
 
     @Override
@@ -514,6 +520,8 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(NewArrayExp node) {
+
+
 
     }
 
@@ -572,9 +580,8 @@ public class IRBuilder implements ASTVisitor {
     @Override
     public void visit(VariableLhsExp node) {
         ((Exp) now).set("%" + anonymousVar);
-        ((Exp) now).push(new Load(node.type, "%" + anonymousVar,
+        ((Exp) now).push(new Load(node.type, "%" + anonymousVar++,
                 var(node.variableName, node.line, node.column)));
-        anonymousVar++;
         ((Exp) now).lhsVar = var(node.variableName, node.line, node.column);
     }
 
@@ -595,7 +602,6 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(StringExp node) {
-
     }
 
     @Override
