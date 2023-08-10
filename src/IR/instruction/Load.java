@@ -14,4 +14,11 @@ public class Load extends Instruction {
         toVarName = toVarName_;
         fromPointer = fromPointer_;
     }
+
+    public Load(IRType irType_, String toVarName_, String fromPointer_) {
+        irType = irType_;
+        toVarName = toVarName_;
+        fromPointer = fromPointer_;
+    }
 }
+

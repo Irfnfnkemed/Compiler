@@ -11,4 +11,9 @@ public class Alloca extends Instruction {
         irType = new IRType(type_);
         varName = varName_;
     }
+
+    public Alloca(IRType irType_, String varName_) {
+        irType = irType_;
+        varName = varName_;
+    }
 }

@@ -21,4 +21,16 @@ public class Store extends Instruction {
         valueVar = valueVar_;
         toPointer = toPointer_;
     }
+
+    public Store(IRType irType_, long value_, String toPointer_) {//常量存到局部变量
+        irType = irType_;
+        value = value_;
+        toPointer = toPointer_;
+    }
+
+    public Store(IRType irType_, String valueVar_, String toPointer_) {//匿名变量值存到局部变量
+        irType = irType_;
+        valueVar = valueVar_;
+        toPointer = toPointer_;
+    }
 }

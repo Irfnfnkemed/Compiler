@@ -35,8 +35,20 @@ public class Call extends Instruction {
         varNameList.add(anonymousVar);
     }
 
+    public void set(IRType irType, String anonymousVar) {
+        callTypeList.add(irType);
+        callCateList.add(callCate.VAR);
+        varNameList.add(anonymousVar);
+    }
+
     public void set(Type type, long value) {
         callTypeList.add(new IRType(type));
+        callCateList.add(callCate.CONST);
+        constValueList.add(value);
+    }
+
+    public void set(IRType irType, long value) {
+        callTypeList.add(irType);
         callCateList.add(callCate.CONST);
         constValueList.add(value);
     }

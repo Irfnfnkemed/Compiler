@@ -67,6 +67,8 @@ public class IRPrinter {
                 print((Call) instruction);
             } else if (instruction instanceof Br) {
                 print((Br) instruction);
+            } else if (instruction instanceof Getelementptr) {
+                print((Getelementptr) instruction);
             }
         }
     }
@@ -97,7 +99,9 @@ public class IRPrinter {
         printType(store.irType);
         System.out.print(' ');
         if (store.valueVar == null) {
-            if (Objects.equals(store.irType.unitName, "i32")) {//
+            if (Objects.equals(store.irType.unitName, "ptr") || store.irType.len != -1) {
+                System.out.print("null");
+            } else if (Objects.equals(store.irType.unitName, "i32")) {//
                 System.out.print(store.value);
             } else if (Objects.equals(store.irType.unitName, "i1")) {
                 System.out.print(store.value == 1);
@@ -186,6 +190,17 @@ public class IRPrinter {
         }
     }
 
+    public void print(Getelementptr getelementptr) {
+        printOut(getelementptr.result, " = getelementptr ");
+        printType(getelementptr.irType);
+        printOut(", ptr ", getelementptr.from);
+        if (getelementptr.offset != -1) {
+            printOut(", i32 " + getelementptr.offset);
+        }
+        printOut(", i32 " + getelementptr.index, "\n");
+    }
+
+
     public void print(FuncDef funcDef) {
         System.out.print("\ndefine ");
         printType(funcDef.irType);
@@ -203,8 +218,13 @@ public class IRPrinter {
     }
 
     public void printType(IRType irType) {
-        System.out.print(irType.unitName);
+        if (irType.len != -1) {
+            System.out.print("ptr");
+        } else {
+            System.out.print(irType.unitName);
+        }
     }
+
 
     public void printOut(String... elements) {
         for (String ele : elements) {

@@ -16,4 +16,8 @@ public class Ret extends Instruction {
         irType = new IRType(type_);
     }
 
+    public Ret(IRType irType_, String var_) {
+        var = var_;
+        irType = irType_;
+    }
 }
