@@ -21,6 +21,7 @@ import src.IR.statement.GlobalVarDef;
 import src.Util.type.IRType;
 import src.Util.type.Type;
 
+import java.util.Arrays;
 import java.util.Objects;
 
 public class IRBuilder implements ASTVisitor {
@@ -56,9 +57,9 @@ public class IRBuilder implements ASTVisitor {
         call.irType = new IRType().setPtr();
         call.resultVar = "%2";
         funcDef.push(call);
-        funcDef.push(new Getelementptr("%3", new IRType().setI32(), "%2", -1, 0));
+        funcDef.push(new Getelementptr("%3", new IRType().setI32(), "%2", -1, "0"));
         funcDef.push(new Store(new IRType().setI32(), "%1", "%3"));
-        funcDef.push(new Getelementptr("%4", new IRType().setPtr(), "%2", -1, 1));
+        funcDef.push(new Getelementptr("%4", new IRType().setPtr(), "%2", -1, "1"));
         funcDef.push(new Ret(new IRType().setPtr(), "%4"));
         irProgram.push(funcDef);
         now = irProgram;
@@ -84,7 +85,8 @@ public class IRBuilder implements ASTVisitor {
     @Override
     public void visit(MainDef node) {
         IRType irType = new IRType().setI32();
-        funcMain.push(new Label("entry"));
+        funcMain.irList.add(0, new Label("entry"));
+        ++funcMain.initInsertIndex;
         funcMain.push(new Alloca(irType, "%.returnValue"));
         funcMain.push(new Store(irType, 0, "%.returnValue"));
         anonymousVar = 0;
@@ -157,6 +159,7 @@ public class IRBuilder implements ASTVisitor {
             globalVarDef.type = node.type;
             if (node.exp != null) {
                 globalVarDef.setFuncDef();
+                globalVarDef.funcDef.push(new Label("entry"));
                 anonymousVar = 0;
                 now = new Exp(globalVarDef.funcDef);
                 node.exp.accept(this);
@@ -167,7 +170,9 @@ public class IRBuilder implements ASTVisitor {
                     globalVarDef.funcDef.push(
                             new Store(node.type, ((Exp) now).popVar(), "@" + node.variableName));
                     globalVarDef.funcDef.push(new Ret());
-                    funcMain.push(new Call("@init-" + node.variableName));
+                    funcMain.irList.add(funcMain.initInsertIndex++, new Call("@init-" + node.variableName));
+                    ++funcMain.allocaIndex;
+                    irProgram.push(globalVarDef.funcDef);
                 }
             } else {
                 globalVarDef.value = 0;
@@ -359,7 +364,11 @@ public class IRBuilder implements ASTVisitor {
         }
         ((FuncDef) now).push(new Label(step.substring(1)));
         if (node.stepExp != null) {
+            Exp exp = new Exp((FuncDef) now);
+            var nowTmp = now;
+            now = exp;
             node.stepExp.accept(this);
+            now = nowTmp;
         }
         ((FuncDef) now).push(new Br(condition));
         ((FuncDef) now).push(new Label(to.substring(1)));
@@ -478,8 +487,8 @@ public class IRBuilder implements ASTVisitor {
         call.irType = new IRType(node.type);
         if (!node.type.isVoid()) {
             call.resultVar = "%" + anonymousVar;
+            ((Exp) now).set("%" + anonymousVar++);
         }
-        ((Exp) now).set("%" + anonymousVar++);
         ((Exp) now).push(call);
     }
 
@@ -516,48 +525,115 @@ public class IRBuilder implements ASTVisitor {
                     long tmp = ((Exp) now).popValue();
                     ((Exp) now).set(((Exp) now).popValue() % tmp);
                 }
-                /////////////
+                case "<" -> ((Exp) now).set(((Exp) now).popValue() > ((Exp) now).popValue());
             }
         } else {
-            Binary binary = new Binary();
-            binary.op = node.op;
-            if (((Exp) now).isOperandConst()) {
-                binary.set(((Exp) now).popValue());
-            } else {
-                binary.set(((Exp) now).popVar());
+            switch (node.op) {
+                case "+", "-", "*", "/", "%" -> {
+                    Binary binary = new Binary();
+                    binary.op = node.op;
+                    if (((Exp) now).isOperandConst()) {
+                        binary.set(((Exp) now).popValue());
+                    } else {
+                        binary.set(((Exp) now).popVar());
+                    }
+                    if (((Exp) now).isOperandConst()) {
+                        binary.set(((Exp) now).popValue());
+                    } else {
+                        binary.set(((Exp) now).popVar());
+                    }
+                    binary.output = "%" + anonymousVar;
+                    ((Exp) now).set("%" + anonymousVar++);
+                    ((Exp) now).push(binary);
+                }
+                case "<", ">" -> {
+                    Icmp icmp = new Icmp(node.op, node.lhs.type);
+                    if (((Exp) now).isOperandConst()) {
+                        icmp.set(((Exp) now).popValue());
+                    } else {
+                        icmp.set(((Exp) now).popVar());
+                    }
+                    if (((Exp) now).isOperandConst()) {
+                        icmp.set(((Exp) now).popValue());
+                    } else {
+                        icmp.set(((Exp) now).popVar());
+                    }
+                    icmp.output = "%" + anonymousVar;
+                    ((Exp) now).set("%" + anonymousVar++);
+                    ((Exp) now).push(icmp);
+                }
             }
-            if (((Exp) now).isOperandConst()) {
-                binary.set(((Exp) now).popValue());
-            } else {
-                binary.set(((Exp) now).popVar());
-            }
-            binary.output = "%" + anonymousVar;
-            ((Exp) now).set("%" + anonymousVar++);
-            ((Exp) now).push(binary);
         }
-
     }
 
     @Override
     public void visit(NewArrayExp node) {
-        node.expressionList.get(0).accept(this);
-        IRType irType = new IRType(node.type);
-        if (irType.unitSize == 32) {
+        ((Exp) now).isConst = false;
+        for (int i = node.expressionList.size() - 1; i >= 0; --i) {
+            node.expressionList.get(i).accept(this);
+        }
+        ((Exp) now).set(newArray(node.expressionList.size() == node.type.dim, node.expressionList.size()));
+    }
+
+    public String newArray(boolean baseDim, int indexDim) {//baseDim为true，表明全部初始化，如new int[10][10]
+        String newPtr = null;
+        if (baseDim || indexDim > 0) {
+            long value = 0;
+            String var = null;
             Call call = new Call("@.newIntArray");
-            ((Exp) now).isConst = false;
             if (((Exp) now).isOperandConst()) {
-                call.set(new IRType().setI32(), ((Exp) now).popValue());
+                value = ((Exp) now).popValue();
+                call.set(new IRType().setI32(), value);
             } else {
-                call.set(new IRType().setI32(), ((Exp) now).popVar());
+                var = ((Exp) now).popVar();
+                call.set(new IRType().setI32(), var);
             }
             call.irType = new IRType().setPtr();
-            call.resultVar = "%" + anonymousVar;
-            ((Exp) now).set("%" + anonymousVar++);
+            newPtr = call.resultVar = "%" + anonymousVar++;
             ((Exp) now).push(call);
-        } else if (irType.unitSize == 1) {
-
+            String loopVar = "%loopVar-newArray-" + anonymousLabel;
+            ((Exp) now).push(new Alloca(new IRType().setI32(), loopVar));
+            ((Exp) now).push(new Store(new IRType().setI32(), 0, loopVar));
+            String condition = "%newArrayCondition-" + anonymousLabel;
+            String body = "%newArrayBody-" + anonymousLabel;
+            String to = "%newArray-To-" + anonymousLabel++;
+            ((Exp) now).push(new Br(condition));
+            ((Exp) now).push(new Label(condition.substring(1)));
+            ((Exp) now).push(new Load(new IRType().setI32(), "%" + anonymousVar, loopVar));
+            Icmp icmp = new Icmp("<", new IRType().setI32());
+            icmp.operandLeft = "%" + anonymousVar++;
+            if (var == null) {
+                icmp.valueRight = value;
+            } else {
+                icmp.operandRight = var;
+            }
+            icmp.output = "%" + anonymousVar;
+            ((Exp) now).push(icmp);
+            ((Exp) now).push(new Br("%" + anonymousVar++, body, to));
+            ((Exp) now).push(new Label(body.substring(1)));
+            String subNewPtr = newArray(baseDim, indexDim - 1);
+            ((Exp) now).push(new Load(new IRType().setI32(), "%" + anonymousVar, loopVar));
+            ((Exp) now).push(new Getelementptr("%" + (anonymousVar + 1),
+                    new IRType().setPtr(), newPtr, -1, "%" + anonymousVar));
+            anonymousVar++;
+            ((Exp) now).push(new Store(new IRType().setPtr(), subNewPtr, "%" + anonymousVar++));
+            ((Exp) now).push(new Load(new IRType().setI32(), "%" + anonymousVar, loopVar));
+            Binary binary = new Binary();
+            binary.op = "+";
+            binary.operandLeft = "%" + anonymousVar++;
+            binary.valueRight = 1;
+            binary.output = "%" + anonymousVar;
+            ((Exp) now).push(binary);
+            ((Exp) now).push(new Store(new IRType().setI32(), "%" + anonymousVar++, loopVar));
+            ((Exp) now).push(new Br(condition));
+            ((Exp) now).push(new Label(to.substring(1)));
+            if (var == null) {
+                ((Exp) now).set(value);
+            } else {
+                ((Exp) now).set(var);
+            }
         }
-
+        return newPtr;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package src.IR.statement;
 
 import src.AST.expression.ParallelExp;
+import src.IR.instruction.Alloca;
 import src.IR.instruction.Instruction;
 import src.Util.position.Position;
 import src.Util.type.IRType;
@@ -34,6 +35,8 @@ public class FuncDef extends IRStatement {
     public Stack<Boolean> ifAndLoopOrder;//true为if，反之为loop
 
     public boolean notReturn = true;
+    public int initInsertIndex = 0;
+    public int allocaIndex = 1;
 
 
     public FuncDef() {
@@ -49,7 +52,11 @@ public class FuncDef extends IRStatement {
     }
 
     public void push(Instruction instruction) {
-        irList.add(instruction);
+        if (instruction instanceof Alloca) {
+            irList.add(allocaIndex++, instruction);
+        } else {
+            irList.add(instruction);
+        }
     }
 
     public void pushIf() {

@@ -6,10 +6,10 @@ public class Getelementptr extends Instruction {
     public String result;
     public IRType irType;
     public String from;
-    public int index = -1;
+    public String index;
     public int offset = -1;
 
-    public Getelementptr(String result_, IRType irType_, String from_, int offset_, int index_) {
+    public Getelementptr(String result_, IRType irType_, String from_, int offset_, String index_) {
         result = result_;
         irType = irType_;
         from = from_;

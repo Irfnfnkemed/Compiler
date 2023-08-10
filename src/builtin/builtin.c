@@ -106,6 +106,6 @@ int array_size(void *arr) {
     return ((int*)arr)[-1];
 }
 
-void *_malloc(int n){
-    return malloc(n);
+void *_malloc(int n){ //分配4n个字节
+    return malloc((size_t)(4 * n));
 }

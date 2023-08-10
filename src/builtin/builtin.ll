@@ -189,8 +189,9 @@ define dso_local i32 @array.size(i8* nocapture noundef readonly %0) local_unname
 
 ; Function Attrs: mustprogress nofree nounwind willreturn
 define dso_local noalias i8* @.malloc(i32 noundef %0) local_unnamed_addr #9 {
-  %2 = tail call i8* @malloc(i32 noundef %0) #11
-  ret i8* %2
+  %2 = shl nsw i32 %0, 2
+  %3 = tail call i8* @malloc(i32 noundef %2) #11
+  ret i8* %3
 }
 
 attributes #0 = { nounwind "frame-pointer"="none" "min-legal-vector-width"="0" "no-builtin-memcpy" "no-builtin-printf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+a,+c,+m" }

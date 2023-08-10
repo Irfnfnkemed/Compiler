@@ -31,6 +31,11 @@ public class Exp extends IRNode {
         constValueStack.push(value);
     }
 
+    public void set(boolean value) {
+        expCateStack.push(expCate.ConstValue);
+        constValueStack.push(value ? 1L : 0L);
+    }
+
     public void set(String anonymousVar) {
         expCateStack.push(expCate.VarName);
         varNameStack.push(anonymousVar);

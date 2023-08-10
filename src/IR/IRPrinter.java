@@ -21,7 +21,7 @@ public class IRPrinter {
         printOut("declare void @print(ptr)\n",
                 "declare void @println(ptr)\n",
                 "declare void @printInt(i32)\n",
-                "declare void @printIntln(i32)\n",
+                "declare void @printlnInt(i32)\n",
                 "declare ptr @getString()\n",
                 "declare i32 @getInt()\n",
                 "declare ptr @toString(i32)\n",
@@ -36,7 +36,7 @@ public class IRPrinter {
                 "declare i1 @string.greater(ptr,ptr)\n",
                 "declare i1 @greaterOrEqual(ptr,ptr)\n",
                 "declare i32 @array.size(ptr)\n",
-                "declare ptr @.malloc(i32)\n");
+                "declare ptr @.malloc(i32)\n\n");
         irProgram.stmtList.forEach(this::print);
     }
 
@@ -69,6 +69,8 @@ public class IRPrinter {
                 print((Br) instruction);
             } else if (instruction instanceof Getelementptr) {
                 print((Getelementptr) instruction);
+            } else if (instruction instanceof Icmp) {
+                print((Icmp) instruction);
             }
         }
     }
@@ -83,9 +85,6 @@ public class IRPrinter {
             System.out.print(globalVarDef.value == 1);
         }
         System.out.print('\n');
-        if (globalVarDef.funcDef != null) {
-            print(globalVarDef.funcDef);
-        }
     }
 
     public void print(Alloca alloca) {
@@ -99,7 +98,7 @@ public class IRPrinter {
         printType(store.irType);
         System.out.print(' ');
         if (store.valueVar == null) {
-            if (Objects.equals(store.irType.unitName, "ptr") || store.irType.len != -1) {
+            if (Objects.equals(store.irType.unitName, "ptr") || store.irType.isArray) {
                 System.out.print("null");
             } else if (Objects.equals(store.irType.unitName, "i32")) {//
                 System.out.print(store.value);
@@ -120,8 +119,12 @@ public class IRPrinter {
 
     public void print(Ret ret) {
         printOut("ret ");
-        printType(ret.irType);
-        printOut(" ", ret.var, "\n");
+        if (ret.irType == null) {
+            printOut("void\n");
+        } else {
+            printType(ret.irType);
+            printOut(" ", ret.var, "\n");
+        }
     }
 
     public void print(Binary binary) {
@@ -200,6 +203,23 @@ public class IRPrinter {
         printOut(", i32 " + getelementptr.index, "\n");
     }
 
+    public void print(Icmp icmp) {
+        printOut(icmp.output, " = icmp ", icmp.cond, " ");
+        printType(icmp.irType);
+        System.out.print(" ");
+        if (icmp.operandLeft == null) {
+            System.out.print(icmp.valueLeft);
+        } else {
+            System.out.print(icmp.operandLeft);
+        }
+        System.out.print(", ");
+        if (icmp.operandRight == null) {
+            System.out.print(icmp.valueRight);
+        } else {
+            System.out.print(icmp.operandRight);
+        }
+        System.out.print('\n');
+    }
 
     public void print(FuncDef funcDef) {
         System.out.print("\ndefine ");
@@ -218,7 +238,9 @@ public class IRPrinter {
     }
 
     public void printType(IRType irType) {
-        if (irType.len != -1) {
+        if (irType == null || irType.unitSize == -1) {
+            System.out.print("void");
+        } else if (irType.isArray) {
             System.out.print("ptr");
         } else {
             System.out.print(irType.unitName);
