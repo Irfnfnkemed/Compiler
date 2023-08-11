@@ -200,7 +200,12 @@ public class IRPrinter {
         if (getelementptr.offset != -1) {
             printOut(", i32 " + getelementptr.offset);
         }
-        printOut(", i32 " + getelementptr.index, "\n");
+        if (getelementptr.indexVar == null) {
+            printOut(", i32 " + getelementptr.indexValue, "\n");
+        } else {
+            printOut(", i32 ", getelementptr.indexVar, "\n");
+        }
+
     }
 
     public void print(Icmp icmp) {

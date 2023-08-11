@@ -17,7 +17,7 @@ public class Exp extends IRNode {
     public Stack<Long> constValueStack;
 
     public FuncDef funcDef;
-    public String lhsVar;
+    public String lhsVar;//指向存放左值的空间的指针名
 
     public Exp(FuncDef funcDef_) {
         funcDef = funcDef_;
@@ -44,6 +44,15 @@ public class Exp extends IRNode {
 
     public boolean isOperandConst() {
         return expCateStack.peek() == expCate.ConstValue;
+    }
+
+    public void pop() {
+        if (isOperandConst()) {
+            constValueStack.pop();
+        } else {
+            varNameStack.pop();
+        }
+        expCateStack.pop();
     }
 
     public String popVar() {
