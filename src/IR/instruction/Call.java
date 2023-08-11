@@ -3,7 +3,7 @@ package src.IR.instruction;
 import src.Util.type.IRType;
 import src.Util.type.Type;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 public class Call extends Instruction {
@@ -23,10 +23,10 @@ public class Call extends Instruction {
 
     public Call(String functionName_) {
         functionName = functionName_;
-        callTypeList = new ArrayList<>();
-        callCateList = new ArrayList<>();
-        varNameList = new ArrayList<>();
-        constValueList = new ArrayList<>();
+        callTypeList = new LinkedList<>();
+        callCateList = new LinkedList<>();
+        varNameList = new LinkedList<>();
+        constValueList = new LinkedList<>();
     }
 
     public void set(Type type, String anonymousVar) {

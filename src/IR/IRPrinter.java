@@ -2,6 +2,7 @@ package src.IR;
 
 import src.IR.instruction.*;
 import src.IR.instruction.Binary;
+import src.IR.statement.ConstString;
 import src.IR.statement.FuncDef;
 import src.IR.statement.GlobalVarDef;
 import src.IR.statement.IRStatement;
@@ -29,6 +30,7 @@ public class IRPrinter {
                 "declare ptr @string.substring(ptr,i32,i32)\n",
                 "declare i32 @string.parseInt(ptr)\n",
                 "declare i32 @string.ord(ptr,i32)\n",
+                "declare ptr @string.add(ptr,ptr)\n",
                 "declare i1 @string.equal(ptr,ptr)\n",
                 "declare i1 @string.notEqual(ptr,ptr)\n",
                 "declare i1 @string.less(ptr,ptr)\n",
@@ -45,6 +47,8 @@ public class IRPrinter {
             print((GlobalVarDef) irStatement);
         } else if (irStatement instanceof FuncDef) {
             print((FuncDef) irStatement);
+        } else if (irStatement instanceof ConstString) {
+            print((ConstString) irStatement);
         }
     }
 
@@ -71,17 +75,58 @@ public class IRPrinter {
                 print((Getelementptr) instruction);
             } else if (instruction instanceof Icmp) {
                 print((Icmp) instruction);
+            } else if (instruction instanceof Phi) {
+                print((Phi) instruction);
             }
         }
     }
 
+    public void print(ConstString constString) {
+        String tmp;
+        for (int i = 0; i < constString.constStringList.size(); ++i) {
+            tmp = constString.constStringList.get(i);
+            System.out.print("@constString-");
+            System.out.print(i);
+            System.out.print(" = private unnamed_addr constant [");
+            char[] chatTmp = tmp.toCharArray();
+            int len = chatTmp.length - 1;
+            for (int j = 1; j < chatTmp.length - 1; ++j) {
+                char ch = chatTmp[j];
+                if (ch == '\\') {
+                    ++j;
+                    --len;
+                }
+            }
+            System.out.print(len);
+            System.out.print(" x i8] c\"");
+            for (int j = 1; j < chatTmp.length - 1; ++j) {
+                char ch = chatTmp[j];
+                if (ch == '\\') {
+                    ch = chatTmp[++j];
+                    if (ch == 'n') {
+                        System.out.print("\\0A");
+                    } else if (ch == '\\') {
+                        System.out.print("\\\\");
+                    } else if (ch == '\"') {
+                        System.out.print("\\22");
+                    }
+                } else {
+                    System.out.print(ch);
+                }
+            }
+            System.out.print("\\00\"\n");
+        }
+    }
 
     public void print(GlobalVarDef globalVarDef) {
         printOut(globalVarDef.varName, " = global ");
-        if (globalVarDef.type.isInt()) {
-            printOut("i32 ", Long.toString(globalVarDef.value));
-        } else if (globalVarDef.type.isBool()) {
-            System.out.print("i1 ");
+        printType(globalVarDef.irType);
+        System.out.print(" ");
+        if (Objects.equals(globalVarDef.irType.unitName, "ptr") || globalVarDef.irType.isArray) {
+            System.out.print("null");
+        } else if (Objects.equals(globalVarDef.irType.unitName, "i32")) {//
+            System.out.print(globalVarDef.value);
+        } else if (Objects.equals(globalVarDef.irType.unitName, "i1")) {
             System.out.print(globalVarDef.value == 1);
         }
         System.out.print('\n');
@@ -95,18 +140,11 @@ public class IRPrinter {
 
     public void print(Store store) {
         System.out.print("store ");
-        printType(store.irType);
-        System.out.print(' ');
         if (store.valueVar == null) {
-            if (Objects.equals(store.irType.unitName, "ptr") || store.irType.isArray) {
-                System.out.print("null");
-            } else if (Objects.equals(store.irType.unitName, "i32")) {//
-                System.out.print(store.value);
-            } else if (Objects.equals(store.irType.unitName, "i1")) {
-                System.out.print(store.value == 1);
-            }
+            printTypeAndValue(store.irType, store.value);
         } else {
-            System.out.print(store.valueVar);
+            printType(store.irType);
+            printOut(" ", store.valueVar);
         }
         printOut(", ptr ", store.toPointer, "\n");
     }
@@ -128,13 +166,7 @@ public class IRPrinter {
     }
 
     public void print(Binary binary) {
-        switch (binary.op) {
-            case "+" -> printOut(binary.output, " = add i32 ");
-            case "-" -> printOut(binary.output, " = sub i32 ");
-            case "*" -> printOut(binary.output, " = mul i32 ");
-            case "/" -> printOut(binary.output, " = sdiv i32 ");
-            case "%" -> printOut(binary.output, " = srem i32 ");
-        }
+        printOut(binary.output, " = ", binary.op, " i32 ");
         if (binary.operandLeft == null) {
             System.out.print(binary.valueLeft);
         } else {
@@ -162,16 +194,12 @@ public class IRPrinter {
         IRType typeTmp;
         for (int i = 0; i < call.callTypeList.size(); ++i) {
             typeTmp = call.callTypeList.get(i);
-            printType(typeTmp);
+
             if (call.callCateList.get(i) == Call.callCate.VAR) {
+                printType(typeTmp);
                 printOut(" ", call.varNameList.get(tmpVar--));
             } else if (call.callCateList.get(i) == Call.callCate.CONST) {
-                System.out.print(" ");
-                if (Objects.equals(typeTmp.unitName, "i32")) {
-                    System.out.print(call.constValueList.get(tmpConst--));
-                } else if (Objects.equals(typeTmp.unitName, "i1")) {
-                    System.out.print(call.constValueList.get(tmpConst--) == 1);
-                }
+                printTypeAndValue(typeTmp, call.constValueList.get(tmpConst--));
             }
             if (i != call.callTypeList.size() - 1) {
                 System.out.print(", ");
@@ -213,15 +241,35 @@ public class IRPrinter {
         printType(icmp.irType);
         System.out.print(" ");
         if (icmp.operandLeft == null) {
-            System.out.print(icmp.valueLeft);
+            printValue(icmp.irType, icmp.valueLeft);
         } else {
             System.out.print(icmp.operandLeft);
         }
         System.out.print(", ");
         if (icmp.operandRight == null) {
-            System.out.print(icmp.valueRight);
+            printValue(icmp.irType, icmp.valueRight);
         } else {
             System.out.print(icmp.operandRight);
+        }
+        System.out.print('\n');
+    }
+
+    public void print(Phi phi) {
+        printOut(phi.result, " = phi ");
+        printType(phi.irType);
+        System.out.print(" ");
+        for (int i = 0; i < phi.assignBlockList.size(); ++i) {
+            var tmp = phi.assignBlockList.get(i);
+            System.out.print("[ ");
+            if (tmp.var == null) {
+                printValue(phi.irType, tmp.value);
+            } else {
+                System.out.print(tmp.var);
+            }
+            printOut(", ", tmp.label, "]");
+            if (i != phi.assignBlockList.size() - 1) {
+                System.out.print(", ");
+            }
         }
         System.out.print('\n');
     }
@@ -256,6 +304,29 @@ public class IRPrinter {
     public void printOut(String... elements) {
         for (String ele : elements) {
             System.out.print(ele);
+        }
+    }
+
+
+    public void printTypeAndValue(IRType irType, long value) {
+        if (Objects.equals(irType.unitName, "ptr") || irType.isArray) {
+            System.out.print("ptr null");
+        } else if (Objects.equals(irType.unitName, "i32")) {
+            System.out.print("i32 ");
+            System.out.print(value);
+        } else if (Objects.equals(irType.unitName, "i1")) {
+            System.out.print("i1 ");
+            System.out.print(value == 1);
+        }
+    }
+
+    public void printValue(IRType irType, long value) {
+        if (Objects.equals(irType.unitName, "ptr") || irType.isArray) {
+            System.out.print("null");
+        } else if (Objects.equals(irType.unitName, "i32")) {
+            System.out.print(value);
+        } else if (Objects.equals(irType.unitName, "i1")) {
+            System.out.print(value == 1);
         }
     }
 }

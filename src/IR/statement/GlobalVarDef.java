@@ -4,7 +4,7 @@ import src.Util.type.IRType;
 import src.Util.type.Type;
 
 public class GlobalVarDef extends IRStatement {
-    public Type type;
+    public IRType irType;
     public String varName;
     public FuncDef funcDef;
 

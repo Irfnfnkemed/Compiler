@@ -12,14 +12,24 @@ public class Icmp extends Instruction {
 
     public Icmp(String cond_, Type type_) {
         switch (cond_) {
-            case "<" -> cond = "ult";
+            case "<" -> cond = "slt";
+            case ">" -> cond = "sgt";
+            case "<=" -> cond = "sle";
+            case ">=" -> cond = "sge";
+            case "==" -> cond = "eq";
+            case "!=" -> cond = "ne";
         }
         irType = new IRType(type_);
     }
 
     public Icmp(String cond_, IRType irType_) {
         switch (cond_) {
-            case "<" -> cond = "ult";
+            case "<" -> cond = "slt";
+            case ">" -> cond = "sgt";
+            case "<=" -> cond = "sle";
+            case ">=" -> cond = "sge";
+            case "==" -> cond = "eq";
+            case "!=" -> cond = "ne";
         }
         irType = irType_;
     }

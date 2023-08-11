@@ -1,21 +1,22 @@
 package src.IR;
 
-import src.AST.expression.FunctionCallLhsExp;
+import src.IR.statement.ConstString;
 import src.IR.statement.FuncDef;
 import src.IR.statement.GlobalVarDef;
 import src.IR.statement.IRStatement;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 
 public class IRProgram extends IRNode {
     public List<IRStatement> stmtList;
-    public int varDefIndex = 0;
-    public int funcDefIndex = 0;
+    public int varDefIndex = 1;
+    public int funcDefIndex = 1;
 
     public IRProgram() {
-        stmtList = new ArrayList<>();
+        stmtList = new LinkedList<>();
+        stmtList.add(new ConstString());
     }
 
     public void push(IRStatement stmt) {
@@ -31,5 +32,9 @@ public class IRProgram extends IRNode {
         } else {
 
         }
+    }
+
+    public String pushConstString(String content) {
+        return ((ConstString) stmtList.get(0)).push(content);
     }
 }

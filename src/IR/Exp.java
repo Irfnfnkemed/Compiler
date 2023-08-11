@@ -51,6 +51,9 @@ public class Exp extends IRNode {
             constValueStack.pop();
         } else {
             varNameStack.pop();
+            if (varNameStack.size() == 0) {
+                isConst = true;
+            }
         }
         expCateStack.pop();
     }

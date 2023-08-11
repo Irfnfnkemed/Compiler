@@ -1,13 +1,12 @@
 package src.IR.statement;
 
-import src.AST.expression.ParallelExp;
 import src.IR.instruction.Alloca;
 import src.IR.instruction.Instruction;
-import src.Util.position.Position;
+import src.IR.instruction.Label;
 import src.Util.type.IRType;
 import src.Util.type.Type;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
 
@@ -37,11 +36,12 @@ public class FuncDef extends IRStatement {
     public boolean notReturn = true;
     public int initInsertIndex = 0;
     public int allocaIndex = 1;
+    public String label = "entry";
 
 
     public FuncDef() {
-        irList = new ArrayList<>();
-        parameterTypeList = new ArrayList<>();
+        irList = new LinkedList<>();
+        parameterTypeList = new LinkedList<>();
         ifStatusStack = new Stack<>();
         loopStatusStack = new Stack<>();
         ifAndLoopOrder = new Stack<>();
@@ -56,6 +56,9 @@ public class FuncDef extends IRStatement {
             irList.add(allocaIndex++, instruction);
         } else {
             irList.add(instruction);
+        }
+        if (instruction instanceof Label) {
+            label = ((Label) instruction).labelName;
         }
     }
 
