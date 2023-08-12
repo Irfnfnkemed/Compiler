@@ -559,9 +559,34 @@ public class IRBuilder implements ASTVisitor {
                 ((Exp) now).set("%" + anonymousVar++);
             }
             return;
+        } else if (Objects.equals(node.op, "||")) {
+            node.lhs.accept(this);
+            if (((Exp) now).isOperandConst()) {
+                boolean lhsIsTrue = ((Exp) now).popValue() == 1;
+                if (lhsIsTrue) {
+                    ((Exp) now).set(1);
+                } else {
+                    node.rhs.accept(this);
+                }
+            } else {
+                String nowLabel = ((Exp) now).funcDef.label;
+                ((Exp) now).push(new Br(((Exp) now).popVar(), "%orTo-" + anonymousLabel, "%orRhs-" + anonymousLabel));
+                ((Exp) now).push(new Label("orRhs-" + anonymousLabel));
+                node.rhs.accept(this);
+                ((Exp) now).push(new Br("%orTo-" + anonymousLabel));
+                ((Exp) now).push(new Label("orTo-" + anonymousLabel));
+                Phi phi = new Phi(new IRType().setI1(), "%" + anonymousVar);
+                phi.push(1, "%" + nowLabel);
+                if (((Exp) now).isOperandConst()) {
+                    phi.push(((Exp) now).popValue(), "%orRhs-" + anonymousLabel);
+                } else {
+                    phi.push(((Exp) now).popVar(), "%orRhs-" + anonymousLabel++);
+                }
+                ((Exp) now).push(phi);
+                ((Exp) now).set("%" + anonymousVar++);
+            }
+            return;
         }
-
-
         node.lhs.accept(this);
         node.rhs.accept(this);
         if (((Exp) now).isConst) {
@@ -594,9 +619,9 @@ public class IRBuilder implements ASTVisitor {
                     case "==" -> call = new Call("@string.equal");
                     case "!=" -> call = new Call("@string.notEqual");
                 }
-                //////////////////////////////assert call != null;
+                String tmp = ((Exp) now).popVar();
                 call.set(new IRType().setPtr(), ((Exp) now).popVar());
-                call.set(new IRType().setPtr(), ((Exp) now).popVar());
+                call.set(new IRType().setPtr(), tmp);
                 call.irType = new IRType(node.type);
                 call.resultVar = "%" + anonymousVar;
                 ((Exp) now).push(call);

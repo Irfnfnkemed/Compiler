@@ -189,17 +189,16 @@ public class IRPrinter {
             printType(call.irType);
         }
         printOut(" ", call.functionName, "(");
-        int tmpVar = call.varNameList.size() - 1;
-        int tmpConst = call.constValueList.size() - 1;
+        int tmpVar = 0;
+        int tmpConst = 0;
         IRType typeTmp;
         for (int i = 0; i < call.callTypeList.size(); ++i) {
             typeTmp = call.callTypeList.get(i);
-
             if (call.callCateList.get(i) == Call.callCate.VAR) {
                 printType(typeTmp);
-                printOut(" ", call.varNameList.get(tmpVar--));
+                printOut(" ", call.varNameList.get(tmpVar++));
             } else if (call.callCateList.get(i) == Call.callCate.CONST) {
-                printTypeAndValue(typeTmp, call.constValueList.get(tmpConst--));
+                printTypeAndValue(typeTmp, call.constValueList.get(tmpConst++));
             }
             if (i != call.callTypeList.size() - 1) {
                 System.out.print(", ");
