@@ -37,6 +37,7 @@ public class FuncDef extends IRStatement {
     public int initInsertIndex = 0;
     public int allocaIndex = 1;
     public String label = "entry";
+    public boolean isClassMethod = false;
 
 
     public FuncDef() {

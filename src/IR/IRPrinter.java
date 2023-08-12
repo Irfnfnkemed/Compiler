@@ -2,10 +2,7 @@ package src.IR;
 
 import src.IR.instruction.*;
 import src.IR.instruction.Binary;
-import src.IR.statement.ConstString;
-import src.IR.statement.FuncDef;
-import src.IR.statement.GlobalVarDef;
-import src.IR.statement.IRStatement;
+import src.IR.statement.*;
 import src.Util.type.IRType;
 import src.Util.type.Type;
 
@@ -49,6 +46,9 @@ public class IRPrinter {
             print((FuncDef) irStatement);
         } else if (irStatement instanceof ConstString) {
             print((ConstString) irStatement);
+            System.out.print('\n');
+        } else if (irStatement instanceof ClassTypeDef) {
+            print((ClassTypeDef) irStatement);
         }
     }
 
@@ -120,15 +120,7 @@ public class IRPrinter {
 
     public void print(GlobalVarDef globalVarDef) {
         printOut(globalVarDef.varName, " = global ");
-        printType(globalVarDef.irType);
-        System.out.print(" ");
-        if (Objects.equals(globalVarDef.irType.unitName, "ptr") || globalVarDef.irType.isArray) {
-            System.out.print("null");
-        } else if (Objects.equals(globalVarDef.irType.unitName, "i32")) {//
-            System.out.print(globalVarDef.value);
-        } else if (Objects.equals(globalVarDef.irType.unitName, "i1")) {
-            System.out.print(globalVarDef.value == 1);
-        }
+        printTypeAndValue(globalVarDef.irType, globalVarDef.value);
         System.out.print('\n');
     }
 
@@ -277,16 +269,37 @@ public class IRPrinter {
         System.out.print("\ndefine ");
         printType(funcDef.irType);
         printOut(" ", funcDef.functionName, "(");
-        for (int i = 0; i < funcDef.parameterTypeList.size(); ++i) {
+        int size = funcDef.parameterTypeList.size();
+        for (int i = 0; i < size - 1; ++i) {
             printType(funcDef.parameterTypeList.get(i));
-            printOut(" %" + i);
-            if (i != funcDef.parameterTypeList.size() - 1) {
-                System.out.print(", ");
+            printOut(" %" + i, ", ");
+        }
+        if (size > 0) {
+            if (funcDef.isClassMethod) {
+                System.out.print("ptr %this");
+            } else {
+                printType(funcDef.parameterTypeList.get(size - 1));
+                System.out.print(" %" + (size - 1));
             }
         }
         System.out.print(") {\n");
         funcDef.irList.forEach(this::print);
         System.out.print("}\n");
+    }
+
+    public void print(ClassTypeDef classTypeDef) {
+        printOut(classTypeDef.className, " = type { ");
+        for (int i = 0; i < classTypeDef.classMemNum; ++i) {
+            if (classTypeDef.isPtrList.get(i)) {
+                System.out.print("ptr");
+            } else {
+                System.out.print("i32");
+            }
+            if (i != classTypeDef.classMemNum - 1) {
+                System.out.print(", ");
+            }
+        }
+        System.out.print(" }\n");
     }
 
     public void printType(IRType irType) {
