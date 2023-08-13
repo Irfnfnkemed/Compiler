@@ -1,25 +1,65 @@
 package src.Util.type;
 
 public class IRType {
-    public int unitSize;//example:i32,unitSize=32; ptr,unitSize = 8; unitSize=-1，表void; 为0，表待定
-    public String className;//自定义类
-    public int len;//example:[4 x i32],len=4;len=0,表非数组类型
+    public String unitName;
+    public int unitSize;//0表待定
+    public boolean isArray = false;
 
     public IRType(Type type) {
+        if (type.dim > 0) {
+            isArray = true;
+            if (type.dim > 1) {
+                unitName = "ptr";
+                unitSize = 0;
+                return;
+            }
+        }
         if (type.typeEnum == Type.TypeEnum.BOOL) {
+            unitName = "i1";
             unitSize = 1;
         } else if (type.typeEnum == Type.TypeEnum.VOID) {
+            unitName = "void";
             unitSize = -1;
-        } else if (type.typeEnum == Type.TypeEnum.CLASS) {
-            unitSize = 0;
-            className = type.typeName;
+        } else if (type.typeEnum == Type.TypeEnum.INT) {
+            unitName = "i32";
+            unitSize = 32;
         } else {
+            unitName = "ptr";
             unitSize = 32;
         }
     }
 
-    public IRType(int unitSize_) {
-        unitSize = unitSize_;
+    public IRType() {
+    }
+
+    public IRType setI32() {
+        unitName = "i32";
+        unitSize = 32;
+        return this;
+    }
+
+    public IRType setI1() {
+        unitName = "i1";
+        unitSize = 1;
+        return this;
+    }
+
+    public IRType setVoid() {
+        unitName = "void";
+        unitSize = -1;
+        return this;
+    }
+
+    public IRType setPtr() {
+        unitName = "ptr";
+        unitSize = 32;
+        return this;
+    }
+
+    public IRType setClass(String className) {
+        unitName = "%class-" + className;
+        unitSize = 0;
+        return this;
     }
 
 

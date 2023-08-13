@@ -25,6 +25,7 @@ public class Scope {
     public boolean isGlobal = false;
     public boolean isClass = false;
     public boolean isFunction = false;
+    public boolean isConstructor = false;
     public Position loopPos = null;
     public boolean notReturn = true;//用于isFunction为true，表示函数可能还未返回
     public Type returnType;//用于isFunction为true，处理return

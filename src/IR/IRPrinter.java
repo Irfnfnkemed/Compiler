@@ -35,7 +35,7 @@ public class IRPrinter {
                 "declare i1 @string.greater(ptr,ptr)\n",
                 "declare i1 @greaterOrEqual(ptr,ptr)\n",
                 "declare i32 @array.size(ptr)\n",
-                "declare ptr @.malloc(i32)\n\n");
+                "declare ptr @.malloc(i32)\n");
         irProgram.stmtList.forEach(this::print);
     }
 
@@ -45,8 +45,10 @@ public class IRPrinter {
         } else if (irStatement instanceof FuncDef) {
             print((FuncDef) irStatement);
         } else if (irStatement instanceof ConstString) {
-            print((ConstString) irStatement);
-            System.out.print('\n');
+            if (((ConstString) irStatement).constStringList.size() > 0) {
+                print((ConstString) irStatement);
+                System.out.print('\n');
+            }
         } else if (irStatement instanceof ClassTypeDef) {
             print((ClassTypeDef) irStatement);
         }
@@ -257,7 +259,7 @@ public class IRPrinter {
             } else {
                 System.out.print(tmp.var);
             }
-            printOut(", ", tmp.label, "]");
+            printOut(", ", tmp.label, " ]");
             if (i != phi.assignBlockList.size() - 1) {
                 System.out.print(", ");
             }

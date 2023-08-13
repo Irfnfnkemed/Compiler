@@ -19,6 +19,7 @@ import src.Util.scope.GlobalScope;
 import src.Util.scope.Scope;
 import src.Util.type.Type;
 
+import java.util.ArrayList;
 import java.util.Objects;
 
 public class Semantic implements ASTVisitor {
@@ -30,17 +31,21 @@ public class Semantic implements ASTVisitor {
         ASTProgram = ASTProgram_;
         for (var def : ASTProgram.defList) {
             if (def.functionDef != null) {
-                globalScope.setFunction(def.functionDef.functionName, def.functionDef.type, def.functionDef.parameterTypeList, def.functionDef.position);
+                globalScope.setFunction(def.functionDef.functionName, def.functionDef.type,
+                        def.functionDef.parameterTypeList, def.functionDef.position);
+            } else if (def.mainDef != null) {
+                Type type = new Type();
+                type.setInt();
+                globalScope.setFunction("main", type, new ArrayList<>(), def.mainDef.position);
             } else if (def.classDef != null) {
                 globalScope.setClassName(def.classDef.className, def.classDef.position);
                 for (var varList : def.classDef.variableDefList) {
-                    varList.initVariablelist.forEach(var -> {
-                        globalScope.setClassMember(def.classDef.className, var.variableName, varList.type, var.position);
-                    });
+                    varList.initVariablelist.forEach(var -> globalScope.setClassMember(
+                            def.classDef.className, var.variableName, varList.type, var.position));
                 }
-                def.classDef.functionDefList.forEach(funcList -> {
-                    globalScope.setClassMethod(def.classDef.className, funcList.functionName, funcList.type, funcList.parameterTypeList, funcList.position);
-                });
+                def.classDef.functionDefList.forEach(funcList -> globalScope.setClassMethod(
+                        def.classDef.className, funcList.functionName, funcList.type,
+                        funcList.parameterTypeList, funcList.position));
             }
         }
     }
@@ -117,6 +122,7 @@ public class Semantic implements ASTVisitor {
         if (node.constructor != null) {
             node.constructor.scope = new Scope(node.scope);
             node.constructor.scope.isFunction = true;
+            node.constructor.scope.isConstructor = true;
             node.constructor.scope.returnType = new Type();
             node.constructor.scope.returnType.setVoid();
             node.constructor.accept(this);
@@ -214,21 +220,27 @@ public class Semantic implements ASTVisitor {
         } else if (node.suite != null) {
             node.suite.scope = new Scope(node.scope);
             node.suite.accept(this);
-            if (node.scope.isFunction) {
-                node.scope.notReturn = node.suite.scope.notReturn;
+            if (node.scope.isFunction && !node.suite.scope.notReturn) {
+                node.scope.notReturn = false;
             }
         } else if (node.jumpStatement != null) {
             node.jumpStatement.scope = node.scope;
             node.jumpStatement.accept(this);
         } else if (node.loopStatement != null) {
             node.loopStatement.scope = new Scope(node.scope);
-            node.loopStatement.scope.isLoop = true;
+            node.loopStatement.scope.loopPos = node.loopStatement.position;
             node.loopStatement.accept(this);
+            if (node.scope.isFunction && !node.loopStatement.scope.notReturn) {
+                node.scope.notReturn = false;
+            }
         } else if (node.selectStatement != null) {
             node.selectStatement.scope = node.scope;
             node.selectStatement.accept(this);
             if (node.scope.isFunction) {
-                node.scope.notReturn = node.selectStatement.scope.notReturn;
+                if (!node.selectStatement.trueStmt.scope.notReturn && node.selectStatement.falseStmt != null &&
+                        !node.selectStatement.falseStmt.scope.notReturn) {
+                    node.scope.notReturn = false;
+                }
             }
         } else if (node.parallelExp != null) {
             node.parallelExp.scope = node.scope;
@@ -251,7 +263,7 @@ public class Semantic implements ASTVisitor {
             node.falseStmt.scope = new Scope(node.scope);
             node.falseStmt.accept(this);
         }
-        if (!node.trueStmt.scope.notReturn && (node.falseStmt == null || !node.falseStmt.scope.notReturn)) {
+        if (!node.trueStmt.scope.notReturn && node.falseStmt != null && !node.falseStmt.scope.notReturn) {
             node.scope.notReturn = false;
         }
     }
@@ -297,13 +309,13 @@ public class Semantic implements ASTVisitor {
     }
 
     public void visit(BreakStmt node) {
-        if (!node.scope.isLoop) {
+        if (node.scope.loopPos == null) {
             throw new SemanticErrors("[Statement error] Unexpected break statement.", node.position);
         }
     }
 
     public void visit(ContinueStmt node) {
-        if (!node.scope.isLoop) {
+        if (node.scope.loopPos == null) {
             throw new SemanticErrors("[Statement error] Unexpected continue statement.", node.position);
         }
     }
@@ -314,13 +326,13 @@ public class Semantic implements ASTVisitor {
         }
         if (node.returnExp == null) {
             if (!node.scope.returnType.isVoid()) {
-                throw new SemanticErrors("[Type error] Unmatched return type.", node.returnExp.position);
+                throw new SemanticErrors("[Type error] Unmatched return type.", node.position);
             }
         } else {
             node.returnExp.scope = node.scope;
             node.returnExp.accept(this);
             if (!node.scope.returnType.assign(node.returnExp.type)) {
-                throw new SemanticErrors("[Type error] Unmatched return type.", node.returnExp.position);
+                throw new SemanticErrors("[Type error] Unmatched return type.", node.position);
             }
         }
         node.scope.notReturn = false;
@@ -432,7 +444,7 @@ public class Semantic implements ASTVisitor {
         }
         for (int i = 0; i < funcTypes.parameterTypes.size(); ++i) {
             if (!funcTypes.parameterTypes.get(i).assign(node.callExpList.expList.get(i).type)) {
-                throw new SemanticErrors("[Type error] Unmatched parameter type.", node.callExpList.expList.get(i).type.position);
+                throw new SemanticErrors("[Type error] Unmatched parameter type.", node.callExpList.expList.get(i).position);
             }
         }
         node.type = new Type(funcTypes.type);
@@ -627,19 +639,30 @@ public class Semantic implements ASTVisitor {
         if (node == null) {
             return;
         }
-        var typeTmp = node.scope.getVariable(node.variableName);
-        if (typeTmp == null) {
+        var varTmp = node.scope.getVariable(node.variableName);
+        if (varTmp != null) {
+            node.type = new Type(varTmp.type);
+            node.line = varTmp.line;
+            node.column = varTmp.column;
+        } else {
+            Type typeTmp = null;
             if (node.scope.isClass) {
                 typeTmp = globalScope.getClassMember(node.scope.classType.GetType(), node.variableName);
+                if (typeTmp != null) {
+                    node.id = globalScope.getClassMemberId(node.scope.classType.GetType(), node.variableName);
+                }
             }
             if (typeTmp == null) {
-                typeTmp = globalScope.getVariable(node.variableName);
+                varTmp = globalScope.getVariable(node.variableName);
+                if (varTmp != null) {
+                    typeTmp = varTmp.type;
+                }
             }
+            if (typeTmp == null) {
+                throw new SemanticErrors("[Name error] Not defined variable", node.position);
+            }
+            node.type = new Type(typeTmp);
         }
-        if (typeTmp == null) {
-            throw new SemanticErrors("[Name error] Not defined variable", node.position);
-        }
-        node.type = new Type(typeTmp);
         node.isAssign = true;
     }
 

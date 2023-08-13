@@ -19,7 +19,7 @@ import src.AST.expression.*;
 public class ASTBuilder extends MxBaseVisitor<ASTNode> {
     public Program ASTProgram;
 
-    public void build(ParseTree ctx) {
+    public  ASTBuilder(ParseTree ctx) {
         ASTProgram = (Program) visit(ctx);
     }
 

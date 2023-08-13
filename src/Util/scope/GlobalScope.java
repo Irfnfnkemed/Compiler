@@ -18,8 +18,23 @@ public class GlobalScope extends Scope {
         }
     }
 
+    public static class ClassMemId {
+        public HashMap<String, Integer> ids;
+        public int memberNum = 0;
+
+        public int push(String memVar) {
+            ids.put(memVar, memberNum);
+            return memberNum++;
+        }
+
+        public ClassMemId() {
+            ids = new HashMap<>();
+        }
+    }
+
     public HashSet<String> classNames;//类名
     public HashMap<String, HashMap<String, Type>> classMember; //类名->类的成员变量(变量名->类型)
+    public HashMap<String, ClassMemId> classMemberId; //类名->类的成员变量下标
     public HashMap<String, HashMap<String, FunctionTypes>> classMethod; //类名->类的方法(方法名->返回类型与参数列表)
     public HashMap<String, FunctionTypes> function; // 函数名-> 返回类型与参数列表
 
@@ -27,6 +42,7 @@ public class GlobalScope extends Scope {
         super();
         classNames = new HashSet<>();
         classMember = new HashMap<>();
+        classMemberId = new HashMap<>();
         classMethod = new HashMap<>();
         function = new HashMap<>();
         setFunction("print", getFoundation(VOID), setList(getFoundation(STRING)), null);
@@ -68,10 +84,14 @@ public class GlobalScope extends Scope {
             } else {
                 classMembers.put(variableName, new Type(variableType));
             }
+            classMemberId.get(className).push(variableName);
         } else {
             HashMap<String, Type> classMem = new HashMap<>();
             classMem.put(variableName, new Type(variableType));
             classMember.put(className, classMem);
+            ClassMemId classMemId = new ClassMemId();
+            classMemberId.put(className, classMemId);
+            classMemId.push(variableName);
         }
     }
 
@@ -142,6 +162,10 @@ public class GlobalScope extends Scope {
         } else {
             return null;
         }
+    }
+
+    public int getClassMemberId(String className, String variableName) {
+        return classMemberId.get(className).ids.get(variableName);
     }
 
     public FunctionTypes getClassMethod(String className, String methodName) {

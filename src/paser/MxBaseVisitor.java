@@ -1,5 +1,4 @@
-// Generated from D:/IntelliJ IDEA 2023.1.3/Compiler/src\Mx.g4 by ANTLR 4.12.0
-package src.paser;
+package src.paser;// Generated from Mx.g4 by ANTLR 4.13.0
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
 /**

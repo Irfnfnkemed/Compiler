@@ -1,8 +1,6 @@
 package src.IR.statement;
 
-import src.IR.instruction.Alloca;
-import src.IR.instruction.Instruction;
-import src.IR.instruction.Label;
+import src.IR.instruction.*;
 import src.Util.type.IRType;
 import src.Util.type.Type;
 
@@ -36,7 +34,7 @@ public class FuncDef extends IRStatement {
     public boolean notReturn = true;
     public int initInsertIndex = 0;
     public int allocaIndex = 1;
-    public String label = "entry";
+    public String label = "%entry";
     public boolean isClassMethod = false;
 
 
@@ -59,8 +57,25 @@ public class FuncDef extends IRStatement {
             irList.add(instruction);
         }
         if (instruction instanceof Label) {
-            label = ((Label) instruction).labelName;
+            label = "%" + ((Label) instruction).labelName;
         }
+    }
+
+    public int pop() {//用于弹出对赋值号左侧不必要的指令
+        Instruction tmp;
+        int tail = irList.size() - 1;
+        int minus = 0;//匿名变量编号需要减少的值
+        while (true) {
+            tmp = irList.get(tail);
+            irList.remove(tail--);
+            if (tmp instanceof Binary) {
+                ++minus;
+            } else if (tmp instanceof Load) {
+                ++minus;
+                break;
+            }
+        }
+        return minus;
     }
 
     public void pushIf() {

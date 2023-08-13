@@ -7,7 +7,7 @@ import src.AST.expression.Expression;
 
 public class SelectStatement extends ASTNode {
     public Expression judgeExp;
-    public Statement trueStmt;
+    public Statement trueStmt = null;
     public Statement falseStmt = null;
 
     @Override

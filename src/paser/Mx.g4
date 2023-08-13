@@ -5,7 +5,7 @@ program
     ;
 
 definition
-    : classDef
+    : classTypeDef
     | functionDef
     | variableDef ';'
     | mainDef
@@ -15,7 +15,7 @@ mainDef
     : INT 'main' '(' ')' suite
     ;
 
-classDef
+classTypeDef
     : CLASS Identifier '{' ( variableDef ';' | functionDef )* constructor?
       ( variableDef ';' | functionDef )* '}' ';'
     ;

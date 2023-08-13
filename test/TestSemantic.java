@@ -20,28 +20,24 @@ public class TestSemantic {
     public static final String YELLOW = "\u001B[33m";
 
     public static void testSemantic() throws Exception {
-        String folderPath = "./test/testcases/sema";
-        traverseFolder(new File(folderPath));
-    }
-
-    public static void traverseFolder(File folder) throws Exception {
-        if (folder.isDirectory()) {
-            File[] files = folder.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    traverseFolder(file);
+        String folderPath = "./test/testcases/sema/";
+        String filePath;
+        try (BufferedReader reader = new BufferedReader(new FileReader("./test/testcases/sema/judgelist.txt"))) {
+            while ((filePath = reader.readLine()) != null) {
+                System.out.println(YELLOW + filePath + ": ");
+                filePath = folderPath + filePath;
+                if (check(filePath)) {
+                    System.out.println(GREEN + "Pass!");
+                } else {
+                    System.out.println(RED + "Fail!");
                 }
             }
-        } else {
-            System.out.println(YELLOW + folder.getAbsolutePath().substring(folder.getAbsolutePath().indexOf("sema\\") + 5) + ": ");
-            if (check(folder.getAbsolutePath())) {
-                System.out.println(GREEN + "Pass!");
-            } else {
-                System.out.println(RED + "Fail!");
-            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-    }
 
+
+    }
     public static boolean check(String fileName) throws Exception {
         boolean success = false;
         try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
@@ -67,11 +63,8 @@ public class TestSemantic {
             parser.removeErrorListeners();
             parser.addErrorListener(new ParserErrorListener());
             ParseTree ctx = parser.program();
-            ASTBuilder build = new ASTBuilder();
-            build.build(ctx);
-            build.build(ctx);
-            Semantic semantic = new Semantic(build.ASTProgram);
-            semantic.visit(build.ASTProgram);
+            ASTBuilder AST = new ASTBuilder(ctx);
+            new Semantic(AST.ASTProgram).check();
         } catch (Errors errors) {
             //System.err.println(errors.toString());
             return !success;
