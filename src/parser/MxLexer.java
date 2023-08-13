@@ -1,4 +1,4 @@
-package src.paser;// Generated from Mx.g4 by ANTLR 4.13.0
+package src.parser;// Generated from Mx.g4 by ANTLR 4.13.0
 import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.*;
@@ -106,7 +106,7 @@ public class MxLexer extends Lexer {
 	}
 
 	@Override
-	public String getGrammarFileName() { return "src/paser/Mx.g4"; }
+	public String getGrammarFileName() { return "src/parser/Mx.g4"; }
 
 	@Override
 	public String[] getRuleNames() { return ruleNames; }

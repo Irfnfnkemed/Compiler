@@ -12,8 +12,8 @@ import src.Util.type.Type;
 import src.AST.definition.variableDef.InitVariable;
 import src.AST.definition.variableDef.VariableDef;
 import src.Util.position.Position;
-import src.paser.MxBaseVisitor;
-import src.paser.MxParser;
+import src.parser.MxBaseVisitor;
+import src.parser.MxParser;
 import src.AST.expression.*;
 
 public class ASTBuilder extends MxBaseVisitor<ASTNode> {

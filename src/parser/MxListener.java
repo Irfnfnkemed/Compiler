@@ -1,4 +1,4 @@
-package src.paser;// Generated from Mx.g4 by ANTLR 4.13.0
+package src.parser;// Generated from Mx.g4 by ANTLR 4.13.0
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
 /**

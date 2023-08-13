@@ -6,8 +6,8 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import src.AST.ASTBuilder;
 import src.Util.error.ParserErrorListener;
 import src.Util.error.Errors;
-import src.paser.MxLexer;
-import src.paser.MxParser;
+import src.parser.MxLexer;
+import src.parser.MxParser;
 import src.semantic.Semantic;
 
 import java.io.*;
