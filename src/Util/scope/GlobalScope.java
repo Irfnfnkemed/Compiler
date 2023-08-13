@@ -164,6 +164,15 @@ public class GlobalScope extends Scope {
         }
     }
 
+    public int getClassSize(String className) {
+        var classMemIds = classMemberId.get(className);
+        if (classMemIds != null) {
+            return classMemIds.memberNum;
+        } else {
+            return 0;
+        }
+    }
+
     public int getClassMemberId(String className, String variableName) {
         return classMemberId.get(className).ids.get(variableName);
     }

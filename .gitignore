@@ -31,3 +31,5 @@ src/builtin/test.s
 .idea
 out
 Compiler.iml
+test/IRgen
+aaa

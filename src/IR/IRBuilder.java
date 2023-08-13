@@ -136,7 +136,7 @@ public class IRBuilder implements ASTVisitor {
         funcDef.functionName = "@init-class-" + node.className;
         Call call = new Call("@.malloc");
         call.irType = new IRType().setPtr();
-        call.set(new IRType().setI32(), globalScope.classMemberId.get(node.className).memberNum);
+        call.set(new IRType().setI32(), globalScope.getClassSize(node.className));
         call.resultVar = "%this.classPtr";
         funcDef.push(call);
         if (node.suite != null) {
@@ -545,6 +545,7 @@ public class IRBuilder implements ASTVisitor {
         } else {
             call = new Call("@" + node.classVariable.type.typeName + "." + node.memberFuncName);
             ((Exp) now).pop();
+            String classVar = ((Exp) now).lhsVar;
             anonymousVar -= ((Exp) now).funcDef.pop();
             if (node.callList != null) {
                 for (var para : node.callList.expList) {
@@ -556,7 +557,7 @@ public class IRBuilder implements ASTVisitor {
                     }
                 }
             }
-            call.set(new IRType().setPtr(), ((Exp) now).lhsVar);
+            call.set(new IRType().setPtr(), classVar);
         }
         call.irType = new IRType(node.type);
         if (!node.type.isVoid()) {
@@ -568,16 +569,26 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(FunctionCallLhsExp node) {
-        Call call = new Call("@" + node.functionName);
+        Call call = null;
+        boolean isMethod = node.scope.isClass &&
+                globalScope.getClassMethod(node.scope.classType.typeName, node.functionName) != null;
+        if (isMethod) {
+            call = new Call("@" + node.scope.classType.typeName + "." + node.functionName);
+        } else {
+            call = new Call("@" + node.functionName);
+        }
         if (node.callExpList != null) {
-            node.callExpList.expList.forEach(para -> {
+            for (var para : node.callExpList.expList) {
                 para.accept(this);
                 if (((Exp) now).isOperandConst()) {
                     call.set(para.type, ((Exp) now).popValue());
                 } else {
                     call.set(para.type, ((Exp) now).popVar());
                 }
-            });
+            }
+        }
+        if (isMethod) {
+            call.set(new IRType().setPtr(), "%this");
         }
         call.irType = new IRType(node.type);
         if (!node.type.isVoid()) {
@@ -784,19 +795,20 @@ public class IRBuilder implements ASTVisitor {
                     ((Exp) now).push(binary);
                     ((Exp) now).set("%" + anonymousVar++);
                 }
-            } else if (node.baseType.isClass()) {
-                int size = globalScope.classMemberId.get(node.baseType.typeName).memberNum;
-                if (((Exp) now).isOperandConst()) {
-                    ((Exp) now).set(((Exp) now).popValue() * size);
-                } else {
-                    Binary binary = new Binary("*");
-                    binary.operandLeft = ((Exp) now).popVar();
-                    binary.valueRight = size;
-                    binary.output = "%" + anonymousVar;
-                    ((Exp) now).push(binary);
-                    ((Exp) now).set("%" + anonymousVar++);
-                }
-            }
+           }
+//            else if (node.baseType.isClass()) {
+//                int size = globalScope.classMemberId.get(node.baseType.typeName).memberNum;
+//                if (((Exp) now).isOperandConst()) {
+//                    ((Exp) now).set(((Exp) now).popValue() * size);
+//                } else {
+//                    Binary binary = new Binary("*");
+//                    binary.operandLeft = ((Exp) now).popVar();
+//                    binary.valueRight = size;
+//                    binary.output = "%" + anonymousVar;
+//                    ((Exp) now).push(binary);
+//                    ((Exp) now).set("%" + anonymousVar++);
+//                }
+//            }
         }
         for (int i = node.expressionList.size() - 2; i >= 0; --i) {
             node.expressionList.get(i).accept(this);

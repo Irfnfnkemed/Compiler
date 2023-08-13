@@ -15,7 +15,7 @@ sorting/bubble_sort.mx
 sorting/merge_sort.mx
 sorting/quick_sort.mx
 sorting/selection_sort.mx
-std/queue.mt
+std/queue.mx
 t1.mx
 t2.mx
 t3.mx
