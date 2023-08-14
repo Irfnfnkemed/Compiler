@@ -33,11 +33,18 @@ public class IRBuilder implements ASTVisitor {
     public int anonymousVar = 0;
     public int anonymousLabel = 0;
 
+    public IRType typeI32;
+    public IRType typeI1;
+    public IRType typePtr;
+
     public IRBuilder(Program node, GlobalScope globalScope_) {
         globalScope = globalScope_;
+        typeI32 = new IRType().setI32();
+        typeI1 = new IRType().setI1();
+        typePtr = new IRType().setPtr();
         irProgram = new IRProgram();
         funcMain = new FuncDef();
-        funcMain.irType = new IRType().setI32();
+        funcMain.irType = typeI32;
         funcMain.functionName = "@main";
         visit(node);
     }
@@ -46,22 +53,22 @@ public class IRBuilder implements ASTVisitor {
     public void visit(Program node) {
         FuncDef funcDef = new FuncDef();
         funcDef.push(new Label("entry"));
-        funcDef.irType = new IRType().setPtr();
+        funcDef.irType = typePtr;
         funcDef.functionName = "@.newArray";
-        funcDef.parameterTypeList.add(new IRType().setI32());
+        funcDef.parameterTypeList.add(typeI32);
         Call call = new Call("@.malloc");
         Binary binary = new Binary("+");
         binary.set(1);
         binary.set("%0");
         binary.output = "%1";
         funcDef.push(binary);
-        call.set(new IRType().setI32(), "%1");
-        call.irType = new IRType().setPtr();
+        call.set(typeI32, "%1");
+        call.irType = typePtr;
         call.resultVar = "%2";
         funcDef.push(call);
-        funcDef.push(new Store(new IRType().setI32(), "%0", "%2"));
-        funcDef.push(new Getelementptr("%3", new IRType().setPtr(), "%2", -1, 1));
-        funcDef.push(new Ret(new IRType().setPtr(), "%3"));
+        funcDef.push(new Store(typeI32, "%0", "%2"));
+        funcDef.push(new Getelementptr("%3", typePtr, "%2", -1, 1));
+        funcDef.push(new Ret(typePtr, "%3"));
         irProgram.push(funcDef);
         now = irProgram;
         node.defList.forEach(def -> def.accept(this));
@@ -85,7 +92,7 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(MainDef node) {
-        IRType irType = new IRType().setI32();
+        IRType irType = typeI32;
         funcMain.irList.add(0, new Label("entry"));
         ++funcMain.initInsertIndex;
         funcMain.push(new Alloca(irType, "%.returnValue"));
@@ -118,7 +125,7 @@ public class IRBuilder implements ASTVisitor {
             functionDef.accept(this);
             var funcDef = (FuncDef) irProgram.stmtList.get(irProgram.stmtList.size() - 1);
             funcDef.functionName = "@" + node.className + "." + functionDef.functionName;
-            funcDef.parameterTypeList.add(new IRType().setPtr());
+            funcDef.parameterTypeList.add(typePtr);
             funcDef.isClassMethod = true;
         });
     }
@@ -132,11 +139,11 @@ public class IRBuilder implements ASTVisitor {
         funcDef.push(new Label("entry"));
         funcDef.isClassMethod = true;
         now = funcDef;
-        funcDef.irType = new IRType().setPtr();
+        funcDef.irType = typePtr;
         funcDef.functionName = "@init-class-" + node.className;
         Call call = new Call("@.malloc");
-        call.irType = new IRType().setPtr();
-        call.set(new IRType().setI32(), globalScope.getClassSize(node.className));
+        call.irType = typePtr;
+        call.set(typeI32, globalScope.getClassSize(node.className));
         call.resultVar = "%this";
         funcDef.push(call);
         if (node.suite != null) {
@@ -148,7 +155,7 @@ public class IRBuilder implements ASTVisitor {
             funcDef.push(new Br("%returnLabel"));
         }
         funcDef.push(new Label("returnLabel"));
-        funcDef.push(new Ret(new IRType().setPtr(), "%this"));
+        funcDef.push(new Ret(typePtr, "%this"));
         now = nowTmp;
         ((IRProgram) now).push(funcDef);
     }
@@ -524,7 +531,7 @@ public class IRBuilder implements ASTVisitor {
         Call call = null;
         if (node.classVariable.type.isString()) {
             call = new Call("@string." + node.memberFuncName);
-            call.set(new IRType().setPtr(), ((Exp) now).popVar());
+            call.set(typePtr, ((Exp) now).popVar());
             if (node.callList != null) {
                 for (var para : node.callList.expList) {
                     para.accept(this);
@@ -538,7 +545,7 @@ public class IRBuilder implements ASTVisitor {
 
         } else if (node.classVariable.type.isArray()) {
             call = new Call("@array.size");
-            call.set(new IRType().setPtr(), ((Exp) now).popVar());
+            call.set(typePtr, ((Exp) now).popVar());
         } else {
             call = new Call("@" + node.classVariable.type.typeName + "." + node.memberFuncName);
             String classVar = ((Exp) now).popVar();
@@ -552,7 +559,7 @@ public class IRBuilder implements ASTVisitor {
                     }
                 }
             }
-            call.set(new IRType().setPtr(), classVar);
+            call.set(typePtr, classVar);
         }
         call.irType = new IRType(node.type);
         if (!node.type.isVoid()) {
@@ -583,7 +590,7 @@ public class IRBuilder implements ASTVisitor {
             }
         }
         if (isMethod) {
-            call.set(new IRType().setPtr(), "%this");
+            call.set(typePtr, "%this");
         }
         call.irType = new IRType(node.type);
         if (!node.type.isVoid()) {
@@ -650,7 +657,7 @@ public class IRBuilder implements ASTVisitor {
                 String rhsNowLabel = ((Exp) now).funcDef.label;
                 ((Exp) now).push(new Br(andToLabel));
                 ((Exp) now).push(new Label(andToLabel.substring(1)));
-                Phi phi = new Phi(new IRType().setI1(), "%" + anonymousVar);
+                Phi phi = new Phi(typeI1, "%" + anonymousVar);
                 phi.push(0, nowLabel);
                 if (((Exp) now).isOperandConst()) {
                     phi.push(((Exp) now).popValue(), rhsNowLabel);
@@ -680,7 +687,7 @@ public class IRBuilder implements ASTVisitor {
                 String rhsNowLabel = ((Exp) now).funcDef.label;
                 ((Exp) now).push(new Br(orToLabel));
                 ((Exp) now).push(new Label(orToLabel.substring(1)));
-                Phi phi = new Phi(new IRType().setI1(), "%" + anonymousVar);
+                Phi phi = new Phi(typeI1, "%" + anonymousVar);
                 phi.push(1, nowLabel);
                 if (((Exp) now).isOperandConst()) {
                     phi.push(((Exp) now).popValue(), rhsNowLabel);
@@ -725,8 +732,8 @@ public class IRBuilder implements ASTVisitor {
                     case "!=" -> call = new Call("@string.notEqual");
                 }
                 String tmp = ((Exp) now).popVar();
-                call.set(new IRType().setPtr(), ((Exp) now).popVar());
-                call.set(new IRType().setPtr(), tmp);
+                call.set(typePtr, ((Exp) now).popVar());
+                call.set(typePtr, tmp);
                 call.irType = new IRType(node.type);
                 call.resultVar = "%" + anonymousVar;
                 ((Exp) now).push(call);
@@ -812,24 +819,24 @@ public class IRBuilder implements ASTVisitor {
         Call call = new Call("@.newArray");
         if (((Exp) now).isOperandConst()) {
             value = ((Exp) now).popValue();
-            call.set(new IRType().setI32(), value);
+            call.set(typeI32, value);
         } else {
             var = ((Exp) now).popVar();
-            call.set(new IRType().setI32(), var);
+            call.set(typeI32, var);
         }
-        call.irType = new IRType().setPtr();
+        call.irType = typePtr;
         newPtr = call.resultVar = "%" + anonymousVar++;
         ((Exp) now).push(call);
         String loopVar = "%loopVar-newArray-" + anonymousLabel;
-        ((Exp) now).push(new Alloca(new IRType().setI32(), loopVar));
-        ((Exp) now).push(new Store(new IRType().setI32(), 0, loopVar));
+        ((Exp) now).push(new Alloca(typeI32, loopVar));
+        ((Exp) now).push(new Store(typeI32, 0, loopVar));
         String condition = "%newArrayCondition-" + anonymousLabel;
         String body = "%newArrayBody-" + anonymousLabel;
         String to = "%newArray-To-" + anonymousLabel++;
         ((Exp) now).push(new Br(condition));
         ((Exp) now).push(new Label(condition.substring(1)));
-        ((Exp) now).push(new Load(new IRType().setI32(), "%" + anonymousVar, loopVar));
-        Icmp icmp = new Icmp("<", new IRType().setI32());
+        ((Exp) now).push(new Load(typeI32, "%" + anonymousVar, loopVar));
+        Icmp icmp = new Icmp("<", typeI32);
         icmp.operandLeft = "%" + anonymousVar++;
         if (var == null) {
             icmp.valueRight = value;
@@ -841,18 +848,18 @@ public class IRBuilder implements ASTVisitor {
         ((Exp) now).push(new Br("%" + anonymousVar++, body, to));
         ((Exp) now).push(new Label(body.substring(1)));
         String subNewPtr = newArray(indexDim - 1);
-        ((Exp) now).push(new Load(new IRType().setI32(), "%" + anonymousVar, loopVar));
+        ((Exp) now).push(new Load(typeI32, "%" + anonymousVar, loopVar));
         ((Exp) now).push(new Getelementptr("%" + (anonymousVar + 1),
-                new IRType().setPtr(), newPtr, -1, "%" + anonymousVar));
+                typePtr, newPtr, -1, "%" + anonymousVar));
         anonymousVar++;
-        ((Exp) now).push(new Store(new IRType().setPtr(), subNewPtr, "%" + anonymousVar++));
-        ((Exp) now).push(new Load(new IRType().setI32(), "%" + anonymousVar, loopVar));
+        ((Exp) now).push(new Store(typePtr, subNewPtr, "%" + anonymousVar++));
+        ((Exp) now).push(new Load(typeI32, "%" + anonymousVar, loopVar));
         Binary binary = new Binary("+");
         binary.operandLeft = "%" + anonymousVar++;
         binary.valueRight = 1;
         binary.output = "%" + anonymousVar;
         ((Exp) now).push(binary);
-        ((Exp) now).push(new Store(new IRType().setI32(), "%" + anonymousVar++, loopVar));
+        ((Exp) now).push(new Store(typeI32, "%" + anonymousVar++, loopVar));
         ((Exp) now).push(new Br(condition));
         ((Exp) now).push(new Label(to.substring(1)));
         if (var == null) {
@@ -866,7 +873,7 @@ public class IRBuilder implements ASTVisitor {
     @Override
     public void visit(NewClassExp node) {
         Call call = new Call("@init-class-" + node.type.typeName);
-        call.irType = new IRType().setPtr();
+        call.irType = typePtr;
         call.resultVar = "%" + anonymousVar;
         ((Exp) now).push(call);
         ((Exp) now).set("%" + anonymousVar++);
@@ -955,7 +962,7 @@ public class IRBuilder implements ASTVisitor {
     public void visit(UnaryExp node) {
         node.exp.accept(this);
         if (Objects.equals(node.op, "!")) {
-            Icmp icmp = new Icmp("==", new IRType().setI1());
+            Icmp icmp = new Icmp("==", typeI1);
             if (((Exp) now).isOperandConst()) {
                 icmp.set(((Exp) now).popValue());
             } else {

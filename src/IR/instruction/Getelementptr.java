@@ -13,6 +13,10 @@ public class Getelementptr extends Instruction {
     public Getelementptr(String result_, IRType irType_, String from_, int offset_, String index_) {
         result = result_;
         irType = irType_;
+        if (irType_.unitSize == 1) {
+            irType.unitSize = 8;
+            irType.unitName = "i8";
+        }
         from = from_;
         offset = offset_;
         indexVar = index_;
@@ -21,6 +25,10 @@ public class Getelementptr extends Instruction {
     public Getelementptr(String result_, IRType irType_, String from_, int offset_, int index_) {
         result = result_;
         irType = irType_;
+        if (irType_.unitSize == 1) {
+            irType.unitSize = 8;
+            irType.unitName = "i8";
+        }
         from = from_;
         offset = offset_;
         indexValue = index_;
