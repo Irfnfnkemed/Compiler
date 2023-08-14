@@ -4,7 +4,6 @@ import src.IR.instruction.*;
 import src.IR.instruction.Binary;
 import src.IR.statement.*;
 import src.Util.type.IRType;
-import src.Util.type.Type;
 
 import java.util.Objects;
 

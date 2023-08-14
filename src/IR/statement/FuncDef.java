@@ -36,6 +36,7 @@ public class FuncDef extends IRStatement {
     public int allocaIndex = 1;
     public String label = "%entry";
     public boolean isClassMethod = false;
+    public int space = 2;//需要用到的变量数，用于ASM分配栈空间
 
 
     public FuncDef() {
