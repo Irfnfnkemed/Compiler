@@ -137,7 +137,7 @@ public class IRBuilder implements ASTVisitor {
         Call call = new Call("@.malloc");
         call.irType = new IRType().setPtr();
         call.set(new IRType().setI32(), globalScope.getClassSize(node.className));
-        call.resultVar = "%this.classPtr";
+        call.resultVar = "%this";
         funcDef.push(call);
         if (node.suite != null) {
             node.suite.accept(this);
@@ -148,7 +148,7 @@ public class IRBuilder implements ASTVisitor {
             funcDef.push(new Br("%returnLabel"));
         }
         funcDef.push(new Label("returnLabel"));
-        funcDef.push(new Ret(new IRType().setPtr(), "%this.classPtr"));
+        funcDef.push(new Ret(new IRType().setPtr(), "%this"));
         now = nowTmp;
         ((IRProgram) now).push(funcDef);
     }
@@ -173,9 +173,6 @@ public class IRBuilder implements ASTVisitor {
                     node.parameterTypeList.get(i).position.column);
             funcDef.push(new Alloca(node.parameterTypeList.get(i), varName));
             funcDef.push(new Store(node.parameterTypeList.get(i), "%" + anonymousVar++, varName));
-        }
-        if (node.scope.isClass && !node.scope.isConstructor) {
-            funcDef.push(new Load(new IRType().setPtr(), "%this.classPtr", "%this"));
         }
         node.body.accept(this);
         if (node.scope.notReturn) {
@@ -544,9 +541,7 @@ public class IRBuilder implements ASTVisitor {
             call.set(new IRType().setPtr(), ((Exp) now).popVar());
         } else {
             call = new Call("@" + node.classVariable.type.typeName + "." + node.memberFuncName);
-            ((Exp) now).pop();
-            String classVar = ((Exp) now).lhsVar;
-            anonymousVar -= ((Exp) now).funcDef.pop();
+            String classVar = ((Exp) now).popVar();
             if (node.callList != null) {
                 for (var para : node.callList.expList) {
                     para.accept(this);
@@ -781,11 +776,11 @@ public class IRBuilder implements ASTVisitor {
         if (node.expressionList.size() == node.type.dim) {//根据大小，更改最后一维的空间大小
             if (node.baseType.isBool()) {
                 if (((Exp) now).isOperandConst()) {
-                    ((Exp) now).set(((Exp) now).popValue() / 32 + 1);
+                    ((Exp) now).set(((Exp) now).popValue() / 4 + 1);
                 } else {
                     Binary binary = new Binary("/");
                     binary.operandLeft = ((Exp) now).popVar();
-                    binary.valueRight = 32;
+                    binary.valueRight = 4;
                     binary.output = "%" + anonymousVar;
                     ((Exp) now).push(binary);
                     binary = new Binary("+");
@@ -795,20 +790,7 @@ public class IRBuilder implements ASTVisitor {
                     ((Exp) now).push(binary);
                     ((Exp) now).set("%" + anonymousVar++);
                 }
-           }
-//            else if (node.baseType.isClass()) {
-//                int size = globalScope.classMemberId.get(node.baseType.typeName).memberNum;
-//                if (((Exp) now).isOperandConst()) {
-//                    ((Exp) now).set(((Exp) now).popValue() * size);
-//                } else {
-//                    Binary binary = new Binary("*");
-//                    binary.operandLeft = ((Exp) now).popVar();
-//                    binary.valueRight = size;
-//                    binary.output = "%" + anonymousVar;
-//                    ((Exp) now).push(binary);
-//                    ((Exp) now).set("%" + anonymousVar++);
-//                }
-//            }
+            }
         }
         for (int i = node.expressionList.size() - 2; i >= 0; --i) {
             node.expressionList.get(i).accept(this);
@@ -999,7 +981,7 @@ public class IRBuilder implements ASTVisitor {
             if (((Exp) now).isOperandConst()) {
                 binary.set(((Exp) now).popValue());
             } else {
-                binary.set(((Exp) now).getVar());
+                binary.set(((Exp) now).popVar());
             }
             binary.set(0);
             binary.output = "%" + anonymousVar;
@@ -1012,7 +994,7 @@ public class IRBuilder implements ASTVisitor {
     public void visit(VariableLhsExp node) {
         if (node.scope.isClass && node.id >= 0) {
             ((Exp) now).push(new Getelementptr("%" + anonymousVar, new IRType().setClass(node.scope.classType.typeName),
-                    "%this.classPtr", 0, node.id));
+                    "%this", 0, node.id));
             ((Exp) now).lhsVar = "%" + anonymousVar;
             ((Exp) now).push(new Load(new IRType(node.type), "%" + (anonymousVar + 1), "%" + anonymousVar));
             ++anonymousVar;
@@ -1027,8 +1009,7 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(ThisPointerExp node) {
-        ((Exp) now).push(new Load(new IRType(node.type), "%" + anonymousVar, "%this"));
-        ((Exp) now).set("%" + anonymousVar++);
+        ((Exp) now).set("%this");
     }
 
     @Override

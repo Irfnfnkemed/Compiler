@@ -11,6 +11,9 @@ import src.parser.MxParser;
 import src.semantic.Semantic;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 
 public class TestSemantic {
 
@@ -20,8 +23,10 @@ public class TestSemantic {
     public static final String YELLOW = "\u001B[33m";
 
     public static void testSemantic() throws Exception {
+        System.out.println(YELLOW + "=== Begin testing semantic ===");
         String folderPath = "./test/testcases/sema/";
         String filePath;
+        List<String> fail = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader("./test/testcases/sema/judgelist.txt"))) {
             while ((filePath = reader.readLine()) != null) {
                 System.out.println(YELLOW + filePath + ": ");
@@ -29,15 +34,22 @@ public class TestSemantic {
                 if (check(filePath)) {
                     System.out.println(GREEN + "Pass!");
                 } else {
+                    fail.add(filePath);
                     System.out.println(RED + "Fail!");
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-
+        System.out.println(YELLOW + "=== END ===");
+        if (fail.isEmpty()) {
+            System.out.println(GREEN + "All pass!");
+        } else {
+            System.out.println(RED + "Failed:");
+            fail.forEach(file -> System.out.println(RED + file));
+        }
     }
+
     public static boolean check(String fileName) throws Exception {
         boolean success = false;
         try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {

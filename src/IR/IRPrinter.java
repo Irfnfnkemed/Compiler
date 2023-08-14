@@ -216,7 +216,15 @@ public class IRPrinter {
 
     public void print(Getelementptr getelementptr) {
         printOut(getelementptr.result, " = getelementptr ");
-        printType(getelementptr.irType);
+        if (getelementptr.irType == null || getelementptr.irType.unitSize == -1) {
+            System.out.print("void");
+        } else if (getelementptr.irType.isArray) {
+            System.out.print("ptr");
+        } else if (getelementptr.irType.unitSize == 1) {
+            System.out.print("i8");
+        } else {
+            System.out.print(getelementptr.irType.unitName);
+        }
         printOut(", ptr ", getelementptr.from);
         if (getelementptr.offset != -1) {
             printOut(", i32 " + getelementptr.offset);
