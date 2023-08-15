@@ -271,16 +271,21 @@ public class IRPrinter {
         printType(funcDef.irType);
         printOut(" ", funcDef.functionName, "(");
         int size = funcDef.parameterTypeList.size();
-        for (int i = 0; i < size - 1; ++i) {
-            printType(funcDef.parameterTypeList.get(i));
-            printOut(" %" + i, ", ");
-        }
         if (size > 0) {
             if (funcDef.isClassMethod) {
                 System.out.print("ptr %this");
             } else {
-                printType(funcDef.parameterTypeList.get(size - 1));
-                System.out.print(" %" + (size - 1));
+                printType(funcDef.parameterTypeList.get(0));
+                System.out.print(" %0");
+            }
+        }
+        for (int i = 1; i < size; ++i) {
+            System.out.print(", ");
+            printType(funcDef.parameterTypeList.get(i));
+            if (funcDef.isClassMethod) {
+                printOut(" %" + (i - 1));
+            } else {
+                printOut(" %" + i);
             }
         }
         System.out.print(") {\n");

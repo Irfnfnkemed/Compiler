@@ -36,6 +36,7 @@ public class FuncDef extends IRStatement {
     public int allocaIndex = 1;
     public String label = "%entry";
     public boolean isClassMethod = false;
+    public int allocaSize = 0;
 
     public FuncDef() {
         irList = new LinkedList<>();
@@ -52,6 +53,7 @@ public class FuncDef extends IRStatement {
     public void push(Instruction instruction) {
         if (instruction instanceof Alloca) {
             irList.add(allocaIndex++, instruction);
+            ++allocaSize;
         } else {
             irList.add(instruction);
         }
