@@ -69,7 +69,6 @@ public class IRBuilder implements ASTVisitor {
         funcDef.push(new Store(typeI32, "%0", "%2"));
         funcDef.push(new Getelementptr("%3", typePtr, "%2", -1, 1));
         funcDef.push(new Ret(typePtr, "%3"));
-        funcDef.space = 6;
         irProgram.push(funcDef);
         now = irProgram;
         node.defList.forEach(def -> def.accept(this));
@@ -128,7 +127,6 @@ public class IRBuilder implements ASTVisitor {
             funcDef.functionName = "@" + node.className + "." + functionDef.functionName;
             funcDef.parameterTypeList.add(typePtr);
             funcDef.isClassMethod = true;
-            funcDef.space += anonymousVar;//包括了this
         });
     }
 
@@ -829,15 +827,13 @@ public class IRBuilder implements ASTVisitor {
         call.irType = typePtr;
         newPtr = call.resultVar = "%" + anonymousVar++;
         ((Exp) now).push(call);
-        String loopVar = "%loopVar-newArray-" + anonymousLabel;
+        String loopVar = "%" + anonymousVar++;
         String condition = "%newArrayCondition-" + anonymousLabel;
         String body = "%newArrayBody-" + anonymousLabel;
         String to = "%newArray-To-" + anonymousLabel++;
         String nowLabel = ((Exp) now).funcDef.label;
         ((Exp) now).push(new Br(condition));
         ((Exp) now).push(new Label(condition.substring(1)));
-
-
         Phi phi = new Phi(typeI32, loopVar);
         ((Exp) now).push(phi);
         phi.push(0, nowLabel);
@@ -856,8 +852,6 @@ public class IRBuilder implements ASTVisitor {
         ((Exp) now).push(new Getelementptr("%" + anonymousVar,
                 typePtr, newPtr, -1, loopVar));
         ((Exp) now).push(new Store(typePtr, subNewPtr, "%" + anonymousVar++));
-
-
         Binary binary = new Binary("+");
         binary.operandLeft = loopVar;
         binary.valueRight = 1;
