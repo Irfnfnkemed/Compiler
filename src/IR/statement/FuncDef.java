@@ -37,6 +37,7 @@ public class FuncDef extends IRStatement {
     public String label = "%entry";
     public boolean isClassMethod = false;
     public int allocaSize = 0;
+    public int maxCallPara = 0;
 
     public FuncDef() {
         irList = new LinkedList<>();
@@ -60,6 +61,12 @@ public class FuncDef extends IRStatement {
         if (instruction instanceof Label) {
             label = "%" + ((Label) instruction).labelName;
         }
+        if (instruction instanceof Call) {
+            if (((Call) instruction).callTypeList.size() > maxCallPara) {
+                maxCallPara = ((Call) instruction).callTypeList.size();
+            }
+        }
+
     }
 
     public int pop() {//用于弹出对赋值号左侧不必要的指令

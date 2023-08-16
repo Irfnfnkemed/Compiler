@@ -27,9 +27,7 @@ public class TestIR {
 
     public static void testIR() throws Exception {
         System.out.println(YELLOW + "=== Begin testing IR ===");
-        if (!create()) {
-            return;
-        }
+        create();
         String filePath;
         List<String> fail = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(folderPath + "judgelist.txt"))) {
@@ -57,9 +55,7 @@ public class TestIR {
             System.out.println(RED + "Failed:");
             fail.forEach(file -> System.out.println(RED + file));
         }
-        if (!delete()) {
-            return;
-        }
+        delete();
     }
 
     private static boolean create() {

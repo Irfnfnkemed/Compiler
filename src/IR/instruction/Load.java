@@ -1,6 +1,5 @@
 package src.IR.instruction;
 
-import src.IR.IRNode;
 import src.Util.type.IRType;
 import src.Util.type.Type;
 

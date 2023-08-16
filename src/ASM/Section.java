@@ -1,6 +1,6 @@
 package src.ASM;
 
-import src.ASM.instruction.Instruction;
+import src.ASM.instruction.ASMInstr;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,15 +8,19 @@ import java.util.List;
 public class Section {
     public String sectionName;
     public List<String> globalList;
-    public List<Instruction> instructionList;
+    public List<ASMInstr> ASMInstrList;
 
     public Section(String sectionName_) {
         sectionName = sectionName_;
         globalList = new ArrayList<>();
-        instructionList = new ArrayList<>();
+        ASMInstrList = new ArrayList<>();
     }
 
     public void pushGlobal(String name) {
         globalList.add(name);
+    }
+
+    public void pushInstr(ASMInstr asmInstr) {
+        ASMInstrList.add(asmInstr);
     }
 }

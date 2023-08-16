@@ -141,9 +141,8 @@ public class IRBuilder implements ASTVisitor {
         FuncDef funcDef = new FuncDef();
         funcDef.push(new Label("entry"));
         funcDef.isClassMethod = true;
-
         funcDef.irType = typePtr;
-        funcDef.functionName = "@init-class-" + node.className;
+        funcDef.functionName = "@.init-class-" + node.className;
         Call call = new Call("@.malloc");
         call.irType = typePtr;
         call.set(typeI32, globalScope.getClassSize(node.className));
@@ -246,7 +245,7 @@ public class IRBuilder implements ASTVisitor {
                     globalVarDef.funcDef.push(
                             new Store(node.type, ((Exp) now).popVar(), "@" + node.variableName));
                     globalVarDef.funcDef.push(new Ret());
-                    funcMain.irList.add(funcMain.initInsertIndex++, new Call("@init-" + node.variableName));
+                    funcMain.irList.add(funcMain.initInsertIndex++, new Call("@.init-" + node.variableName));
                     ++funcMain.allocaIndex;
                     irProgram.push(globalVarDef.funcDef);
                 }
@@ -893,7 +892,7 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(NewClassExp node) {
-        Call call = new Call("@init-class-" + node.type.typeName);
+        Call call = new Call("@.init-class-" + node.type.typeName);
         call.irType = typePtr;
         call.resultVar = "%" + anonymousVar;
         ((Exp) now).push(call);

@@ -1,4 +1,4 @@
 package src.ASM.instruction;
 
-abstract public class Instruction {
+abstract public class ASMInstr {
 }

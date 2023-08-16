@@ -37,7 +37,7 @@ public class TmpVarScope {
     public HashSet<String> except;
     public List<change> changeList;
     public static Cmp cmp;
-    int max = 0;//表示临时变量最多需要的同时使用的虚拟寄存器的数量
+    public int max = 0;//表示临时变量最多需要的同时使用的虚拟寄存器的数量
     int nowIndex = 0;//表示下一条寄存器分配变化(changeList)的下标
 
     public TmpVarScope() {
@@ -165,9 +165,9 @@ public class TmpVarScope {
         }
     }
 
-    public change changeReg(int nowId) {
+    public change getChangeReg(int nowId) {
         if (changeList.size() > nowIndex && changeList.get(nowIndex).id == nowId) {
-            return changeList.get(nowIndex++);
+            return changeList.get(nowIndex);
         } else {
             return null;
         }

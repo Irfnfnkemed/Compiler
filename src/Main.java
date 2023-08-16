@@ -4,6 +4,7 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import src.ASM.ASMBuilder;
+import src.ASM.ASMPrinter;
 import src.AST.ASTBuilder;
 import src.IR.IRBuilder;
 import src.IR.IRPrinter;
@@ -51,11 +52,13 @@ public class Main {
             var b = new IRPrinter(a.irProgram);
             b.print();
             var c = new ASMBuilder(a.irProgram);
+            var d = new ASMPrinter(c.asmProgram);
+             d.print();
         } catch (Errors errors) {
             System.err.println(errors.toString());
         }
         // testSemantic();
-        //  testIR();
+       //testIR();
     }
 }
 
