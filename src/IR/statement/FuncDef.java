@@ -4,6 +4,7 @@ import src.IR.instruction.*;
 import src.Util.type.IRType;
 import src.Util.type.Type;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
@@ -38,6 +39,7 @@ public class FuncDef extends IRStatement {
     public boolean isClassMethod = false;
     public int allocaSize = 0;
     public int maxCallPara = 0;
+    public HashMap<String, Phi.assignBlock> phiList;//phi指令，跳转来源标签->目标标签及赋值语段，便于汇编处理
 
     public FuncDef() {
         irList = new LinkedList<>();
@@ -45,6 +47,7 @@ public class FuncDef extends IRStatement {
         ifStatusStack = new Stack<>();
         loopStatusStack = new Stack<>();
         ifAndLoopOrder = new Stack<>();
+        phiList = new HashMap<>();
     }
 
     public void pushPara(Type parameterType) {
@@ -66,7 +69,6 @@ public class FuncDef extends IRStatement {
                 maxCallPara = ((Call) instruction).callTypeList.size();
             }
         }
-
     }
 
     public int pop() {//用于弹出对赋值号左侧不必要的指令
@@ -124,4 +126,8 @@ public class FuncDef extends IRStatement {
         return ifAndLoopOrder.peek();
     }
 
+    public void setPhiList(Phi phi) {
+        phi.assignBlockList.forEach(assignBlock ->
+                phiList.put(assignBlock.label, new Phi.assignBlock(assignBlock.var, assignBlock.value, label)));
+    }
 }

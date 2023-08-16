@@ -42,7 +42,19 @@ public class Reg {
         tmpVarScope.collect(funcDef);
     }
 
-    public void setTmp() {//分配临时变量占据的寄存器/空间
+    public void flushReg() {//分配、释放临时变量占据的寄存器/空间
+        while (true) {
+            var change = tmpVarScope.getChangeReg(nowId);
+            if (change == null || change.newVar) {
+                break;
+            }
+            ++tmpVarScope.nowIndex;
+            if (getTmpVar.containsKey(change.varName)) {
+                freeSavedReg(getTmpVar.get(change.varName));//释放寄存器
+            } else {
+                asmStack.freeVar(change.varName);//释放内存
+            }
+        }
         while (true) {
             var change = tmpVarScope.getChangeReg(nowId);
             if (change == null || !change.newVar) {
@@ -59,21 +71,6 @@ public class Reg {
 
     public void clearTmp() {//清除t0-t7寄存器
         Arrays.fill(tmpRegister, false);
-    }
-
-    public void freeTmp() {//释放临时变量占据的寄存器/空间
-        while (true) {
-            var change = tmpVarScope.getChangeReg(nowId);
-            if (change == null || change.newVar) {
-                break;
-            }
-            ++tmpVarScope.nowIndex;
-            if (getTmpVar.containsKey(change.varName)) {
-                freeSavedReg(getTmpVar.remove(change.varName));//释放寄存器
-            } else {
-                asmStack.freeVar(change.varName);//释放内存
-            }
-        }
     }
 
     public String getVarReg(String varName) {

@@ -34,6 +34,6 @@ public class ASMStack {
     }
 
     public void freeVar(String varName) {
-        freePos.add(getVar.remove(varName));
+        freePos.add(getVar.get(varName));
     }
 }

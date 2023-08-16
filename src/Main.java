@@ -27,7 +27,7 @@ public class Main {
     public static void main(String[] args) throws Exception {
         Scanner scanner = new Scanner(System.in);
         try {
-//            // 创建一个文件输出流，并指定输出文件的路径
+            // 创建一个文件输出流，并指定输出文件的路径
 //            FileOutputStream fileOutputStream = new FileOutputStream("./src/builtin/test.ll");
 //
 //            // 创建一个 PrintStream 对象，用于将输出写入文件输出流

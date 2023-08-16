@@ -687,6 +687,7 @@ public class IRBuilder implements ASTVisitor {
                     phi.push(((Exp) now).popVar(), rhsNowLabel);
                 }
                 ((Exp) now).push(phi);
+                ((Exp) now).funcDef.setPhiList(phi);
                 ((Exp) now).set("%" + anonymousVar++);
             }
             return;
@@ -717,6 +718,7 @@ public class IRBuilder implements ASTVisitor {
                     phi.push(((Exp) now).popVar(), rhsNowLabel);
                 }
                 ((Exp) now).push(phi);
+                ((Exp) now).funcDef.setPhiList(phi);
                 ((Exp) now).set("%" + anonymousVar++);
             }
             return;
@@ -880,6 +882,7 @@ public class IRBuilder implements ASTVisitor {
         binary.output = "%" + anonymousVar;
         ((Exp) now).push(binary);
         phi.push("%" + anonymousVar++, ((Exp) now).funcDef.label);
+        ((Exp) now).funcDef.setPhiList(phi);
         ((Exp) now).push(new Br(condition));
         ((Exp) now).push(new Label(to.substring(1)));
         if (var == null) {
@@ -973,6 +976,7 @@ public class IRBuilder implements ASTVisitor {
                     phi.push(((Exp) now).popVar(), trueNowLabel);
                 }
                 ((Exp) now).push(phi);
+                ((Exp) now).funcDef.setPhiList(phi);
                 ((Exp) now).set("%" + anonymousVar++);
             }
         }
@@ -982,10 +986,12 @@ public class IRBuilder implements ASTVisitor {
     public void visit(UnaryExp node) {
         node.exp.accept(this);
         if (Objects.equals(node.op, "!")) {
-            Icmp icmp = new Icmp("==", typeI1);
+            Icmp icmp = null;
             if (((Exp) now).isOperandConst()) {
-                icmp.set(((Exp) now).popValue());
+                ((Exp) now).set(((Exp) now).popValue() == 0);
+                return;
             } else {
+                icmp = new Icmp("==", typeI1);
                 icmp.set(((Exp) now).getVar());
             }
             icmp.set(0);
@@ -993,10 +999,12 @@ public class IRBuilder implements ASTVisitor {
             ((Exp) now).push(icmp);
             ((Exp) now).set("%" + anonymousVar++);
         } else if (Objects.equals(node.op, "~")) {
-            Binary binary = new Binary("^");
+            Binary binary = null;
             if (((Exp) now).isOperandConst()) {
-                binary.set(((Exp) now).popValue());
+                ((Exp) now).set(~((Exp) now).popValue());
+                return;
             } else {
+                binary = new Binary("^");
                 binary.set(((Exp) now).getVar());
             }
             binary.set(-1);
@@ -1004,10 +1012,12 @@ public class IRBuilder implements ASTVisitor {
             ((Exp) now).push(binary);
             ((Exp) now).set("%" + anonymousVar++);
         } else if (Objects.equals(node.op, "-")) {
-            Binary binary = new Binary("-");
+            Binary binary = null;
             if (((Exp) now).isOperandConst()) {
-                binary.set(((Exp) now).popValue());
+                ((Exp) now).set(-((Exp) now).popValue());
+                return;
             } else {
+                binary = new Binary("-");
                 binary.set(((Exp) now).popVar());
             }
             binary.set(0);
