@@ -31,8 +31,6 @@ public class IRProgram extends IRNode {
             } else {
                 stmtList.add(funcDefIndex++, stmt);
             }
-        } else {
-
         }
     }
 

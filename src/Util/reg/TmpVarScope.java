@@ -46,6 +46,7 @@ public class TmpVarScope {
         except = new HashSet<>();
         changeList = new ArrayList<>();
         cmp = new Cmp();
+        except.add("%this");
     }
 
     public void setExcept(String varName) {
@@ -78,13 +79,17 @@ public class TmpVarScope {
             for (int j = 0; j < funcDef.parameterTypeList.size() - 1; ++j) {
                 setExcept("%" + j);
             }
-            setBeg("%this", 0);
         } else {
             for (int j = 0; j < funcDef.parameterTypeList.size(); ++j) {
                 setExcept("%" + j);
             }
         }
         for (var inst : funcDef.irList) {
+            if (inst.tmpVarScopeEnd != null) {
+                for (var tmpVar : inst.tmpVarScopeEnd) {
+                    setEnd(tmpVar, i);
+                }
+            }
             if (inst instanceof Alloca) {
                 setExcept(((Alloca) inst).varName);
             } else if (inst instanceof Binary) {
@@ -98,6 +103,10 @@ public class TmpVarScope {
             } else if (inst instanceof Br) {
                 if (((Br) inst).condition != null) {
                     setEnd(((Br) inst).condition, i);
+                }
+                var phi = (((Br) inst).funcDef.phiList.get(((Br) inst).nowLabel));
+                if (phi != null) {
+                    setBeg(phi.toVar, i);
                 }
             } else if (inst instanceof Call) {
                 for (var varName : ((Call) inst).varNameList) {
@@ -141,9 +150,6 @@ public class TmpVarScope {
                 setEnd(((Store) inst).toPointer, i);
             }
             ++i;
-        }
-        if (funcDef.isClassMethod && !end.containsKey("%this")) {
-            beg.remove("%this");
         }
         sort();
     }

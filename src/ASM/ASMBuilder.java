@@ -8,31 +8,33 @@ import src.ASM.instruction.binary.*;
 import src.ASM.instruction.binaryImme.*;
 import src.IR.IRProgram;
 import src.IR.instruction.*;
+import src.IR.statement.ConstString;
 import src.IR.statement.FuncDef;
 import src.IR.statement.GlobalVarDef;
 import src.Util.reg.Reg;
 
+import java.util.HashSet;
 import java.util.Objects;
 
 import static java.lang.Math.min;
 
 public class ASMBuilder {
     public ASMProgram asmProgram;
+    public HashSet<String> globalVar;
 
     public ASMBuilder(IRProgram irProgram) {
         asmProgram = new ASMProgram();
+        globalVar = new HashSet<>();
         for (var stmt : irProgram.stmtList) {
             if (stmt instanceof GlobalVarDef) {
                 asmProgram.sectionData.pushGlobal(((GlobalVarDef) stmt).varName.substring(1));
+                asmProgram.sectionData.pushWord(((GlobalVarDef) stmt).varName.substring(1), (int) ((GlobalVarDef) stmt).value);
+                globalVar.add(((GlobalVarDef) stmt).varName);
             } else if (stmt instanceof FuncDef) {
-                ////////////////////////////////////////
-                if (((FuncDef) stmt).functionName.charAt(1) == '.') {
-                    continue;
-                }
                 asmProgram.sectionText.pushGlobal(((FuncDef) stmt).functionName.substring(1));
-                Reg reg = new Reg(asmProgram.sectionText);
+                asmProgram.sectionText.nowFuncName = ((FuncDef) stmt).functionName.substring(1);
+                Reg reg = new Reg(asmProgram.sectionText, globalVar);
                 reg.collect((FuncDef) stmt);
-                //需要的栈字节数，是16的倍数（15 = 12 + 3，前者是ra,s1-s11，后者是为了向上取整）
                 int stackSize = reg.setStack(((FuncDef) stmt).allocaSize, reg.tmpVarScope.max, ((FuncDef) stmt).maxCallPara);
                 asmProgram.sectionText.pushInstr(new LABEL(((FuncDef) stmt).functionName.substring(1)));
                 asmProgram.sectionText.pushInstr(new ADDI("sp", "sp", -stackSize));
@@ -40,18 +42,31 @@ public class ASMBuilder {
                 for (int i = 1; i <= 11; ++i) {
                     asmProgram.sectionText.pushInstr(new SW("s" + i, stackSize - ((i + 1) << 2)));
                 }
-
                 //处理参数
                 int size = ((FuncDef) stmt).parameterTypeList.size();
                 if (size > 0) {
                     if (((FuncDef) stmt).isClassMethod) {
-                        reg.getTmpVar.put("%this", "a0");
+                        String savedReg = reg.getSavedReg();
+                        asmProgram.sectionText.pushInstr(new MV("a0", savedReg));
+                        reg.getTmpVar.put("%this", savedReg);
                         reg.setHeap("%this");
                     } else {
-                        reg.getTmpVar.put("%0", "a0");
-                        if (Objects.equals(((FuncDef) stmt).parameterTypeList.get(0).unitName, "ptr")) {
-                            reg.setHeap("%0");
+                        if (Objects.equals(((FuncDef) stmt).functionName, "@.newArray")) {
+                            String savedReg = reg.getSavedReg();
+                            asmProgram.sectionText.pushInstr(new MV("a0", savedReg));
+                            reg.getTmpVar.put("%0", savedReg);
+                        } else {
+                            reg.getTmpVar.put("%0", "a0");
+                            if (Objects.equals(((FuncDef) stmt).parameterTypeList.get(0).unitName, "ptr")) {
+                                reg.setHeap("%0");
+                            }
                         }
+                    }
+                }else {
+                    if (((FuncDef) stmt).isClassMethod) {
+                        String savedReg = reg.getSavedReg();
+                        reg.getTmpVar.put("%this", savedReg);
+                        reg.setHeap("%this");
                     }
                 }
                 for (int i = 1; i < min(size, 8); ++i) {
@@ -89,6 +104,7 @@ public class ASMBuilder {
                     visitInstr(asmProgram.sectionText, reg, irInstr);
                     //TODO
                     ++reg.nowId;
+                    reg.clearTmp();
                 }
                 for (int i = 11; i >= 0; --i) {
                     asmProgram.sectionText.pushInstr(new LW("s" + i, stackSize - 4 * i - 4));
@@ -96,6 +112,12 @@ public class ASMBuilder {
                 asmProgram.sectionText.pushInstr(new LW("ra", stackSize - 4));
                 asmProgram.sectionText.pushInstr(new ADDI("sp", "sp", stackSize));
                 asmProgram.sectionText.pushInstr(new RET());
+            } else if (stmt instanceof ConstString) {
+                for (int i = 0; i < ((ConstString) stmt).constStringList.size(); ++i) {
+                    asmProgram.sectionRodata.pushConstString(
+                            "constString-" + i, ((ConstString) stmt).constStringList.get(i));
+                    globalVar.add("@constString-" + i);
+                }
             }
         }
     }
@@ -118,7 +140,9 @@ public class ASMBuilder {
         } else if (instruction instanceof Label) {
             visit(section, (Label) instruction);
         } else if (instruction instanceof Br) {
-            visit(section, (Br) instruction);
+            visit(section, reg, (Br) instruction);
+        } else if (instruction instanceof Getelementptr) {
+            visit(section, reg, (Getelementptr) instruction);
         }
     }
 
@@ -136,7 +160,7 @@ public class ASMBuilder {
             from = reg.getVarReg(store.valueVar);
         }
         if (reg.isHeap(store.toPointer)) {
-            to = reg.getVarReg(store.valueVar);
+            to = reg.getVarReg(store.toPointer);
             offset = 0;
         } else {
             to = "sp";
@@ -238,7 +262,7 @@ public class ASMBuilder {
                 } else {
                     if (binary.operandLeft == null) {
                         String tmp = reg.getTmpReg();
-                        section.pushInstr(new LI(tmp, -(int) binary.valueLeft));
+                        section.pushInstr(new LI(tmp, (int) binary.valueLeft));
                         section.pushInstr(new SUB(tmp, reg.getVarReg(binary.operandRight), to));
                     } else {
                         section.pushInstr(new ADDI(to, reg.getVarReg(binary.operandLeft),
@@ -384,8 +408,9 @@ public class ASMBuilder {
                             reg.getVarReg(icmp.operandRight), to));
                 } else {
                     if (icmp.operandLeft == null) {
-                        section.pushInstr(new SGTI(to, reg.getVarReg(icmp.operandRight),
-                                (int) icmp.valueLeft));
+                        String tmp = reg.getTmpReg();
+                        section.pushInstr(new LI(tmp, (int) icmp.valueLeft));
+                        section.pushInstr(new SLT(tmp, reg.getVarReg(icmp.operandRight), to));
                     } else {
                         section.pushInstr(new SLTI(to, reg.getVarReg(icmp.operandLeft),
                                 (int) icmp.valueRight));
@@ -394,21 +419,22 @@ public class ASMBuilder {
             }
             case "sgt" -> {
                 if (icmp.operandLeft != null && icmp.operandRight != null) {
-                    section.pushInstr(new SGT(reg.getVarReg(icmp.operandLeft),
-                            reg.getVarReg(icmp.operandRight), to));
+                    section.pushInstr(new SLT(reg.getVarReg(icmp.operandRight),
+                            reg.getVarReg(icmp.operandLeft), to));
                 } else {
                     if (icmp.operandLeft == null) {
                         section.pushInstr(new SLTI(to, reg.getVarReg(icmp.operandRight),
                                 (int) icmp.valueLeft));
                     } else {
-                        section.pushInstr(new SGTI(to, reg.getVarReg(icmp.operandLeft),
-                                (int) icmp.valueRight));
+                        String tmp = reg.getTmpReg();
+                        section.pushInstr(new LI(tmp, (int) icmp.valueRight));
+                        section.pushInstr(new SLT(tmp, reg.getVarReg(icmp.operandLeft), to));
                     }
                 }
             }
             case "sle" -> {
                 if (icmp.operandLeft != null && icmp.operandRight != null) {
-                    section.pushInstr(new SGT(reg.getVarReg(icmp.operandRight),
+                    section.pushInstr(new SLT(reg.getVarReg(icmp.operandRight),
                             reg.getVarReg(icmp.operandLeft), to));
                     section.pushInstr(new XORI(to, to, 1));
                 } else {
@@ -417,8 +443,9 @@ public class ASMBuilder {
                                 (int) icmp.valueLeft));
                         section.pushInstr(new XORI(to, to, 1));
                     } else {
-                        section.pushInstr(new SGTI(to, reg.getVarReg(icmp.operandLeft),
-                                (int) icmp.valueRight));
+                        String tmp = reg.getTmpReg();
+                        section.pushInstr(new LI(tmp, (int) icmp.valueRight));
+                        section.pushInstr(new SLT(tmp, reg.getVarReg(icmp.operandLeft), to));
                         section.pushInstr(new XORI(to, to, 1));
                     }
                 }
@@ -427,10 +454,12 @@ public class ASMBuilder {
                 if (icmp.operandLeft != null && icmp.operandRight != null) {
                     section.pushInstr(new SLT(reg.getVarReg(icmp.operandLeft),
                             reg.getVarReg(icmp.operandRight), to));
+                    section.pushInstr(new XORI(to, to, 1));
                 } else {
                     if (icmp.operandLeft == null) {
-                        section.pushInstr(new SGTI(to, reg.getVarReg(icmp.operandRight),
-                                (int) icmp.valueLeft));
+                        String tmp = reg.getTmpReg();
+                        section.pushInstr(new LI(tmp, (int) icmp.valueLeft));
+                        section.pushInstr(new SLT(tmp, reg.getVarReg(icmp.operandRight), to));
                         section.pushInstr(new XORI(to, to, 1));
                     } else {
                         section.pushInstr(new SLTI(to, reg.getVarReg(icmp.operandLeft),
@@ -481,14 +510,87 @@ public class ASMBuilder {
     }
 
     void visit(Section section, Reg reg, Ret ret) {
-        String from = reg.getVarReg(ret.var);
-        section.pushInstr(new MV(from, "a0"));
-        reg.clearTmp();
+        if (ret.irType != null && ret.irType.unitSize != -1) {
+            String from = reg.getVarReg(ret.var);
+            section.pushInstr(new MV(from, "a0"));
+            reg.clearTmp();
+        }
     }
 
-    void visit(Section section, Br br) {
+    void visit(Section section, Reg reg, Br br) {
         if (br.condition == null) {
+            var phi = br.funcDef.phiList.get(br.nowLabel);
+            if (phi != null) {
+                visit(section, reg, phi);
+            }
             section.pushInstr(new J("." + br.trueLabel.substring(1)));
+        } else {
+            var phi = br.funcDef.phiList.get(br.nowLabel);
+            if (phi != null && Objects.equals(phi.label, br.trueLabel)) {
+                visit(section, reg, phi);
+            }
+            section.pushInstr(new BNEZ(reg.getVarReg(br.condition), "." + br.trueLabel.substring(1)));
+            if (phi != null && Objects.equals(phi.label, br.falseLabel)) {
+                visit(section, reg, phi);
+            }
+            section.pushInstr(new J("." + br.falseLabel.substring(1)));
+        }
+    }
+
+    void visit(Section section, Reg reg, FuncDef.phiBlock phi) {
+        if (phi.fromVar == null) {
+            if (reg.isInReg(phi.toVar)) {
+                section.pushInstr(new LI(reg.getVarReg(phi.toVar), (int) phi.value));
+            } else {
+                String tmp = reg.getTmpReg();
+                section.pushInstr(new LI(tmp, (int) phi.value));
+                section.pushInstr(new SW(tmp, reg.getStackAddr(phi.toVar)));
+            }
+        } else {
+            String from = reg.getVarReg(phi.fromVar);
+            if (reg.isInReg(phi.toVar)) {
+                section.pushInstr(new MV(from, reg.getVarReg(phi.toVar)));
+            } else {
+                section.pushInstr(new SW(from, reg.getStackAddr(phi.toVar)));
+            }
+        }
+    }
+
+    void visit(Section section, Reg reg, Getelementptr getelementptr) {
+        if (getelementptr.indexVar == null) {
+            String to;
+            if (reg.isInReg(getelementptr.result)) {
+                to = reg.getVarReg(getelementptr.result);
+            } else {
+                to = reg.getTmpReg();
+            }
+            int index = getelementptr.indexValue << 2;
+            if (!getelementptr.irType.isArray && getelementptr.irType.unitSize == 8) {
+                index = getelementptr.indexValue;
+            }
+            section.pushInstr(new ADDI(to, reg.getVarReg(getelementptr.from), index));
+            if (!reg.isInReg(getelementptr.result)) {
+                section.pushInstr(new SW(to, reg.getStackAddr(getelementptr.result)));
+            }
+            reg.setHeap(getelementptr.result);
+        } else {
+            String to;
+            if (reg.isInReg(getelementptr.result)) {
+                to = reg.getVarReg(getelementptr.result);
+            } else {
+                to = reg.getTmpReg();
+            }
+            String index = reg.getVarReg(getelementptr.indexVar);
+            if (getelementptr.irType.unitSize == 32) {
+                String newIndex = reg.getTmpReg();
+                section.pushInstr(new SLLI(newIndex, index, 2));
+                index = newIndex;
+            }
+            section.pushInstr(new ADD(reg.getVarReg(getelementptr.from), index, to));
+            if (!reg.isInReg(getelementptr.result)) {
+                section.pushInstr(new SW(to, reg.getStackAddr(getelementptr.result)));
+            }
+            reg.setHeap(getelementptr.result);
         }
     }
 

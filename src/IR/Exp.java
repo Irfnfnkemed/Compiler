@@ -11,7 +11,6 @@ public class Exp extends IRNode {
         VarName, ConstValue;
     }
 
-    public boolean isConst = true;
     public Stack<expCate> expCateStack;
     public Stack<String> varNameStack;
     public Stack<Long> constValueStack;
@@ -39,11 +38,20 @@ public class Exp extends IRNode {
     public void set(String anonymousVar) {
         expCateStack.push(expCate.VarName);
         varNameStack.push(anonymousVar);
-        isConst = false;
     }
 
     public boolean isOperandConst() {
         return expCateStack.peek() == expCate.ConstValue;
+    }
+
+    public boolean isOperandTwoConst() {
+        boolean flag = false;
+        var tmp = expCateStack.pop();
+        if (tmp == expCate.ConstValue && expCateStack.peek() == expCate.ConstValue) {
+            flag = true;
+        }
+        expCateStack.push(tmp);
+        return flag;
     }
 
     public void pop() {
@@ -51,9 +59,6 @@ public class Exp extends IRNode {
             constValueStack.pop();
         } else {
             varNameStack.pop();
-            if (varNameStack.size() == 0) {
-                isConst = true;
-            }
         }
         expCateStack.pop();
     }
@@ -81,9 +86,13 @@ public class Exp extends IRNode {
     }
 
     public void reset() {
-        isConst = true;
         expCateStack.clear();
         varNameStack.clear();
         constValueStack.clear();
+    }
+
+    public void setTmpVarEnd(String varName) {
+        var tmp = funcDef.irList.get(funcDef.irList.size() - 1);
+        tmp.setTmpVarScopeEnd(varName);
     }
 }

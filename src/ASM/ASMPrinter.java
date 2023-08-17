@@ -14,16 +14,17 @@ public class ASMPrinter {
 
     public void print() {
         print(asmProgram.sectionText);
+        print(asmProgram.sectionData);
+        print(asmProgram.sectionRodata);
     }
 
     public void print(Section section) {
         printOut(" .section ", section.sectionName, "\n");
-        for (String global : section.globalList) {
-            printOut(" .globl ", global, "\n");
-        }
-        for (var instr : section.ASMInstrList) {
-            print(instr);
-        }
+        section.globalList.forEach(global -> printOut(" .globl ", global, "\n"));
+        section.asmInstrList.forEach(this::print);
+        section.wordList.forEach(word -> printOut(word.varName, ":\n", "  .word ", Integer.toString(word.value), "\n"));
+        section.constStringList.forEach(constString -> printOut(constString.varName, ":\n", "  .asciz ", constString.value, "\n"));
+        printOut("\n");
     }
 
     public void print(ASMInstr asmInstr) {
@@ -77,16 +78,16 @@ public class ASMPrinter {
             print((SLT) asmInstr);
         } else if (asmInstr instanceof SLTI) {
             print((SLTI) asmInstr);
-        } else if (asmInstr instanceof SGT) {
-            print((SGT) asmInstr);
-        } else if (asmInstr instanceof SGTI) {
-            print((SGTI) asmInstr);
         } else if (asmInstr instanceof SEQZ) {
             print((SEQZ) asmInstr);
         } else if (asmInstr instanceof SNEZ) {
             print((SNEZ) asmInstr);
         } else if (asmInstr instanceof J) {
             print((J) asmInstr);
+        } else if (asmInstr instanceof BNEZ) {
+            print((BNEZ) asmInstr);
+        } else if (asmInstr instanceof LA) {
+            print((LA) asmInstr);
         }
     }
 
@@ -100,6 +101,10 @@ public class ASMPrinter {
 
     public void print(J j) {
         printOut("  j ", j.toLabel, "\n");
+    }
+
+    public void print(LA la) {
+        printOut("  la ", la.to, " ", la.fromLabel, "\n");
     }
 
     public void print(ANDI andi) {
@@ -125,11 +130,6 @@ public class ASMPrinter {
     public void print(SLTI slti) {
         printOut("  slti ", slti.to, " ", slti.from, " ", Integer.toString(slti.imme), "\n");
     }
-
-    public void print(SGTI sgti) {
-        printOut("  sgti ", sgti.to, " ", sgti.from, " ", Integer.toString(sgti.imme), "\n");
-    }
-
 
     public void print(SW sw) {
         printOut("  sw ", sw.from, " ", Integer.toString(sw.offset), "(", sw.to, ")\n");
@@ -187,10 +187,6 @@ public class ASMPrinter {
         printOut("  slt ", slt.to, " ", slt.lhs, " ", slt.rhs, "\n");
     }
 
-    public void print(SGT sgt) {
-        printOut("  sgt ", sgt.to, " ", sgt.lhs, " ", sgt.rhs, "\n");
-    }
-
     public void print(OR or) {
         printOut("  or ", or.to, " ", or.lhs, " ", or.rhs, "\n");
     }
@@ -211,6 +207,9 @@ public class ASMPrinter {
         printOut("  snez ", snez.to, " ", snez.from, "\n");
     }
 
+    public void print(BNEZ bnez) {
+        printOut("  bnez ", bnez.condition, " ", bnez.toLabel, "\n");
+    }
 
     public void printOut(String... elements) {
         for (String ele : elements) {

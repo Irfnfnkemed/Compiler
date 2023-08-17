@@ -1,6 +1,7 @@
 package src.Util.reg;
 
 import src.ASM.Section;
+import src.ASM.instruction.LA;
 import src.ASM.instruction.LW;
 import src.ASM.instruction.MV;
 import src.IR.statement.FuncDef;
@@ -16,9 +17,10 @@ public class Reg {
     public HashMap<String, String> getTmpVar;//临时变量->寄存器
     public List<Integer> freeSaveReg;//空闲的s1-s11寄存器
     public HashSet<String> isHeap;//指向堆空间的指针变量
+    public HashSet<String> globalVar;//全局变量
     public Section section;
 
-    public Reg(Section section_) {
+    public Reg(Section section_, HashSet<String> globalVar_) {
         tmpVarScope = new TmpVarScope();
         savedRegister = new boolean[12];
         tmpRegister = new boolean[7];
@@ -31,6 +33,7 @@ public class Reg {
         }
         isHeap = new HashSet<>();
         section = section_;
+        globalVar = globalVar_;
     }
 
     public int setStack(int allocaSize, int regMax, int callParaMax) {
@@ -77,7 +80,11 @@ public class Reg {
         var reg = getTmpVar.get(varName);
         if (reg != null) {//变量在寄存器中
             return reg;
-        } else {
+        } else if (globalVar.contains(varName)) {//全局变量
+            String tmp = getTmpReg();
+            section.pushInstr(new LA(tmp, varName.substring(1)));
+            return tmp;
+        } else {//栈上
             int pos = asmStack.getVar(varName);
             String tmp = getTmpReg();
             section.pushInstr(new LW(tmp, pos));
@@ -89,7 +96,9 @@ public class Reg {
         var reg = getTmpVar.get(varName);
         if (reg != null) {//变量在寄存器中
             section.pushInstr(new MV(reg, toReg));
-        } else {
+        } else if (globalVar.contains(varName)) {//全局变量
+            section.pushInstr(new LA(toReg, varName.substring(1)));
+        } else {//栈上
             int pos = asmStack.getVar(varName);
             section.pushInstr(new LW(toReg, pos));
         }
@@ -113,7 +122,7 @@ public class Reg {
     }
 
     public boolean isHeap(String varName) {
-        return isHeap.contains(varName);
+        return isHeap.contains(varName) || globalVar.contains(varName);
     }
 
 
@@ -125,7 +134,7 @@ public class Reg {
         }
     }
 
-    private String getSavedReg() {//得到空闲s1-s11寄存器
+    public String getSavedReg() {//得到空闲s1-s11寄存器
         int reg = freeSaveReg.remove(freeSaveReg.size() - 1);
         savedRegister[reg] = true;
         return "s" + reg;

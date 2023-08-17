@@ -22,6 +22,19 @@ public class FuncDef extends IRStatement {
         public boolean jump = false;
     }
 
+    public static class phiBlock {
+        public String fromVar, toVar;
+        public long value;
+        public String label;
+
+        public phiBlock(String fromVar_, String toVar_, long value_, String label_) {
+            fromVar = fromVar_;
+            toVar = toVar_;
+            value = value_;
+            label = label_;
+        }
+    }
+
     public IRType irType;
     public String functionName;
     public List<IRType> parameterTypeList;
@@ -39,7 +52,7 @@ public class FuncDef extends IRStatement {
     public boolean isClassMethod = false;
     public int allocaSize = 0;
     public int maxCallPara = 0;
-    public HashMap<String, Phi.assignBlock> phiList;//phi指令，跳转来源标签->目标标签及赋值语段，便于汇编处理
+    public HashMap<String, phiBlock> phiList;//phi指令，跳转来源标签->目标标签及赋值语段，便于汇编处理
 
     public FuncDef() {
         irList = new LinkedList<>();
@@ -128,6 +141,7 @@ public class FuncDef extends IRStatement {
 
     public void setPhiList(Phi phi) {
         phi.assignBlockList.forEach(assignBlock ->
-                phiList.put(assignBlock.label, new Phi.assignBlock(assignBlock.var, assignBlock.value, label)));
+                phiList.put(assignBlock.label, new phiBlock(
+                        assignBlock.var, phi.result, assignBlock.value, label)));
     }
 }
