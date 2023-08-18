@@ -14,8 +14,8 @@ public class Getelementptr extends Instruction {
         result = result_;
         irType = irType_;
         if (irType_.unitSize == 1) {
-            irType.unitSize = 8;
-            irType.unitName = "i8";
+            irType.unitSize = 32;
+            irType.unitName = "i32";
         }
         from = from_;
         offset = offset_;
@@ -26,8 +26,8 @@ public class Getelementptr extends Instruction {
         result = result_;
         irType = irType_;
         if (irType_.unitSize == 1) {
-            irType.unitSize = 8;
-            irType.unitName = "i8";
+            irType.unitSize = 32;
+            irType.unitName = "i32";
         }
         from = from_;
         offset = offset_;

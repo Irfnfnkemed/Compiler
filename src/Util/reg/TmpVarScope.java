@@ -106,7 +106,7 @@ public class TmpVarScope {
                 }
                 var phi = (((Br) inst).funcDef.phiList.get(((Br) inst).nowLabel));
                 if (phi != null) {
-                    setBeg(phi.toVar, i);
+                    setBeg(phi.toVar, i - 1);
                 }
             } else if (inst instanceof Call) {
                 for (var varName : ((Call) inst).varNameList) {

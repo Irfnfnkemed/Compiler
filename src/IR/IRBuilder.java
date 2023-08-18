@@ -742,6 +742,14 @@ public class IRBuilder implements ASTVisitor {
                 case ">" -> ((Exp) now).set(((Exp) now).popValue() < ((Exp) now).popValue());
                 case "<=" -> ((Exp) now).set(((Exp) now).popValue() >= ((Exp) now).popValue());
                 case ">=" -> ((Exp) now).set(((Exp) now).popValue() <= ((Exp) now).popValue());
+                case "<<" -> {
+                    long shift = ((Exp) now).popValue();
+                    ((Exp) now).set(((Exp) now).popValue() << shift);
+                }
+                case ">>" -> {
+                    long shift = ((Exp) now).popValue();
+                    ((Exp) now).set(((Exp) now).popValue() >> shift);
+                }
             }
         } else {
             if (node.lhs.type.isString()) {
@@ -803,27 +811,7 @@ public class IRBuilder implements ASTVisitor {
 
     @Override
     public void visit(NewArrayExp node) {
-        node.expressionList.get(node.expressionList.size() - 1).accept(this);
-        if (node.expressionList.size() == node.type.dim) {//根据大小，更改最后一维的空间大小
-            if (node.baseType.isBool()) {
-                if (((Exp) now).isOperandConst()) {
-                    ((Exp) now).set(((Exp) now).popValue() / 4 + 1);
-                } else {
-                    Binary binary = new Binary("/");
-                    binary.operandLeft = ((Exp) now).popVar();
-                    binary.valueRight = 4;
-                    binary.output = "%" + anonymousVar;
-                    ((Exp) now).push(binary);
-                    binary = new Binary("+");
-                    binary.operandLeft = "%" + anonymousVar++;
-                    binary.valueRight = 1;
-                    binary.output = "%" + anonymousVar;
-                    ((Exp) now).push(binary);
-                    ((Exp) now).set("%" + anonymousVar++);
-                }
-            }
-        }
-        for (int i = node.expressionList.size() - 2; i >= 0; --i) {
+        for (int i = node.expressionList.size() - 1; i >= 0; --i) {
             node.expressionList.get(i).accept(this);
         }
         String newPtr = newArray(node.expressionList.size());

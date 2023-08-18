@@ -62,7 +62,7 @@ public class ASMBuilder {
                             }
                         }
                     }
-                }else {
+                } else {
                     if (((FuncDef) stmt).isClassMethod) {
                         String savedReg = reg.getSavedReg();
                         reg.getTmpVar.put("%this", savedReg);
@@ -216,8 +216,8 @@ public class ASMBuilder {
                     section.pushInstr(new LI(tmp, call.constValueList.get(tmpConst++).intValue()));
                 }
                 section.pushInstr(new SW(tmp, 4 * i));
+                reg.clearTmp();
             }
-            reg.clearTmp();
         }
         section.pushInstr(new CALL(call.functionName.substring(1)));
         if (call.resultVar != null) {
@@ -565,9 +565,6 @@ public class ASMBuilder {
                 to = reg.getTmpReg();
             }
             int index = getelementptr.indexValue << 2;
-            if (!getelementptr.irType.isArray && getelementptr.irType.unitSize == 8) {
-                index = getelementptr.indexValue;
-            }
             section.pushInstr(new ADDI(to, reg.getVarReg(getelementptr.from), index));
             if (!reg.isInReg(getelementptr.result)) {
                 section.pushInstr(new SW(to, reg.getStackAddr(getelementptr.result)));
@@ -580,12 +577,9 @@ public class ASMBuilder {
             } else {
                 to = reg.getTmpReg();
             }
-            String index = reg.getVarReg(getelementptr.indexVar);
-            if (getelementptr.irType.unitSize == 32) {
-                String newIndex = reg.getTmpReg();
-                section.pushInstr(new SLLI(newIndex, index, 2));
-                index = newIndex;
-            }
+            String index = reg.getVarReg(getelementptr.indexVar), newIndex = reg.getTmpReg();
+            section.pushInstr(new SLLI(newIndex, index, 2));
+            index = newIndex;
             section.pushInstr(new ADD(reg.getVarReg(getelementptr.from), index, to));
             if (!reg.isInReg(getelementptr.result)) {
                 section.pushInstr(new SW(to, reg.getStackAddr(getelementptr.result)));
