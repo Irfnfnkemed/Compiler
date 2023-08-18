@@ -53,7 +53,6 @@ public class FuncDef extends IRStatement {
     public int allocaSize = 0;
     public int maxCallPara = 0;
     public HashMap<String, phiBlock> phiList;//phi指令，跳转来源标签->目标标签及赋值语段，便于汇编处理
-    public HashMap<String, Integer> callPara;//call指令中，变量在参数表中的下标，便于简化寄存器分配
 
     public FuncDef() {
         irList = new LinkedList<>();
@@ -62,7 +61,6 @@ public class FuncDef extends IRStatement {
         loopStatusStack = new Stack<>();
         ifAndLoopOrder = new Stack<>();
         phiList = new HashMap<>();
-        callPara = new HashMap<>();
     }
 
     public void pushPara(Type parameterType) {

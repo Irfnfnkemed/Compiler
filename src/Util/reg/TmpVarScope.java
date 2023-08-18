@@ -39,8 +39,7 @@ public class TmpVarScope {
     public static Cmp cmp;
     public int max = 0;//表示临时变量最多需要的同时使用的虚拟寄存器的数量
     int nowIndex = 0;//表示下一条寄存器分配变化(changeList)的下标
-    FuncDef funcDef;
-    HashMap<String, String> getTmpVar;
+
 
     public TmpVarScope() {
         beg = new HashMap<>();
@@ -67,12 +66,6 @@ public class TmpVarScope {
 
     public void setEnd(String var, int id) {
         if (!except.contains(var) && var.charAt(0) != '@') {
-            if (funcDef.callPara.containsKey(var) && funcDef.callPara.get(var) < 8 &&
-                    !end.containsKey(var)) {
-                beg.remove(var);
-                getTmpVar.put(var, "a" + funcDef.callPara.get(var));
-                return;
-            }
             if (!beg.containsKey(var)) {
                 setBeg(var, id);
             } else {
@@ -81,9 +74,7 @@ public class TmpVarScope {
         }
     }
 
-    public void collect(FuncDef funcDef_, HashMap<String, String> getTmpVar_) {
-        funcDef = funcDef_;
-        getTmpVar = getTmpVar_;
+    public void collect(FuncDef funcDef) {
         int i = 0;
         if (funcDef.isClassMethod) {
             for (int j = 0; j < funcDef.parameterTypeList.size() - 1; ++j) {
