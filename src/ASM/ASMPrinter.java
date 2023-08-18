@@ -88,10 +88,6 @@ public class ASMPrinter {
             print((BNEZ) asmInstr);
         } else if (asmInstr instanceof LA) {
             print((LA) asmInstr);
-        } else if (asmInstr instanceof LB) {
-            print((LB) asmInstr);
-        } else if (asmInstr instanceof SB) {
-            print((SB) asmInstr);
         }
     }
 
@@ -137,10 +133,6 @@ public class ASMPrinter {
 
     public void print(SW sw) {
         printOut("  sw ", sw.from, " ", Integer.toString(sw.offset), "(", sw.to, ")\n");
-    }
-
-    public void print(SB sb) {
-        printOut("  sb ", sb.from, " ", Integer.toString(sb.offset), "(", sb.to, ")\n");
     }
 
     public void print(LW lw) {
@@ -217,10 +209,6 @@ public class ASMPrinter {
 
     public void print(BNEZ bnez) {
         printOut("  bnez ", bnez.condition, " ", bnez.toLabel, "\n");
-    }
-
-    public void print(LB lb) {
-        printOut("  lb ", lb.to, " ", Integer.toString(lb.offset), "(", lb.from, ")\n");
     }
 
     public void printOut(String... elements) {
