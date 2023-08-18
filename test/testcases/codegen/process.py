@@ -1,6 +1,6 @@
 import os
 import base64
-base_path = '/Users/peterzheng/Documents/Projects/OldProject/Compiler/Compiler-2020-test.testcases/codegen'
+base_path = '/Users/peterzheng/Documents/Projects/OldProject/src.Compiler/src.Compiler-2020-test.testcases/codegen'
 
 str_list = []
 file_list = open(os.path.join(base_path, 'judgelist.txt')).readlines()

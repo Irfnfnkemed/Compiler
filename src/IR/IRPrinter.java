@@ -53,33 +53,37 @@ public class IRPrinter {
         }
     }
 
-    private void print(Instruction instruction) {
-        if (instruction instanceof Label) {
-            print((Label) instruction);
-        } else {
-            System.out.print("    ");
-            if (instruction instanceof Alloca) {
-                print((Alloca) instruction);
-            } else if (instruction instanceof Store) {
-                print((Store) instruction);
-            } else if (instruction instanceof Load) {
-                print((Load) instruction);
-            } else if (instruction instanceof Ret) {
-                print((Ret) instruction);
-            } else if (instruction instanceof Binary) {
-                print((Binary) instruction);
-            } else if (instruction instanceof Call) {
-                print((Call) instruction);
-            } else if (instruction instanceof Br) {
-                print((Br) instruction);
-            } else if (instruction instanceof Getelementptr) {
-                print((Getelementptr) instruction);
-            } else if (instruction instanceof Icmp) {
-                print((Icmp) instruction);
-            } else if (instruction instanceof Phi) {
-                print((Phi) instruction);
+    public void print(GlobalVarDef globalVarDef) {
+        printOut(globalVarDef.varName, " = global ");
+        printTypeAndValue(globalVarDef.irType, globalVarDef.value);
+        System.out.print('\n');
+    }
+
+    public void print(FuncDef funcDef) {
+        System.out.print("\ndefine ");
+        printType(funcDef.irType);
+        printOut(" ", funcDef.functionName, "(");
+        int size = funcDef.parameterTypeList.size();
+        if (size > 0) {
+            if (funcDef.isClassMethod) {
+                System.out.print("ptr %this");
+            } else {
+                printType(funcDef.parameterTypeList.get(0));
+                System.out.print(" %0");
             }
         }
+        for (int i = 1; i < size; ++i) {
+            System.out.print(", ");
+            printType(funcDef.parameterTypeList.get(i));
+            if (funcDef.isClassMethod) {
+                printOut(" %" + (i - 1));
+            } else {
+                printOut(" %" + i);
+            }
+        }
+        System.out.print(") {\n");
+        funcDef.irList.forEach(this::print);
+        System.out.print("}\n");
     }
 
     public void print(ConstString constString) {
@@ -119,10 +123,53 @@ public class IRPrinter {
         }
     }
 
-    public void print(GlobalVarDef globalVarDef) {
-        printOut(globalVarDef.varName, " = global ");
-        printTypeAndValue(globalVarDef.irType, globalVarDef.value);
-        System.out.print('\n');
+    public void print(ClassTypeDef classTypeDef) {
+        printOut(classTypeDef.className, " = type { ");
+        for (int i = 0; i < classTypeDef.classMemNum; ++i) {
+            if (classTypeDef.isPtrList.get(i)) {
+                System.out.print("ptr");
+            } else {
+                System.out.print("i32");
+            }
+            if (i != classTypeDef.classMemNum - 1) {
+                System.out.print(", ");
+            }
+        }
+        System.out.print(" }\n");
+    }
+
+    private void print(Instruction instruction) {
+        if (instruction instanceof Label) {
+            print((Label) instruction);
+        } else {
+            System.out.print("    ");
+            if (instruction instanceof Alloca) {
+                print((Alloca) instruction);
+            } else if (instruction instanceof Store) {
+                print((Store) instruction);
+            } else if (instruction instanceof Load) {
+                print((Load) instruction);
+            } else if (instruction instanceof Binary) {
+                print((Binary) instruction);
+            } else if (instruction instanceof Icmp) {
+                print((Icmp) instruction);
+            } else if (instruction instanceof Call) {
+                print((Call) instruction);
+            } else if (instruction instanceof Br) {
+                print((Br) instruction);
+            } else if (instruction instanceof Getelementptr) {
+                print((Getelementptr) instruction);
+            } else if (instruction instanceof Phi) {
+                print((Phi) instruction);
+            } else if (instruction instanceof Ret) {
+                print((Ret) instruction);
+            }
+        }
+    }
+
+    public void print(Label label) {
+        System.out.print(label.labelName);
+        System.out.print(":\n");
     }
 
     public void print(Alloca alloca) {
@@ -148,16 +195,6 @@ public class IRPrinter {
         printOut(", ptr ", load.fromPointer, "\n");
     }
 
-    public void print(Ret ret) {
-        printOut("ret ");
-        if (ret.irType == null) {
-            printOut("void\n");
-        } else {
-            printType(ret.irType);
-            printOut(" ", ret.var, "\n");
-        }
-    }
-
     public void print(Binary binary) {
         printOut(binary.output, " = ", binary.op, " i32 ");
         if (binary.operandLeft == null) {
@@ -170,6 +207,24 @@ public class IRPrinter {
             System.out.print(binary.valueRight);
         } else {
             System.out.print(binary.operandRight);
+        }
+        System.out.print('\n');
+    }
+
+    public void print(Icmp icmp) {
+        printOut(icmp.output, " = icmp ", icmp.cond, " ");
+        printType(icmp.irType);
+        System.out.print(" ");
+        if (icmp.operandLeft == null) {
+            printValue(icmp.irType, icmp.valueLeft);
+        } else {
+            System.out.print(icmp.operandLeft);
+        }
+        System.out.print(", ");
+        if (icmp.operandRight == null) {
+            printValue(icmp.irType, icmp.valueRight);
+        } else {
+            System.out.print(icmp.operandRight);
         }
         System.out.print('\n');
     }
@@ -200,11 +255,6 @@ public class IRPrinter {
         System.out.print(")\n");
     }
 
-    public void print(Label label) {
-        System.out.print(label.labelName);
-        System.out.print(":\n");
-    }
-
     public void print(Br br) {
         if (br.condition == null) {
             printOut("br label ", br.trueLabel, "\n");
@@ -228,24 +278,6 @@ public class IRPrinter {
 
     }
 
-    public void print(Icmp icmp) {
-        printOut(icmp.output, " = icmp ", icmp.cond, " ");
-        printType(icmp.irType);
-        System.out.print(" ");
-        if (icmp.operandLeft == null) {
-            printValue(icmp.irType, icmp.valueLeft);
-        } else {
-            System.out.print(icmp.operandLeft);
-        }
-        System.out.print(", ");
-        if (icmp.operandRight == null) {
-            printValue(icmp.irType, icmp.valueRight);
-        } else {
-            System.out.print(icmp.operandRight);
-        }
-        System.out.print('\n');
-    }
-
     public void print(Phi phi) {
         printOut(phi.result, " = phi ");
         printType(phi.irType);
@@ -266,46 +298,14 @@ public class IRPrinter {
         System.out.print('\n');
     }
 
-    public void print(FuncDef funcDef) {
-        System.out.print("\ndefine ");
-        printType(funcDef.irType);
-        printOut(" ", funcDef.functionName, "(");
-        int size = funcDef.parameterTypeList.size();
-        if (size > 0) {
-            if (funcDef.isClassMethod) {
-                System.out.print("ptr %this");
-            } else {
-                printType(funcDef.parameterTypeList.get(0));
-                System.out.print(" %0");
-            }
+    public void print(Ret ret) {
+        printOut("ret ");
+        if (ret.irType == null) {
+            printOut("void\n");
+        } else {
+            printType(ret.irType);
+            printOut(" ", ret.var, "\n");
         }
-        for (int i = 1; i < size; ++i) {
-            System.out.print(", ");
-            printType(funcDef.parameterTypeList.get(i));
-            if (funcDef.isClassMethod) {
-                printOut(" %" + (i - 1));
-            } else {
-                printOut(" %" + i);
-            }
-        }
-        System.out.print(") {\n");
-        funcDef.irList.forEach(this::print);
-        System.out.print("}\n");
-    }
-
-    public void print(ClassTypeDef classTypeDef) {
-        printOut(classTypeDef.className, " = type { ");
-        for (int i = 0; i < classTypeDef.classMemNum; ++i) {
-            if (classTypeDef.isPtrList.get(i)) {
-                System.out.print("ptr");
-            } else {
-                System.out.print("i32");
-            }
-            if (i != classTypeDef.classMemNum - 1) {
-                System.out.print(", ");
-            }
-        }
-        System.out.print(" }\n");
     }
 
     public void printType(IRType irType) {
@@ -317,14 +317,6 @@ public class IRPrinter {
             System.out.print(irType.unitName);
         }
     }
-
-
-    public void printOut(String... elements) {
-        for (String ele : elements) {
-            System.out.print(ele);
-        }
-    }
-
 
     public void printTypeAndValue(IRType irType, long value) {
         if (Objects.equals(irType.unitName, "ptr") || irType.isArray) {
@@ -345,6 +337,12 @@ public class IRPrinter {
             System.out.print(value);
         } else if (Objects.equals(irType.unitName, "i1")) {
             System.out.print(value == 1);
+        }
+    }
+
+    public void printOut(String... elements) {
+        for (String ele : elements) {
+            System.out.print(ele);
         }
     }
 }

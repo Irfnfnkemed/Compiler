@@ -1,9 +1,6 @@
 package src.ASM;
 
-import src.ASM.instruction.ASMInstr;
-import src.ASM.instruction.BNEZ;
-import src.ASM.instruction.J;
-import src.ASM.instruction.LABEL;
+import src.ASM.instruction.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,6 +60,11 @@ public class Section {
         if (asmInstr instanceof BNEZ) {
             if (!Objects.equals(((BNEZ) asmInstr).toLabel, nowFuncName)) {
                 ((BNEZ) asmInstr).toLabel = nowFuncName + "-" + ((BNEZ) asmInstr).toLabel;
+            }
+        }
+        if (asmInstr instanceof MV mv) {
+            if (Objects.equals(mv.from, mv.to)) {
+                return;
             }
         }
         asmInstrList.add(asmInstr);

@@ -42,7 +42,7 @@ public class Reg {
     }
 
     public void collect(FuncDef funcDef) {
-        tmpVarScope.collect(funcDef);
+        tmpVarScope.collect(funcDef,getTmpVar);
     }
 
     public void flushReg() {//分配、释放临时变量占据的寄存器/空间

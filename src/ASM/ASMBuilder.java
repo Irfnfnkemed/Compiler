@@ -26,11 +26,7 @@ public class ASMBuilder {
         asmProgram = new ASMProgram();
         globalVar = new HashSet<>();
         for (var stmt : irProgram.stmtList) {
-            if (stmt instanceof GlobalVarDef) {
-                asmProgram.sectionData.pushGlobal(((GlobalVarDef) stmt).varName.substring(1));
-                asmProgram.sectionData.pushWord(((GlobalVarDef) stmt).varName.substring(1), (int) ((GlobalVarDef) stmt).value);
-                globalVar.add(((GlobalVarDef) stmt).varName);
-            } else if (stmt instanceof FuncDef) {
+            if (stmt instanceof FuncDef) {
                 asmProgram.sectionText.pushGlobal(((FuncDef) stmt).functionName.substring(1));
                 asmProgram.sectionText.nowFuncName = ((FuncDef) stmt).functionName.substring(1);
                 Reg reg = new Reg(asmProgram.sectionText, globalVar);
@@ -97,12 +93,9 @@ public class ASMBuilder {
                         }
                     }
                 }
-
-
                 for (var irInstr : ((FuncDef) stmt).irList) {
                     reg.flushReg();
                     visitInstr(asmProgram.sectionText, reg, irInstr);
-                    //TODO
                     ++reg.nowId;
                     reg.clearTmp();
                 }
@@ -112,6 +105,10 @@ public class ASMBuilder {
                 asmProgram.sectionText.pushInstr(new LW("ra", stackSize - 4));
                 asmProgram.sectionText.pushInstr(new ADDI("sp", "sp", stackSize));
                 asmProgram.sectionText.pushInstr(new RET());
+            } else if (stmt instanceof GlobalVarDef) {
+                asmProgram.sectionData.pushGlobal(((GlobalVarDef) stmt).varName.substring(1));
+                asmProgram.sectionData.pushWord(((GlobalVarDef) stmt).varName.substring(1), (int) ((GlobalVarDef) stmt).value);
+                globalVar.add(((GlobalVarDef) stmt).varName);
             } else if (stmt instanceof ConstString) {
                 for (int i = 0; i < ((ConstString) stmt).constStringList.size(); ++i) {
                     asmProgram.sectionRodata.pushConstString(
@@ -123,27 +120,34 @@ public class ASMBuilder {
     }
 
     void visitInstr(Section section, Reg reg, Instruction instruction) {
-        if (instruction instanceof Alloca) {
+        if (instruction instanceof Label) {
+            visit(section, (Label) instruction);
+        } else if (instruction instanceof Alloca) {
             reg.setStackVar(((Alloca) instruction).varName);
         } else if (instruction instanceof Store) {
             visit(section, reg, (Store) instruction);
         } else if (instruction instanceof Load) {
             visit(section, reg, (Load) instruction);
-        } else if (instruction instanceof Call) {
-            visit(section, reg, (Call) instruction);
         } else if (instruction instanceof Binary) {
             visit(section, reg, (Binary) instruction);
         } else if (instruction instanceof Icmp) {
             visit(section, reg, (Icmp) instruction);
-        } else if (instruction instanceof Ret) {
-            visit(section, reg, (Ret) instruction);
-        } else if (instruction instanceof Label) {
-            visit(section, (Label) instruction);
+        } else if (instruction instanceof Call) {
+            visit(section, reg, (Call) instruction);
         } else if (instruction instanceof Br) {
             visit(section, reg, (Br) instruction);
         } else if (instruction instanceof Getelementptr) {
             visit(section, reg, (Getelementptr) instruction);
+        } else if (instruction instanceof Ret) {
+            visit(section, reg, (Ret) instruction);
         }
+    }
+
+    void visit(Section section, Label label) {
+        if (Objects.equals(label.labelName, "entry")) {
+            return;
+        }
+        section.pushInstr(new LABEL("." + label.labelName));
     }
 
     void visit(Section section, Reg reg, Store store) {
@@ -170,13 +174,6 @@ public class ASMBuilder {
         reg.clearTmp();
     }
 
-    void visit(Section section, Label label) {
-        if (Objects.equals(label.labelName, "entry")) {
-            return;
-        }
-        section.pushInstr(new LABEL("." + label.labelName));
-    }
-
     void visit(Section section, Reg reg, Load load) {
         String from;
         if (reg.isInReg(load.toVarName)) {
@@ -191,44 +188,6 @@ public class ASMBuilder {
         }
         if (!reg.isInReg(load.toVarName)) {
             section.pushInstr(new SW(from, reg.getStackAddr(load.toVarName)));
-        }
-        reg.clearTmp();
-    }
-
-    void visit(Section section, Reg reg, Call call) {
-        int size = call.callTypeList.size();
-        int tmpVar = 0, tmpConst = 0;
-        for (int i = 0; i < min(size, 8); ++i) {
-            if (call.callCateList.get(i) == Call.callCate.VAR) {
-                reg.getVarReg(call.varNameList.get(tmpVar++), "a" + i);
-            } else {
-                section.pushInstr(new LI("a" + i, call.constValueList.get(tmpConst++).intValue()));
-            }
-            reg.clearTmp();
-        }
-        if (size > 8) {
-            String tmp;
-            for (int i = 8; i < size; ++i) {
-                if (call.callCateList.get(i) == Call.callCate.VAR) {
-                    tmp = reg.getVarReg(call.varNameList.get(tmpVar++));
-                } else {
-                    tmp = reg.getTmpReg();
-                    section.pushInstr(new LI(tmp, call.constValueList.get(tmpConst++).intValue()));
-                }
-                section.pushInstr(new SW(tmp, 4 * i));
-                reg.clearTmp();
-            }
-        }
-        section.pushInstr(new CALL(call.functionName.substring(1)));
-        if (call.resultVar != null) {
-            if (reg.isInReg(call.resultVar)) {
-                section.pushInstr(new MV("a0", reg.getVarReg(call.resultVar)));
-            } else {
-                section.pushInstr(new SW("a0", reg.getStackAddr(call.resultVar)));
-            }
-            if (Objects.equals(call.irType.unitName, "ptr")) {
-                reg.setHeap(call.resultVar);
-            }
         }
         reg.clearTmp();
     }
@@ -509,23 +468,52 @@ public class ASMBuilder {
         reg.clearTmp();
     }
 
-    void visit(Section section, Reg reg, Ret ret) {
-        if (ret.irType != null && ret.irType.unitSize != -1) {
-            String from = reg.getVarReg(ret.var);
-            section.pushInstr(new MV(from, "a0"));
+    void visit(Section section, Reg reg, Call call) {
+        int size = call.callTypeList.size();
+        int tmpVar = 0, tmpConst = 0;
+        for (int i = 0; i < min(size, 8); ++i) {
+            if (call.callCateList.get(i) == Call.callCate.VAR) {
+                reg.getVarReg(call.varNameList.get(tmpVar++), "a" + i);
+            } else {
+                section.pushInstr(new LI("a" + i, call.constValueList.get(tmpConst++).intValue()));
+            }
             reg.clearTmp();
         }
+        if (size > 8) {
+            String tmp;
+            for (int i = 8; i < size; ++i) {
+                if (call.callCateList.get(i) == Call.callCate.VAR) {
+                    tmp = reg.getVarReg(call.varNameList.get(tmpVar++));
+                } else {
+                    tmp = reg.getTmpReg();
+                    section.pushInstr(new LI(tmp, call.constValueList.get(tmpConst++).intValue()));
+                }
+                section.pushInstr(new SW(tmp, 4 * i));
+                reg.clearTmp();
+            }
+        }
+        section.pushInstr(new CALL(call.functionName.substring(1)));
+        if (call.resultVar != null) {
+            if (reg.isInReg(call.resultVar)) {
+                section.pushInstr(new MV("a0", reg.getVarReg(call.resultVar)));
+            } else {
+                section.pushInstr(new SW("a0", reg.getStackAddr(call.resultVar)));
+            }
+            if (Objects.equals(call.irType.unitName, "ptr")) {
+                reg.setHeap(call.resultVar);
+            }
+        }
+        reg.clearTmp();
     }
 
     void visit(Section section, Reg reg, Br br) {
+        var phi = br.funcDef.phiList.get(br.nowLabel);
         if (br.condition == null) {
-            var phi = br.funcDef.phiList.get(br.nowLabel);
             if (phi != null) {
                 visit(section, reg, phi);
             }
             section.pushInstr(new J("." + br.trueLabel.substring(1)));
         } else {
-            var phi = br.funcDef.phiList.get(br.nowLabel);
             if (phi != null && Objects.equals(phi.label, br.trueLabel)) {
                 visit(section, reg, phi);
             }
@@ -588,4 +576,11 @@ public class ASMBuilder {
         }
     }
 
+    void visit(Section section, Reg reg, Ret ret) {
+        if (ret.irType != null && ret.irType.unitSize != -1) {
+            String from = reg.getVarReg(ret.var);
+            section.pushInstr(new MV(from, "a0"));
+            reg.clearTmp();
+        }
+    }
 }

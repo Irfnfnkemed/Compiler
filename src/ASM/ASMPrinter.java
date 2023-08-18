@@ -4,13 +4,49 @@ import src.ASM.instruction.*;
 import src.ASM.instruction.binary.*;
 import src.ASM.instruction.binaryImme.*;
 
+import java.util.HashMap;
+import java.util.function.Consumer;
+
 public class ASMPrinter {
 
     public ASMProgram asmProgram;
+    private final HashMap<Class<? extends ASMInstr>, Consumer<ASMInstr>> instrHandlers;
 
     public ASMPrinter(ASMProgram asmProgram_) {
         asmProgram = asmProgram_;
+        instrHandlers = new HashMap<>();
+        instrHandlers.put(LABEL.class, this::printLABEL);
+        instrHandlers.put(LI.class, this::printLI);
+        instrHandlers.put(LW.class, this::printLW);
+        instrHandlers.put(LA.class, this::printLA);
+        instrHandlers.put(SW.class, this::printSW);
+        instrHandlers.put(MV.class, this::printMV);
+        instrHandlers.put(ADDI.class, this::printADDI);
+        instrHandlers.put(ADD.class, this::printADD);
+        instrHandlers.put(SUB.class, this::printSUB);
+        instrHandlers.put(MUL.class, this::printMUL);
+        instrHandlers.put(DIV.class, this::printDIV);
+        instrHandlers.put(REM.class, this::printREM);
+        instrHandlers.put(AND.class, this::printAND);
+        instrHandlers.put(ANDI.class, this::printANDI);
+        instrHandlers.put(OR.class, this::printOR);
+        instrHandlers.put(ORI.class, this::printORI);
+        instrHandlers.put(XOR.class, this::printXOR);
+        instrHandlers.put(XORI.class, this::printXORI);
+        instrHandlers.put(SLL.class, this::printSLL);
+        instrHandlers.put(SLLI.class, this::printSLLI);
+        instrHandlers.put(SRA.class, this::printSRA);
+        instrHandlers.put(SRAI.class, this::printSRAI);
+        instrHandlers.put(SLT.class, this::printSLT);
+        instrHandlers.put(SLTI.class, this::printSLTI);
+        instrHandlers.put(SEQZ.class, this::printSEQZ);
+        instrHandlers.put(SNEZ.class, this::printSNEZ);
+        instrHandlers.put(BNEZ.class, this::printBNEZ);
+        instrHandlers.put(J.class, this::printJ);
+        instrHandlers.put(CALL.class, this::printCALL);
+        instrHandlers.put(RET.class, this::printRET);
     }
+
 
     public void print() {
         print(asmProgram.sectionText);
@@ -28,187 +64,157 @@ public class ASMPrinter {
     }
 
     public void print(ASMInstr asmInstr) {
-        if (asmInstr instanceof LABEL) {
-            print((LABEL) asmInstr);
-        } else if (asmInstr instanceof ADDI) {
-            print((ADDI) asmInstr);
-        } else if (asmInstr instanceof SW) {
-            print((SW) asmInstr);
-        } else if (asmInstr instanceof LW) {
-            print((LW) asmInstr);
-        } else if (asmInstr instanceof RET) {
-            print((RET) asmInstr);
-        } else if (asmInstr instanceof LI) {
-            print((LI) asmInstr);
-        } else if (asmInstr instanceof MV) {
-            print((MV) asmInstr);
-        } else if (asmInstr instanceof CALL) {
-            print((CALL) asmInstr);
-        } else if (asmInstr instanceof ADD) {
-            print((ADD) asmInstr);
-        } else if (asmInstr instanceof SUB) {
-            print((SUB) asmInstr);
-        } else if (asmInstr instanceof MUL) {
-            print((MUL) asmInstr);
-        } else if (asmInstr instanceof DIV) {
-            print((DIV) asmInstr);
-        } else if (asmInstr instanceof REM) {
-            print((REM) asmInstr);
-        } else if (asmInstr instanceof SLL) {
-            print((SLL) asmInstr);
-        } else if (asmInstr instanceof SLLI) {
-            print((SLLI) asmInstr);
-        } else if (asmInstr instanceof SRA) {
-            print((SRA) asmInstr);
-        } else if (asmInstr instanceof SRAI) {
-            print((SRAI) asmInstr);
-        } else if (asmInstr instanceof AND) {
-            print((AND) asmInstr);
-        } else if (asmInstr instanceof ANDI) {
-            print((ANDI) asmInstr);
-        } else if (asmInstr instanceof OR) {
-            print((OR) asmInstr);
-        } else if (asmInstr instanceof ORI) {
-            print((ORI) asmInstr);
-        } else if (asmInstr instanceof XOR) {
-            print((XOR) asmInstr);
-        } else if (asmInstr instanceof XORI) {
-            print((XORI) asmInstr);
-        } else if (asmInstr instanceof SLT) {
-            print((SLT) asmInstr);
-        } else if (asmInstr instanceof SLTI) {
-            print((SLTI) asmInstr);
-        } else if (asmInstr instanceof SEQZ) {
-            print((SEQZ) asmInstr);
-        } else if (asmInstr instanceof SNEZ) {
-            print((SNEZ) asmInstr);
-        } else if (asmInstr instanceof J) {
-            print((J) asmInstr);
-        } else if (asmInstr instanceof BNEZ) {
-            print((BNEZ) asmInstr);
-        } else if (asmInstr instanceof LA) {
-            print((LA) asmInstr);
-        }
+        instrHandlers.get(asmInstr.getClass()).accept(asmInstr);
     }
 
-    public void print(LABEL label) {
+
+    public void printLABEL(ASMInstr asmInstr) {
+        var label = (LABEL) asmInstr;
         printOut(label.label, ":\n");
     }
 
-    public void print(ADDI addi) {
-        printOut("  addi ", addi.to, " ", addi.from, " ", Integer.toString(addi.imme), "\n");
-    }
-
-    public void print(J j) {
-        printOut("  j ", j.toLabel, "\n");
-    }
-
-    public void print(LA la) {
-        printOut("  la ", la.to, " ", la.fromLabel, "\n");
-    }
-
-    public void print(ANDI andi) {
-        printOut("  andi ", andi.to, " ", andi.from, " ", Integer.toString(andi.imme), "\n");
-    }
-
-    public void print(SLLI slli) {
-        printOut("  slli ", slli.to, " ", slli.from, " ", Integer.toString(slli.imme), "\n");
-    }
-
-    public void print(SRAI srai) {
-        printOut("  srai ", srai.to, " ", srai.from, " ", Integer.toString(srai.imme), "\n");
-    }
-
-    public void print(ORI ori) {
-        printOut("  ori ", ori.to, " ", ori.from, " ", Integer.toString(ori.imme), "\n");
-    }
-
-    public void print(XORI xori) {
-        printOut("  xori ", xori.to, " ", xori.from, " ", Integer.toString(xori.imme), "\n");
-    }
-
-    public void print(SLTI slti) {
-        printOut("  slti ", slti.to, " ", slti.from, " ", Integer.toString(slti.imme), "\n");
-    }
-
-    public void print(SW sw) {
-        printOut("  sw ", sw.from, " ", Integer.toString(sw.offset), "(", sw.to, ")\n");
-    }
-
-    public void print(LW lw) {
-        printOut("  lw ", lw.to, " ", Integer.toString(lw.offset), "(", lw.from, ")\n");
-    }
-
-    public void print(LI li) {
+    public void printLI(ASMInstr asmInstr) {
+        var li = (LI) asmInstr;
         printOut("  li ", li.to, " ", Integer.toString(li.imme), "\n");
     }
 
-    public void print(MV mv) {
+    public void printLW(ASMInstr asmInstr) {
+        var lw = (LW) asmInstr;
+        printOut("  lw ", lw.to, " ", Integer.toString(lw.offset), "(", lw.from, ")\n");
+    }
+
+    public void printLA(ASMInstr asmInstr) {
+        var la = (LA) asmInstr;
+        printOut("  la ", la.to, " ", la.fromLabel, "\n");
+    }
+
+    public void printSW(ASMInstr asmInstr) {
+        var sw = (SW) asmInstr;
+        printOut("  sw ", sw.from, " ", Integer.toString(sw.offset), "(", sw.to, ")\n");
+    }
+
+    public void printMV(ASMInstr asmInstr) {
+        var mv = (MV) asmInstr;
         printOut("  mv ", mv.to, " ", mv.from, "\n");
     }
 
-    public void print(RET ret) {
-        printOut("  ret\n");
+    public void printADDI(ASMInstr asmInstr) {
+        var addi = (ADDI) asmInstr;
+        printOut("  addi ", addi.to, " ", addi.from, " ", Integer.toString(addi.imme), "\n");
     }
 
-    public void print(CALL call) {
-        printOut("  call ", call.func, "\n");
-    }
-
-    public void print(ADD add) {
+    public void printADD(ASMInstr asmInstr) {
+        var add = (ADD) asmInstr;
         printOut("  add ", add.to, " ", add.lhs, " ", add.rhs, "\n");
     }
 
-    public void print(AND and) {
-        printOut("  and ", and.to, " ", and.lhs, " ", and.rhs, "\n");
-    }
-
-    public void print(SUB sub) {
+    public void printSUB(ASMInstr asmInstr) {
+        var sub = (SUB) asmInstr;
         printOut("  sub ", sub.to, " ", sub.lhs, " ", sub.rhs, "\n");
     }
 
-    public void print(MUL mul) {
+    public void printMUL(ASMInstr asmInstr) {
+        var mul = (MUL) asmInstr;
         printOut("  mul ", mul.to, " ", mul.lhs, " ", mul.rhs, "\n");
     }
 
-    public void print(DIV div) {
+    public void printDIV(ASMInstr asmInstr) {
+        var div = (DIV) asmInstr;
         printOut("  div ", div.to, " ", div.lhs, " ", div.rhs, "\n");
     }
 
-    public void print(SLL sll) {
-        printOut("  sll ", sll.to, " ", sll.lhs, " ", sll.rhs, "\n");
-    }
-
-    public void print(SRA sra) {
-        printOut("  sra ", sra.to, " ", sra.lhs, " ", sra.rhs, "\n");
-    }
-
-    public void print(SLT slt) {
-        printOut("  slt ", slt.to, " ", slt.lhs, " ", slt.rhs, "\n");
-    }
-
-    public void print(OR or) {
-        printOut("  or ", or.to, " ", or.lhs, " ", or.rhs, "\n");
-    }
-
-    public void print(XOR xor) {
-        printOut("  xor ", xor.to, " ", xor.lhs, " ", xor.rhs, "\n");
-    }
-
-    public void print(REM rem) {
+    public void printREM(ASMInstr asmInstr) {
+        var rem = (REM) asmInstr;
         printOut("  rem ", rem.to, " ", rem.lhs, " ", rem.rhs, "\n");
     }
 
-    public void print(SEQZ seqz) {
+    public void printAND(ASMInstr asmInstr) {
+        var and = (AND) asmInstr;
+        printOut("  and ", and.to, " ", and.lhs, " ", and.rhs, "\n");
+    }
+
+    public void printANDI(ASMInstr asmInstr) {
+        var andi = (ANDI) asmInstr;
+        printOut("  andi ", andi.to, " ", andi.from, " ", Integer.toString(andi.imme), "\n");
+    }
+
+    public void printOR(ASMInstr asmInstr) {
+        var or = (OR) asmInstr;
+        printOut("  or ", or.to, " ", or.lhs, " ", or.rhs, "\n");
+    }
+
+    public void printORI(ASMInstr asmInstr) {
+        var ori = (ORI) asmInstr;
+        printOut("  ori ", ori.to, " ", ori.from, " ", Integer.toString(ori.imme), "\n");
+    }
+
+    public void printXOR(ASMInstr asmInstr) {
+        var xor = (XOR) asmInstr;
+        printOut("  xor ", xor.to, " ", xor.lhs, " ", xor.rhs, "\n");
+    }
+
+    public void printXORI(ASMInstr asmInstr) {
+        var xori = (XORI) asmInstr;
+        printOut("  xori ", xori.to, " ", xori.from, " ", Integer.toString(xori.imme), "\n");
+    }
+
+    public void printSLL(ASMInstr asmInstr) {
+        var sll = (SLL) asmInstr;
+        printOut("  sll ", sll.to, " ", sll.lhs, " ", sll.rhs, "\n");
+    }
+
+    public void printSLLI(ASMInstr asmInstr) {
+        var slli = (SLLI) asmInstr;
+        printOut("  slli ", slli.to, " ", slli.from, " ", Integer.toString(slli.imme), "\n");
+    }
+
+    public void printSRA(ASMInstr asmInstr) {
+        var sra = (SRA) asmInstr;
+        printOut("  sra ", sra.to, " ", sra.lhs, " ", sra.rhs, "\n");
+    }
+
+    public void printSRAI(ASMInstr asmInstr) {
+        var srai = (SRAI) asmInstr;
+        printOut("  srai ", srai.to, " ", srai.from, " ", Integer.toString(srai.imme), "\n");
+    }
+
+    public void printSLT(ASMInstr asmInstr) {
+        var slt = (SLT) asmInstr;
+        printOut("  slt ", slt.to, " ", slt.lhs, " ", slt.rhs, "\n");
+    }
+
+    public void printSLTI(ASMInstr asmInstr) {
+        var slti = (SLTI) asmInstr;
+        printOut("  slti ", slti.to, " ", slti.from, " ", Integer.toString(slti.imme), "\n");
+    }
+
+    public void printSEQZ(ASMInstr asmInstr) {
+        var seqz = (SEQZ) asmInstr;
         printOut("  seqz ", seqz.to, " ", seqz.from, "\n");
     }
 
-    public void print(SNEZ snez) {
+    public void printSNEZ(ASMInstr asmInstr) {
+        var snez = (SNEZ) asmInstr;
         printOut("  snez ", snez.to, " ", snez.from, "\n");
     }
 
-    public void print(BNEZ bnez) {
+    public void printBNEZ(ASMInstr asmInstr) {
+        var bnez = (BNEZ) asmInstr;
         printOut("  bnez ", bnez.condition, " ", bnez.toLabel, "\n");
+    }
+
+    public void printJ(ASMInstr asmInstr) {
+        var j = (J) asmInstr;
+        printOut("  j ", j.toLabel, "\n");
+    }
+
+    public void printCALL(ASMInstr asmInstr) {
+        var call = (CALL) asmInstr;
+        printOut("  call ", call.func, "\n");
+    }
+
+    public void printRET(ASMInstr asmInstr) {
+        printOut("  ret\n");
     }
 
     public void printOut(String... elements) {

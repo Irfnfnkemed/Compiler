@@ -619,6 +619,12 @@ public class IRBuilder implements ASTVisitor {
             call.resultVar = "%" + anonymousVar;
             ((Exp) now).set("%" + anonymousVar++);
         }
+        int index = 0;
+        for (int i = 0; i < call.callCateList.size(); ++i) {
+            if (call.callCateList.get(i) == Call.callCate.VAR) {
+                ((Exp) now).funcDef.callPara.put(call.varNameList.get(index++), i);
+            }
+        }
         ((Exp) now).push(call);
     }
 
