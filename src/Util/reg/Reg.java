@@ -7,6 +7,8 @@ import src.IR.statement.FuncDef;
 
 import java.util.*;
 
+import static java.lang.Math.min;
+
 public class Reg {
     public TmpVarScope tmpVarScope;
     public ASMStack asmStack;
@@ -39,7 +41,7 @@ public class Reg {
     }
 
     public void setStack(int allocaSize, int regMax, int callParaMax) {
-        savedReg = regMax;
+        savedReg = min(regMax, 11);
         call = regMax > -1;
         asmStack = new ASMStack(allocaSize, regMax, callParaMax, call);
         section.pushInstr(new ADDI("sp", "sp", -asmStack.stackSize));

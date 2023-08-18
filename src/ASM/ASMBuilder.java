@@ -482,7 +482,7 @@ public class ASMBuilder {
                     tmp = reg.getTmpReg();
                     section.pushInstr(new LI(tmp, call.constValueList.get(tmpConst++).intValue()));
                 }
-                section.pushInstr(new SW(tmp, 4 * i));
+                section.pushInstr(new SW(tmp, 4 * (i - 8)));
                 reg.clearTmp();
             }
         }
