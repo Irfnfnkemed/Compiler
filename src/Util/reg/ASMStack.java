@@ -10,11 +10,12 @@ public class ASMStack {
     public int nowPos;
     public List<Integer> freePos;//已经释放的位置
 
-    public ASMStack(int allocaSize, int regMax, int callParaMax) {
-        //需要的栈字节数，是16的倍数（15 = 12 + 3，前者是ra,s1-s11，后者是为了向上取整）
+    public ASMStack(int allocaSize, int regMax, int callParaMax, int savedReg, boolean call) {
+        //需要的栈字节数，是16的倍数（+3是为了向上取整）
         int callStackMax = callParaMax > 8 ? callParaMax - 8 : 0;
         int regStackMax = regMax > 11 ? regMax - 11 : 0;
-        stackSize = ((allocaSize + regStackMax + callStackMax + 15) >> 2) << 4;
+        int callee = savedReg + (call ? 1 : 0);
+        stackSize = ((allocaSize + regStackMax + callStackMax + callee + 3) >> 2) << 4;
         getVar = new HashMap<>();
         nowPos = stackSize - 52;//除去ra,s1-s11
         freePos = new ArrayList<>();

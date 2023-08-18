@@ -49,17 +49,17 @@ public class Section {
     public void pushInstr(ASMInstr asmInstr) {
         if (asmInstr instanceof LABEL) {
             if (!Objects.equals(((LABEL) asmInstr).label, nowFuncName)) {
-                ((LABEL) asmInstr).label = nowFuncName + "-" + ((LABEL) asmInstr).label;
+                ((LABEL) asmInstr).label = "." + nowFuncName + "-" + ((LABEL) asmInstr).label;
             }
         }
         if (asmInstr instanceof J) {
             if (!Objects.equals(((J) asmInstr).toLabel, nowFuncName)) {
-                ((J) asmInstr).toLabel = nowFuncName + "-" + ((J) asmInstr).toLabel;
+                ((J) asmInstr).toLabel = "." + nowFuncName + "-" + ((J) asmInstr).toLabel;
             }
         }
         if (asmInstr instanceof BNEZ) {
             if (!Objects.equals(((BNEZ) asmInstr).toLabel, nowFuncName)) {
-                ((BNEZ) asmInstr).toLabel = nowFuncName + "-" + ((BNEZ) asmInstr).toLabel;
+                ((BNEZ) asmInstr).toLabel = "." + nowFuncName + "-" + ((BNEZ) asmInstr).toLabel;
             }
         }
         if (asmInstr instanceof MV mv) {

@@ -1,9 +1,8 @@
 package src.Util.reg;
 
 import src.ASM.Section;
-import src.ASM.instruction.LA;
-import src.ASM.instruction.LW;
-import src.ASM.instruction.MV;
+import src.ASM.instruction.*;
+import src.ASM.instruction.binaryImme.ADDI;
 import src.IR.statement.FuncDef;
 
 import java.util.*;
@@ -19,6 +18,8 @@ public class Reg {
     public HashSet<String> isHeap;//指向堆空间的指针变量
     public HashSet<String> globalVar;//全局变量
     public Section section;
+    int savedReg;//需要用到的s1-s11寄存器数量
+    boolean call;//是否需要调用函数
 
     public Reg(Section section_, HashSet<String> globalVar_) {
         tmpVarScope = new TmpVarScope();
@@ -36,9 +37,27 @@ public class Reg {
         globalVar = globalVar_;
     }
 
-    public int setStack(int allocaSize, int regMax, int callParaMax) {
-        asmStack = new ASMStack(allocaSize, regMax, callParaMax);
-        return asmStack.stackSize;
+    public void setStack(int allocaSize, int regMax, int callParaMax, int savedReg_) {
+        savedReg = savedReg_;
+        call = regMax > -1;
+        asmStack = new ASMStack(allocaSize, regMax, callParaMax, savedReg, call);
+        section.pushInstr(new ADDI("sp", "sp", -asmStack.stackSize));
+        if (call) {
+            section.pushInstr(new SW("ra", asmStack.stackSize - 4));
+        }
+        for (int i = 1; i <= savedReg; ++i) {
+            section.pushInstr(new SW("s" + i, asmStack.stackSize - ((i + 1) << 2)));
+        }
+    }
+
+    public void restoreStack() {
+        for (int i = savedReg; i > 0; --i) {
+            section.pushInstr(new LW("s" + i, asmStack.stackSize - ((i + 1) << 2)));
+        }
+        if (call) {
+            section.pushInstr(new LW("ra", asmStack.stackSize - 4));
+        }
+        section.pushInstr(new ADDI("sp", "sp", asmStack.stackSize));
     }
 
     public void collect(FuncDef funcDef) {

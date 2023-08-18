@@ -31,12 +31,13 @@ public class ASMBuilder {
                 asmProgram.sectionText.nowFuncName = ((FuncDef) stmt).functionName.substring(1);
                 Reg reg = new Reg(asmProgram.sectionText, globalVar);
                 reg.collect((FuncDef) stmt);
-                int stackSize = reg.setStack(((FuncDef) stmt).allocaSize, reg.tmpVarScope.max, ((FuncDef) stmt).maxCallPara);
                 asmProgram.sectionText.pushInstr(new LABEL(((FuncDef) stmt).functionName.substring(1)));
-                asmProgram.sectionText.pushInstr(new ADDI("sp", "sp", -stackSize));
-                asmProgram.sectionText.pushInstr(new SW("ra", stackSize - 4));
-                for (int i = 1; i <= 11; ++i) {
-                    asmProgram.sectionText.pushInstr(new SW("s" + i, stackSize - ((i + 1) << 2)));
+                if (Objects.equals(((FuncDef) stmt).functionName, "@.newArray")) {
+                    reg.setStack(((FuncDef) stmt).allocaSize,
+                            reg.tmpVarScope.max, ((FuncDef) stmt).maxCallPara, 2);
+                } else {
+                    reg.setStack(((FuncDef) stmt).allocaSize,
+                            reg.tmpVarScope.max, ((FuncDef) stmt).maxCallPara, 11);
                 }
                 //处理参数
                 int size = ((FuncDef) stmt).parameterTypeList.size();
@@ -99,11 +100,7 @@ public class ASMBuilder {
                     ++reg.nowId;
                     reg.clearTmp();
                 }
-                for (int i = 11; i >= 0; --i) {
-                    asmProgram.sectionText.pushInstr(new LW("s" + i, stackSize - 4 * i - 4));
-                }
-                asmProgram.sectionText.pushInstr(new LW("ra", stackSize - 4));
-                asmProgram.sectionText.pushInstr(new ADDI("sp", "sp", stackSize));
+                reg.restoreStack();
                 asmProgram.sectionText.pushInstr(new RET());
             } else if (stmt instanceof GlobalVarDef) {
                 asmProgram.sectionData.pushGlobal(((GlobalVarDef) stmt).varName.substring(1));
@@ -147,7 +144,7 @@ public class ASMBuilder {
         if (Objects.equals(label.labelName, "entry")) {
             return;
         }
-        section.pushInstr(new LABEL("." + label.labelName));
+        section.pushInstr(new LABEL(label.labelName));
     }
 
     void visit(Section section, Reg reg, Store store) {
@@ -512,16 +509,16 @@ public class ASMBuilder {
             if (phi != null) {
                 visit(section, reg, phi);
             }
-            section.pushInstr(new J("." + br.trueLabel.substring(1)));
+            section.pushInstr(new J(br.trueLabel.substring(1)));
         } else {
             if (phi != null && Objects.equals(phi.label, br.trueLabel)) {
                 visit(section, reg, phi);
             }
-            section.pushInstr(new BNEZ(reg.getVarReg(br.condition), "." + br.trueLabel.substring(1)));
+            section.pushInstr(new BNEZ(reg.getVarReg(br.condition), br.trueLabel.substring(1)));
             if (phi != null && Objects.equals(phi.label, br.falseLabel)) {
                 visit(section, reg, phi);
             }
-            section.pushInstr(new J("." + br.falseLabel.substring(1)));
+            section.pushInstr(new J(br.falseLabel.substring(1)));
         }
     }
 
