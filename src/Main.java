@@ -20,8 +20,8 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Scanner;
 
-import static test.TestIR.testIR;
-import static test.TestSemantic.testSemantic;
+//import static test.TestIR.testIR;
+//import static test.TestSemantic.testSemantic;
 
 public class Main {
     public static void main(String[] args) throws Exception {
