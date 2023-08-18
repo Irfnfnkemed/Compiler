@@ -18,6 +18,7 @@ public class Reg {
     public HashSet<String> isHeap;//指向堆空间的指针变量
     public HashSet<String> globalVar;//全局变量
     public Section section;
+    FuncDef funcDef;//对应函数的IR节点
     int savedReg;//需要用到的s1-s11寄存器数量
     boolean call;//是否需要调用函数
 
@@ -37,10 +38,10 @@ public class Reg {
         globalVar = globalVar_;
     }
 
-    public void setStack(int allocaSize, int regMax, int callParaMax, int savedReg_) {
-        savedReg = savedReg_;
+    public void setStack(int allocaSize, int regMax, int callParaMax) {
+        savedReg = regMax;
         call = regMax > -1;
-        asmStack = new ASMStack(allocaSize, regMax, callParaMax, savedReg, call);
+        asmStack = new ASMStack(allocaSize, regMax, callParaMax, call);
         section.pushInstr(new ADDI("sp", "sp", -asmStack.stackSize));
         if (call) {
             section.pushInstr(new SW("ra", asmStack.stackSize - 4));

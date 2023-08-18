@@ -32,13 +32,10 @@ public class ASMBuilder {
                 Reg reg = new Reg(asmProgram.sectionText, globalVar);
                 reg.collect((FuncDef) stmt);
                 asmProgram.sectionText.pushInstr(new LABEL(((FuncDef) stmt).functionName.substring(1)));
-                if (Objects.equals(((FuncDef) stmt).functionName, "@.newArray")) {
-                    reg.setStack(((FuncDef) stmt).allocaSize,
-                            reg.tmpVarScope.max, ((FuncDef) stmt).maxCallPara, 2);
-                } else {
-                    reg.setStack(((FuncDef) stmt).allocaSize,
-                            reg.tmpVarScope.max, ((FuncDef) stmt).maxCallPara, 11);
+                if (Objects.equals(((FuncDef) stmt).functionName, "@.newArray") || ((FuncDef) stmt).isClassMethod) {
+                    ++reg.tmpVarScope.max;
                 }
+                reg.setStack(((FuncDef) stmt).allocaSize, reg.tmpVarScope.max, ((FuncDef) stmt).maxCallPara);
                 //处理参数
                 int size = ((FuncDef) stmt).parameterTypeList.size();
                 if (size > 0) {
