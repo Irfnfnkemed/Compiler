@@ -8,6 +8,9 @@ import src.ASM.ASMPrinter;
 import src.AST.ASTBuilder;
 import src.IR.IRBuilder;
 import src.IR.IRPrinter;
+import src.IR.statement.FuncDef;
+import src.Mem2Reg.CFG;
+import src.Mem2Reg.Dom;
 import src.Util.error.Errors;
 import src.Util.error.ParserErrorListener;
 import src.parser.MxLexer;
@@ -42,6 +45,13 @@ public class Main {
             semantic.check();
             var a = new IRBuilder(AST.ASTProgram, semantic.globalScope);
             var b = new IRPrinter(a.irProgram);
+            for (var stmt : a.irProgram.stmtList) {
+                if (stmt instanceof FuncDef) {
+                    var cfg = new CFG((FuncDef) stmt);
+                    var dom = new Dom(cfg);
+                    int p = 34;
+                }
+            }
             // 创建一个文件输出流，并指定输出文件的路径
             FileOutputStream fileOutputStream = new FileOutputStream("./src/builtin/test.ll");
 
