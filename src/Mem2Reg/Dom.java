@@ -6,6 +6,7 @@ public class Dom {
     public static class domSet {//节点的支配集
         public String blockName;
         public List<domSet> domSetList;
+        public domSet immeDom;
 
         public domSet(String blockName_) {
             blockName = blockName_;
@@ -15,21 +16,19 @@ public class Dom {
     }
 
     public HashMap<String, domSet> domMap;
+    public CFG cfg;
 
-    public Dom(CFG cfg) {
+    public Dom(CFG cfg_) {
+        cfg = cfg_;
         domMap = new HashMap<>();
         cfg.funcBlocks.forEach((label, block) -> domMap.put(label, new domSet(label)));
         boolean flag = true;
         while (flag) {
-            flag = true;
             for (var entry : cfg.funcBlocks.entrySet()) {
-                if (!getIntersection(entry.getValue().prev, entry.getKey())) {
-                    flag = false;
-                } else {
-                    flag = true;
-                }
+                flag = getIntersection(entry.getValue().prev, entry.getKey());
             }
         }
+        buildDomTree();
     }
 
     public boolean getIntersection(List<Block> prev, String nowLabel) {//发现前驱的支配集交集有新元素，返回true
@@ -47,7 +46,7 @@ public class Dom {
                 }
             }
         }
-        boolean newDom = true;
+        boolean newDom;
         for (var entry : intersection.entrySet()) {
             if (entry.getValue() == prev.size()) {
                 newDom = true;
@@ -64,6 +63,35 @@ public class Dom {
             }
         }
         return flag;
+    }
+
+    private void buildDomTree() {
+        domSet root = domMap.get("entry");
+        List<String> already = new ArrayList<>();
+        visitNode(root, already);
+    }
+
+    private void visitNode(domSet node, List<String> already) {
+        if (node.immeDom != null) {
+            return;
+        }
+        findImme(node, already);
+        already.add(node.blockName);
+        for (int i = 0; i < cfg.funcBlocks.get(node.blockName).suc; ++i) {
+            visitNode(domMap.get(cfg.funcBlocks.get(node.blockName).next[i].label), already);
+        }
+    }
+
+    private void findImme(domSet node, List<String> already) {
+        for (int i = already.size() - 1; i >= 0; --i) {
+            String prev = already.get(i);
+            for (var dom : node.domSetList) {
+                if (Objects.equals(dom.blockName, prev)) {
+                    node.immeDom = dom;
+                    return;
+                }
+            }
+        }
     }
 
 }
