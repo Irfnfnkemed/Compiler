@@ -1,18 +1,22 @@
 package src.Mem2Reg;
 
-import src.IR.IRProgram;
+import src.IR.instruction.Alloca;
 import src.IR.instruction.Br;
 import src.IR.instruction.Label;
+import src.IR.instruction.Store;
 import src.IR.statement.FuncDef;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Objects;
 
 public class CFG {
     public HashMap<String, Block> funcBlocks;//函数名->(块名->Block节点)
+    public HashSet<String> allocaVar;//alloca的变量
 
     public CFG(FuncDef funcDef) {
-        funcBlocks = new HashMap<String, Block>();
+        funcBlocks = new HashMap<>();
+        allocaVar = new HashSet<>();
         Block nowBlock = null;
         for (var instr : funcDef.irList) {
             if (instr instanceof Label) {
@@ -39,6 +43,12 @@ public class CFG {
                         }
                         nowBlock.setSuc(nextBlock);
                         nextBlock.setPre(nowBlock);
+                    }
+                } else if (instr instanceof Alloca) {
+                    allocaVar.add(((Alloca) instr).varName);
+                } else if (instr instanceof Store) {
+                    if (allocaVar.contains(((Store) instr).toPointer)) {
+                        nowBlock.defList.add(((Store) instr).toPointer);
                     }
                 }
 

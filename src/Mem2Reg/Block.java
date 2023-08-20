@@ -3,7 +3,7 @@ package src.Mem2Reg;
 import src.IR.IRNode;
 import src.IR.instruction.Instruction;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -11,13 +11,17 @@ import java.util.Objects;
 public class Block extends IRNode {
     public List<Instruction> instructionList;
     public String label;
-    public Block[] next = new Block[2];
-    public List<Block> prev = new LinkedList<>();
+    public Block[] next;
+    public List<Block> prev;
+    public HashSet<String> defList;//在块内def的变量
     public int pre = 0, suc = 0;//前驱、后继个数
 
     public Block(String label_) {
         label = label_;
         instructionList = new LinkedList<>();
+        next = new Block[2];
+        prev = new LinkedList<>();
+        defList = new HashSet<>();
     }
 
     public void pushIR(Instruction instruction) {

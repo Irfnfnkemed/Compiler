@@ -3,42 +3,60 @@ package src.Mem2Reg;
 import java.util.*;
 
 public class Dom {
-    public static class domSet {//节点的支配集
+    public static class DomInfo {//节点的支配集、直接支配节点和支配边界
         public String blockName;
-        public List<domSet> domSetList;
-        public domSet immeDom;
+        public HashMap<String, DomInfo> domSet;//支配集
+        public DomInfo immeDom;//直接支配节点
+        public HashMap<String, DomInfo> domFrontier;//支配边界
 
-        public domSet(String blockName_) {
+        public DomInfo(String blockName_) {
             blockName = blockName_;
-            domSetList = new ArrayList<>();
-            domSetList.add(this);
+            domSet = new HashMap<>();
+            domFrontier = new HashMap<>();
         }
     }
 
-    public HashMap<String, domSet> domMap;
+    public HashMap<String, DomInfo> domMap;
     public CFG cfg;
 
     public Dom(CFG cfg_) {
         cfg = cfg_;
         domMap = new HashMap<>();
-        cfg.funcBlocks.forEach((label, block) -> domMap.put(label, new domSet(label)));
-        boolean flag = true;
-        while (flag) {
-            for (var entry : cfg.funcBlocks.entrySet()) {
-                flag = getIntersection(entry.getValue().prev, entry.getKey());
+        cfg.funcBlocks.keySet().forEach(label -> domMap.put(label, new DomInfo(label)));
+        for (DomInfo domInfo : domMap.values()) {
+            if (Objects.equals(domInfo.blockName, "entry")) {
+                domInfo.domSet.put("entry", domInfo);
+            } else {
+                for (String label : domMap.keySet()) {
+                    domInfo.domSet.put(label, domMap.get(label));
+                }
             }
         }
+        buildDomSet();
         buildDomTree();
+        buildDomFrontier();
     }
 
-    public boolean getIntersection(List<Block> prev, String nowLabel) {//发现前驱的支配集交集有新元素，返回true
+    private void buildDomSet() {
+        boolean flag = true;
+        while (flag) {
+            flag = false;
+            for (var entry : cfg.funcBlocks.entrySet()) {
+                if (getIntersection(entry.getValue().prev, entry.getKey())) {
+                    flag = true;
+                }
+            }
+        }
+    }
+
+    private boolean getIntersection(List<Block> prev, String nowLabel) {//发现前驱的支配集交集有元素要去除，返回true
         if (prev.size() == 0) {
             return false;
         }
         boolean flag = false;
         HashMap<String, Integer> intersection = new HashMap<>();
         for (var block : prev) {
-            for (var domSet : domMap.get(block.label).domSetList) {
+            for (var domSet : domMap.get(block.label).domSet.values()) {
                 if (!intersection.containsKey(domSet.blockName)) {
                     intersection.put(domSet.blockName, 1);
                 } else {
@@ -46,52 +64,57 @@ public class Dom {
                 }
             }
         }
-        boolean newDom;
-        for (var entry : intersection.entrySet()) {
-            if (entry.getValue() == prev.size()) {
-                newDom = true;
-                for (var domSet : domMap.get(nowLabel).domSetList) {
-                    if (Objects.equals(domSet.blockName, entry.getKey())) {
-                        newDom = false;
-                        break;
-                    }
-                }
-                if (newDom) {
-                    flag = true;
-                    domMap.get(nowLabel).domSetList.add(domMap.get(entry.getKey()));
-                }
+        DomInfo nowDomInfo = domMap.get(nowLabel);
+        var iterator = nowDomInfo.domSet.entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            Integer num = intersection.get(entry.getKey());
+            if (!Objects.equals(entry.getKey(), nowLabel) && (num == null || num != prev.size())) {
+                flag = true;
+                iterator.remove();
             }
         }
         return flag;
     }
 
     private void buildDomTree() {
-        domSet root = domMap.get("entry");
+        DomInfo root = domMap.get("entry");
         List<String> already = new ArrayList<>();
         visitNode(root, already);
     }
 
-    private void visitNode(domSet node, List<String> already) {
+    private void visitNode(DomInfo node, List<String> already) {
         if (node.immeDom != null) {
             return;
         }
-        findImme(node, already);
+        for (int i = already.size() - 1; i >= 0; --i) {
+            var dom = node.domSet.get(already.get(i));
+            if (dom != null) {
+                node.immeDom = dom;
+                break;
+            }
+        }
         already.add(node.blockName);
         for (int i = 0; i < cfg.funcBlocks.get(node.blockName).suc; ++i) {
             visitNode(domMap.get(cfg.funcBlocks.get(node.blockName).next[i].label), already);
         }
     }
 
-    private void findImme(domSet node, List<String> already) {
-        for (int i = already.size() - 1; i >= 0; --i) {
-            String prev = already.get(i);
-            for (var dom : node.domSetList) {
-                if (Objects.equals(dom.blockName, prev)) {
-                    node.immeDom = dom;
-                    return;
+    private void buildDomFrontier() {
+        Block nowBlock = null;
+        DomInfo domInfoPre = null, domInfoNow = null;
+        for (var entry : domMap.entrySet()) {
+            nowBlock = cfg.funcBlocks.get(entry.getKey());
+            domInfoNow = domMap.get(entry.getKey());
+            if (nowBlock.pre > 1) {//汇合点
+                for (var preBlock : nowBlock.prev) {
+                    domInfoPre = domMap.get(preBlock.label);
+                    while (domInfoPre != entry.getValue().immeDom) {
+                        domMap.get(domInfoPre.blockName).domFrontier.put(domInfoNow.blockName, domInfoNow);
+                        domInfoPre = domInfoPre.immeDom;
+                    }
                 }
             }
         }
     }
-
 }
