@@ -11,6 +11,7 @@ import src.IR.IRPrinter;
 import src.IR.statement.FuncDef;
 import src.Mem2Reg.CFG;
 import src.Mem2Reg.Dom;
+import src.Mem2Reg.PutPhi;
 import src.Util.error.Errors;
 import src.Util.error.ParserErrorListener;
 import src.parser.MxLexer;
@@ -49,6 +50,7 @@ public class Main {
                 if (stmt instanceof FuncDef) {
                     var cfg = new CFG((FuncDef) stmt);
                     var dom = new Dom(cfg);
+                    var putPhi = new PutPhi(dom);
                     int p = 34;
                 }
             }

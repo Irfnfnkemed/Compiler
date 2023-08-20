@@ -5,18 +5,19 @@ import src.IR.instruction.Br;
 import src.IR.instruction.Label;
 import src.IR.instruction.Store;
 import src.IR.statement.FuncDef;
+import src.Util.type.IRType;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Objects;
+import java.util.*;
 
 public class CFG {
-    public HashMap<String, Block> funcBlocks;//函数名->(块名->Block节点)
-    public HashSet<String> allocaVar;//alloca的变量
+    public HashMap<String, Block> funcBlocks;//块名->Block节点
+    public HashMap<String, List<String>> allocaVar;//alloca的变量，变量名->def的块名列表
+    public HashMap<String, IRType> allocaVarType;//alloca的变量名->类型
 
     public CFG(FuncDef funcDef) {
         funcBlocks = new HashMap<>();
-        allocaVar = new HashSet<>();
+        allocaVar = new HashMap<>();
+        allocaVarType = new HashMap<>();
         Block nowBlock = null;
         for (var instr : funcDef.irList) {
             if (instr instanceof Label) {
@@ -26,6 +27,7 @@ public class CFG {
                     funcBlocks.put(nowBlock.label, nowBlock);
                 }
             } else {
+                assert nowBlock != null;
                 nowBlock.pushIR(instr);
                 if (instr instanceof Br) {
                     var nextBlock = funcBlocks.get(((Br) instr).trueLabel.substring(1));
@@ -45,13 +47,18 @@ public class CFG {
                         nextBlock.setPre(nowBlock);
                     }
                 } else if (instr instanceof Alloca) {
-                    allocaVar.add(((Alloca) instr).varName);
+                    List<String> defList = new ArrayList<>();
+                    defList.add(nowBlock.label);
+                    allocaVar.put(((Alloca) instr).varName, defList);
+                    allocaVarType.put(((Alloca) instr).varName, ((Alloca) instr).irType);
                 } else if (instr instanceof Store) {
-                    if (allocaVar.contains(((Store) instr).toPointer)) {
-                        nowBlock.defList.add(((Store) instr).toPointer);
+                    if (allocaVar.containsKey(((Store) instr).toPointer)) {
+                        var defList = allocaVar.get(((Store) instr).toPointer);
+                        if (!Objects.equals(defList.get(defList.size() - 1), nowBlock.label)) {
+                            allocaVar.get(((Store) instr).toPointer).add(nowBlock.label);
+                        }
                     }
                 }
-
             }
         }
         var iterator = funcBlocks.entrySet().iterator();

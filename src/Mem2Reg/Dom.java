@@ -7,12 +7,12 @@ public class Dom {
         public String blockName;
         public HashMap<String, DomInfo> domSet;//支配集
         public DomInfo immeDom;//直接支配节点
-        public HashMap<String, DomInfo> domFrontier;//支配边界
+        public HashSet<String> domFrontier;//支配边界
 
         public DomInfo(String blockName_) {
             blockName = blockName_;
             domSet = new HashMap<>();
-            domFrontier = new HashMap<>();
+            domFrontier = new HashSet<>();
         }
     }
 
@@ -22,6 +22,12 @@ public class Dom {
     public Dom(CFG cfg_) {
         cfg = cfg_;
         domMap = new HashMap<>();
+        buildDomSet();
+        buildDomTree();
+        buildDomFrontier();
+    }
+
+    private void buildDomSet() {
         cfg.funcBlocks.keySet().forEach(label -> domMap.put(label, new DomInfo(label)));
         for (DomInfo domInfo : domMap.values()) {
             if (Objects.equals(domInfo.blockName, "entry")) {
@@ -32,12 +38,6 @@ public class Dom {
                 }
             }
         }
-        buildDomSet();
-        buildDomTree();
-        buildDomFrontier();
-    }
-
-    private void buildDomSet() {
         boolean flag = true;
         while (flag) {
             flag = false;
@@ -101,8 +101,8 @@ public class Dom {
     }
 
     private void buildDomFrontier() {
-        Block nowBlock = null;
-        DomInfo domInfoPre = null, domInfoNow = null;
+        Block nowBlock;
+        DomInfo domInfoPre, domInfoNow;
         for (var entry : domMap.entrySet()) {
             nowBlock = cfg.funcBlocks.get(entry.getKey());
             domInfoNow = domMap.get(entry.getKey());
@@ -110,7 +110,7 @@ public class Dom {
                 for (var preBlock : nowBlock.prev) {
                     domInfoPre = domMap.get(preBlock.label);
                     while (domInfoPre != entry.getValue().immeDom) {
-                        domMap.get(domInfoPre.blockName).domFrontier.put(domInfoNow.blockName, domInfoNow);
+                        domMap.get(domInfoPre.blockName).domFrontier.add(domInfoNow.blockName);
                         domInfoPre = domInfoPre.immeDom;
                     }
                 }

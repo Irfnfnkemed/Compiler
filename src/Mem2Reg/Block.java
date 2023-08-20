@@ -2,26 +2,25 @@ package src.Mem2Reg;
 
 import src.IR.IRNode;
 import src.IR.instruction.Instruction;
+import src.IR.instruction.Phi;
 
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class Block extends IRNode {
     public List<Instruction> instructionList;
     public String label;
     public Block[] next;
     public List<Block> prev;
-    public HashSet<String> defList;//在块内def的变量
     public int pre = 0, suc = 0;//前驱、后继个数
+    public HashMap<String, Phi> insertPhi;//要插入的phi，局部变量名->phi指令
+    public boolean renamed = false;//是否已经重命名过各操作
 
     public Block(String label_) {
         label = label_;
         instructionList = new LinkedList<>();
         next = new Block[2];
         prev = new LinkedList<>();
-        defList = new HashSet<>();
+        insertPhi = new HashMap<>();
     }
 
     public void pushIR(Instruction instruction) {
