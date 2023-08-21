@@ -464,23 +464,25 @@ public class ASMBuilder {
 
     void visit(Section section, Reg reg, Call call) {
         int size = call.callTypeList.size();
-        int tmpVar = 0, tmpConst = 0;
+        Call.variable variable;
         for (int i = 0; i < min(size, 8); ++i) {
-            if (call.callCateList.get(i) == Call.callCate.VAR) {
-                reg.getVarReg(call.varNameList.get(tmpVar++), "a" + i);
+            variable = call.callList.get(i);
+            if (variable.varName != null) {
+                reg.getVarReg(variable.varName, "a" + i);
             } else {
-                section.pushInstr(new LI("a" + i, call.constValueList.get(tmpConst++).intValue()));
+                section.pushInstr(new LI("a" + i, (int) variable.varValue));
             }
             reg.clearTmp();
         }
         if (size > 8) {
             String tmp;
             for (int i = 8; i < size; ++i) {
-                if (call.callCateList.get(i) == Call.callCate.VAR) {
-                    tmp = reg.getVarReg(call.varNameList.get(tmpVar++));
+                variable = call.callList.get(i);
+                if (variable.varName != null) {
+                    tmp = reg.getVarReg(variable.varName);
                 } else {
                     tmp = reg.getTmpReg();
-                    section.pushInstr(new LI(tmp, call.constValueList.get(tmpConst++).intValue()));
+                    section.pushInstr(new LI(tmp, (int) variable.varValue));
                 }
                 section.pushInstr(new SW(tmp, 4 * (i - 8)));
                 reg.clearTmp();

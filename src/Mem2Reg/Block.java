@@ -45,20 +45,4 @@ public class Block extends IRNode {
             }
         }
     }
-
-    public void deleteSuc(String sucLabel) {
-        if (suc == 0) {
-            return;
-        }
-        if (suc > 0 && Objects.equals(next[0].label, sucLabel)) {
-            --suc;
-            if (suc == 1) {
-                next[0] = next[1];
-                next[1] = null;
-            }
-        } else if (suc > 1 && Objects.equals(next[1].label, sucLabel)) {
-            --suc;
-            next[1] = null;
-        }
-    }
 }

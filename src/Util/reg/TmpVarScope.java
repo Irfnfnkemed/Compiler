@@ -110,8 +110,10 @@ public class TmpVarScope {
                     setBeg(phi.toVar, i - 1);
                 }
             } else if (inst instanceof Call) {
-                for (var varName : ((Call) inst).varNameList) {
-                    setEnd(varName, i);
+                for (var variable : ((Call) inst).callList) {
+                    if (variable.varName != null) {
+                        setEnd(variable.varName, i);
+                    }
                 }
                 if (((Call) inst).resultVar != null) {
                     setBeg(((Call) inst).resultVar, i);

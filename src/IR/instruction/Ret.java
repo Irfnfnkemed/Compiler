@@ -7,6 +7,7 @@ import src.Util.type.Type;
 public class Ret extends Instruction {
     public IRType irType;
     public String var;
+    public int value;
 
     public Ret() {
     }

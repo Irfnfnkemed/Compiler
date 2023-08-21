@@ -3,12 +3,21 @@ package src.IR.instruction;
 import src.Util.type.IRType;
 import src.Util.type.Type;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Call extends Instruction {
-    public enum callCate {
-        VAR, CONST
+    public static class variable {
+        public String varName;
+        public long varValue;
+
+        public variable(String varName_) {
+            varName = varName_;
+        }
+
+        public variable(long varValue_) {
+            varValue = varValue_;
+        }
     }
 
     public IRType irType;
@@ -16,40 +25,32 @@ public class Call extends Instruction {
 
     public List<IRType> callTypeList;
 
-    public List<callCate> callCateList;
-    public List<String> varNameList;
-    public List<Long> constValueList;
+    public List<variable> callList;
     public String resultVar;
 
     public Call(String functionName_) {
         functionName = functionName_;
-        callTypeList = new LinkedList<>();
-        callCateList = new LinkedList<>();
-        varNameList = new LinkedList<>();
-        constValueList = new LinkedList<>();
+        callTypeList = new ArrayList<>();
+        callList = new ArrayList<>();
     }
 
     public void set(Type type, String anonymousVar) {
         callTypeList.add(new IRType(type));
-        callCateList.add(callCate.VAR);
-        varNameList.add(anonymousVar);
+        callList.add(new variable(anonymousVar));
     }
 
     public void set(IRType irType, String anonymousVar) {
         callTypeList.add(irType);
-        callCateList.add(callCate.VAR);
-        varNameList.add(anonymousVar);
+        callList.add(new variable(anonymousVar));
     }
 
     public void set(Type type, long value) {
         callTypeList.add(new IRType(type));
-        callCateList.add(callCate.CONST);
-        constValueList.add(value);
+        callList.add(new variable(value));
     }
 
     public void set(IRType irType, long value) {
         callTypeList.add(irType);
-        callCateList.add(callCate.CONST);
-        constValueList.add(value);
+        callList.add(new variable(value));
     }
 }

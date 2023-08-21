@@ -69,16 +69,16 @@ public class IRPrinter {
                 System.out.print("ptr %this");
             } else {
                 printType(funcDef.parameterTypeList.get(0));
-                System.out.print(" %0");
+                System.out.print(" %_0");
             }
         }
         for (int i = 1; i < size; ++i) {
             System.out.print(", ");
             printType(funcDef.parameterTypeList.get(i));
             if (funcDef.isClassMethod) {
-                printOut(" %" + (i - 1));
+                printOut(" %_" + (i - 1));
             } else {
-                printOut(" %" + i);
+                printOut(" %_" + i);
             }
         }
         System.out.print(") {\n");
@@ -237,16 +237,16 @@ public class IRPrinter {
             printType(call.irType);
         }
         printOut(" ", call.functionName, "(");
-        int tmpVar = 0;
-        int tmpConst = 0;
         IRType typeTmp;
-        for (int i = 0; i < call.callTypeList.size(); ++i) {
+        Call.variable variable;
+        for (int i = 0; i < call.callList.size(); ++i) {
             typeTmp = call.callTypeList.get(i);
-            if (call.callCateList.get(i) == Call.callCate.VAR) {
+            variable = call.callList.get(i);
+            if (variable.varName != null) {
                 printType(typeTmp);
-                printOut(" ", call.varNameList.get(tmpVar++));
-            } else if (call.callCateList.get(i) == Call.callCate.CONST) {
-                printTypeAndValue(typeTmp, call.constValueList.get(tmpConst++));
+                printOut(" ", variable.varName);
+            } else {
+                printTypeAndValue(typeTmp, variable.varValue);
             }
             if (i != call.callTypeList.size() - 1) {
                 System.out.print(", ");
@@ -304,7 +304,11 @@ public class IRPrinter {
             printOut("void\n");
         } else {
             printType(ret.irType);
-            printOut(" ", ret.var, "\n");
+            if (ret.var != null) {
+                printOut(" ", ret.var, "\n");
+            } else {
+                printOut(" ", Integer.toString(ret.value), "\n");
+            }
         }
     }
 

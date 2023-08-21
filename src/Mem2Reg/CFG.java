@@ -47,30 +47,30 @@ public class CFG {
                         nextBlock.setPre(nowBlock);
                     }
                 } else if (instr instanceof Alloca) {
-                    List<String> defList = new ArrayList<>();
-                    defList.add(nowBlock.label);
-                    allocaVar.put(((Alloca) instr).varName, defList);
+                    allocaVar.put(((Alloca) instr).varName, new ArrayList<>());
                     allocaVarType.put(((Alloca) instr).varName, ((Alloca) instr).irType);
                 } else if (instr instanceof Store) {
                     if (allocaVar.containsKey(((Store) instr).toPointer)) {
                         var defList = allocaVar.get(((Store) instr).toPointer);
-                        if (!Objects.equals(defList.get(defList.size() - 1), nowBlock.label)) {
+                        if (defList.isEmpty() || !Objects.equals(defList.get(defList.size() - 1), nowBlock.label)) {
                             allocaVar.get(((Store) instr).toPointer).add(nowBlock.label);
                         }
                     }
                 }
             }
         }
-        var iterator = funcBlocks.entrySet().iterator();
-        while (iterator.hasNext()) {//消除死块
-            var entry = iterator.next();
-            if (entry.getValue().prev.size() == 0 && !Objects.equals(entry.getValue().label, "entry")) {
-                funcBlocks.forEach((label, block) -> block.deletePre(entry.getKey()));
-                iterator.remove();
-            } else if (entry.getValue().suc == 0 && !Objects.equals(entry.getValue().label, "returnLabel") &&
-                    !Objects.equals(entry.getValue().label, "entry")) {
-                funcBlocks.forEach((label, block) -> block.deleteSuc(entry.getKey()));
-                iterator.remove();
+
+        boolean flag = true;
+        while (flag) {
+            flag = false;
+            var iterator = funcBlocks.entrySet().iterator();
+            while (iterator.hasNext()) {//消除死块
+                var entry = iterator.next();
+                if (entry.getValue().prev.size() == 0 && !Objects.equals(entry.getValue().label, "entry")) {
+                    funcBlocks.forEach((label, block) -> block.deletePre(entry.getKey()));
+                    iterator.remove();
+                    flag = true;//迭代，直至没有死块
+                }
             }
         }
     }

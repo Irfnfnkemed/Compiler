@@ -28,6 +28,7 @@ src/test
 src/builtin/test
 src/builtin/test.ll
 src/builtin/test.s
+src/builtin/test_standard.ll
 .idea
 out
 Compiler.iml

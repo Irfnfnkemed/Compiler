@@ -24,6 +24,8 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Scanner;
 
+import static test.TestIR.testIR;
+
 //import static test.TestIR.testIR;
 //import static test.TestSemantic.testSemantic;
 
@@ -46,16 +48,8 @@ public class Main {
             semantic.check();
             var a = new IRBuilder(AST.ASTProgram, semantic.globalScope);
             var b = new IRPrinter(a.irProgram);
-            for (var stmt : a.irProgram.stmtList) {
-                if (stmt instanceof FuncDef) {
-                    var cfg = new CFG((FuncDef) stmt);
-                    var dom = new Dom(cfg);
-                    var putPhi = new PutPhi(dom);
-                    int p = 34;
-                }
-            }
             // 创建一个文件输出流，并指定输出文件的路径
-            FileOutputStream fileOutputStream = new FileOutputStream("./src/builtin/test.ll");
+            FileOutputStream fileOutputStream = new FileOutputStream("./src/builtin/test_standard.ll");
 
             // 创建一个 PrintStream 对象，用于将输出写入文件输出流
             PrintStream printStream = new PrintStream(fileOutputStream);
@@ -63,22 +57,39 @@ public class Main {
             // 将 System.out 设置为新的 PrintStream 对象
             System.setOut(printStream);
             b.print();
-            var c = new ASMBuilder(a.irProgram);
-            var d = new ASMPrinter(c.asmProgram);
+            for (var stmt : a.irProgram.stmtList) {
+                if (stmt instanceof FuncDef) {
+                    var cfg = new CFG((FuncDef) stmt);
+                    var dom = new Dom(cfg);
+                    var putPhi = new PutPhi(dom,(FuncDef) stmt);
+                    int p = 34;
+                }
+            }
             // 创建一个文件输出流，并指定输出文件的路径
-            fileOutputStream = new FileOutputStream("./src/builtin/test.s");
+             fileOutputStream = new FileOutputStream("./src/builtin/test.ll");
 
             // 创建一个 PrintStream 对象，用于将输出写入文件输出流
-            printStream = new PrintStream(fileOutputStream);
+             printStream = new PrintStream(fileOutputStream);
 
             // 将 System.out 设置为新的 PrintStream 对象
             System.setOut(printStream);
-            d.print();
+            b.print();
+//            var c = new ASMBuilder(a.irProgram);
+//            var d = new ASMPrinter(c.asmProgram);
+//            // 创建一个文件输出流，并指定输出文件的路径
+//            fileOutputStream = new FileOutputStream("./src/builtin/test.s");
+//
+//            // 创建一个 PrintStream 对象，用于将输出写入文件输出流
+//            printStream = new PrintStream(fileOutputStream);
+//
+//            // 将 System.out 设置为新的 PrintStream 对象
+//            System.setOut(printStream);
+//            d.print();
         } catch (Errors errors) {
             System.err.println(errors.toString());
         }
-        // testSemantic();
-        //testIR();
+         //testSemantic();
+        testIR();
     }
 }
 
