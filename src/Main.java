@@ -89,7 +89,7 @@ public class Main {
             System.err.println(errors.toString());
         }
          //testSemantic();
-        testIR();
+       // testIR();
     }
 }
 

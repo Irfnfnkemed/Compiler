@@ -981,7 +981,7 @@ public class IRBuilder implements ASTVisitor {
                 return;
             } else {
                 icmp = new Icmp("==", typeI1);
-                icmp.set(((Exp) now).getVar());
+                icmp.set(((Exp) now).popVar());
             }
             icmp.set(0);
             icmp.output = "%_" + anonymousVar;
@@ -994,7 +994,7 @@ public class IRBuilder implements ASTVisitor {
                 return;
             } else {
                 binary = new Binary("^");
-                binary.set(((Exp) now).getVar());
+                binary.set(((Exp) now).popVar());
             }
             binary.set(-1);
             binary.output = "%_" + anonymousVar;
