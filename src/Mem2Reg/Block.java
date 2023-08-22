@@ -1,4 +1,4 @@
-package src.Mem2Reg;
+package src.mem2Reg;
 
 import src.IR.IRNode;
 import src.IR.instruction.Instruction;

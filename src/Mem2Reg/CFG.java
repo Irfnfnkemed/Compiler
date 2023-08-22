@@ -1,4 +1,4 @@
-package src.Mem2Reg;
+package src.mem2Reg;
 
 import src.IR.instruction.Alloca;
 import src.IR.instruction.Br;
@@ -13,6 +13,7 @@ public class CFG {
     public HashMap<String, Block> funcBlocks;//块名->Block节点
     public HashMap<String, List<String>> allocaVar;//alloca的变量，变量名->def的块名列表
     public HashMap<String, IRType> allocaVarType;//alloca的变量名->类型
+    public boolean change = false;//控制流发生改变
 
     public CFG(FuncDef funcDef) {
         funcBlocks = new HashMap<>();
@@ -37,7 +38,7 @@ public class CFG {
                     }
                     nextBlock.setPre(nowBlock);
                     nowBlock.setSuc(nextBlock);
-                    if (((Br) instr).falseLabel != null) {
+                    if (((Br) instr).condition != null) {
                         nextBlock = funcBlocks.get(((Br) instr).falseLabel.substring(1));
                         if (nextBlock == null) {
                             nextBlock = new Block(((Br) instr).falseLabel.substring(1));
@@ -59,7 +60,6 @@ public class CFG {
                 }
             }
         }
-
         boolean flag = true;
         while (flag) {
             flag = false;
@@ -69,6 +69,7 @@ public class CFG {
                 if (entry.getValue().prev.size() == 0 && !Objects.equals(entry.getValue().label, "entry")) {
                     funcBlocks.forEach((label, block) -> block.deletePre(entry.getKey()));
                     iterator.remove();
+                    change = true;
                     flag = true;//迭代，直至没有死块
                 }
             }

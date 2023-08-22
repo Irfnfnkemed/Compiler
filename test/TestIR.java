@@ -7,9 +7,10 @@ import src.AST.ASTBuilder;
 import src.IR.IRBuilder;
 import src.IR.IRPrinter;
 import src.IR.statement.FuncDef;
-import src.Mem2Reg.CFG;
-import src.Mem2Reg.Dom;
-import src.Mem2Reg.PutPhi;
+import src.mem2Reg.CFG;
+import src.mem2Reg.Dom;
+import src.mem2Reg.Mem2Reg;
+import src.mem2Reg.PutPhi;
 import src.Util.error.Errors;
 import src.Util.error.ParserErrorListener;
 import src.parser.MxLexer;
@@ -118,13 +119,7 @@ public class TestIR {
             semantic.check();
             IRBuilder irBuilder = new IRBuilder(AST.ASTProgram, semantic.globalScope);
             IRPrinter irPrinter = new IRPrinter(irBuilder.irProgram);
-            for (var stmt : irBuilder.irProgram.stmtList) {
-                if (stmt instanceof FuncDef) {
-                    var cfg = new CFG((FuncDef) stmt);
-                    var dom = new Dom(cfg);
-                    var putPhi = new PutPhi(dom,(FuncDef) stmt);
-                }
-            }
+            Mem2Reg mem2Reg = new Mem2Reg(irBuilder.irProgram);
             irPrinter.print();
             printStream.close();
             String input = extractContentFromFile(folderPath + fileName, "=== input ===");

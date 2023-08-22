@@ -39,6 +39,7 @@ public class FuncDef extends IRStatement {
     public String functionName;
     public List<IRType> parameterTypeList;
     public List<Instruction> irList;
+    public List<Label> labelList;
 
     public Stack<ifStatus> ifStatusStack;
     public Stack<loopStatus> loopStatusStack;
@@ -61,6 +62,7 @@ public class FuncDef extends IRStatement {
         loopStatusStack = new Stack<>();
         ifAndLoopOrder = new Stack<>();
         phiList = new HashMap<>();
+        labelList = new LinkedList<>();
     }
 
     public void pushPara(Type parameterType) {
@@ -76,6 +78,7 @@ public class FuncDef extends IRStatement {
         }
         if (instruction instanceof Label) {
             label = "%" + ((Label) instruction).labelName;
+            labelList.add((Label) instruction);
         }
         if (instruction instanceof Call) {
             if (((Call) instruction).callTypeList.size() > maxCallPara) {
