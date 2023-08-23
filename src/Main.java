@@ -8,11 +8,11 @@ import src.ASM.ASMPrinter;
 import src.AST.ASTBuilder;
 import src.IR.IRBuilder;
 import src.IR.IRPrinter;
-//import src.IR.statement.FuncDef;
-//import src.mem2Reg.CFG;
-//import src.mem2Reg.Dom;
-//import src.mem2Reg.Mem2Reg;
-//import src.mem2Reg.PutPhi;
+import src.IR.statement.FuncDef;
+import src.mem2Reg.CFG;
+import src.mem2Reg.Dom;
+import src.mem2Reg.Mem2Reg;
+import src.mem2Reg.PutPhi;
 import src.Util.error.Errors;
 import src.Util.error.ParserErrorListener;
 import src.parser.MxLexer;
@@ -25,7 +25,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Scanner;
 
-//import static test.TestIR.testIR;
+import static test.TestIR.testIR;
 
 //import static test.TestIR.testIR;
 //import static test.TestSemantic.testSemantic;
@@ -53,17 +53,17 @@ public class Main {
             PrintStream printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);
             b.print();
-//            Mem2Reg mem2Reg = new Mem2Reg(a.irProgram);
-//            fileOutputStream = new FileOutputStream("./src/builtin/test.ll");
-//            printStream = new PrintStream(fileOutputStream);
-//            System.setOut(printStream);
-//            b.print();
-            var c = new ASMBuilder(a.irProgram);
-            var d = new ASMPrinter(c.asmProgram);
-            fileOutputStream = new FileOutputStream("./src/builtin/test.s");
+            Mem2Reg mem2Reg = new Mem2Reg(a.irProgram);
+            fileOutputStream = new FileOutputStream("./src/builtin/test.ll");
             printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);
-            d.print();
+            b.print();
+//            var c = new ASMBuilder(a.irProgram);
+//            var d = new ASMPrinter(c.asmProgram);
+//            fileOutputStream = new FileOutputStream("./src/builtin/test.s");
+//            printStream = new PrintStream(fileOutputStream);
+//            System.setOut(printStream);
+//            d.print();
         } catch (Errors errors) {
             System.err.println(errors.toString());
         }

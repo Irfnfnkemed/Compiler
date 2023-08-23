@@ -59,6 +59,10 @@ public class PutPhi {
             var defList = entry.getValue();
             defLabelSet.addAll(defList);
             while (index < defList.size()) {
+                if (!cfg.funcBlocks.containsKey(defList.get(index))) {
+                    ++index;
+                    continue;
+                }
                 for (String putBlockLabel : dom.domMap.get(defList.get(index)).domFrontier) {
                     if (!cfg.funcBlocks.get(putBlockLabel).insertPhi.containsKey(varName)) {
                         cfg.funcBlocks.get(putBlockLabel).insertPhi.put(

@@ -60,6 +60,36 @@ public class CFG {
                 }
             }
         }
+//        Queue<Block> queue = new ArrayDeque<>();
+//        queue.add(funcBlocks.get("entry"));
+//        Block block;
+//        while (!queue.isEmpty()) {//BFS
+//            block = queue.poll();
+//            block.visited = true;
+//            for (int i = 0; i < block.suc; ++i) {
+//                if (!block.next[i].visited) {
+//                    queue.add(block.next[i]);
+//                }
+//            }
+//        }
+//        var iterator = funcBlocks.values().iterator();
+//        while (iterator.hasNext()) {//消除死块
+//            var entry = iterator.next();
+//            if (!entry.visited) {
+//                for (int i = 0; i < entry.suc; ++i) {
+//                    block = entry.next[i];
+//                    for (int j = 0; j < block.pre; ++j) {
+//                        if (block.prev.get(j) == entry) {
+//                            block.prev.remove(j);
+//                            --block.pre;
+//                            break;
+//                        }
+//                    }
+//                }
+//                iterator.remove();
+//                change = true;
+//            }
+//        }
         boolean flag = true;
         while (flag) {
             flag = false;

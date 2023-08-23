@@ -14,6 +14,7 @@ public class Block extends IRNode {
     public int pre = 0, suc = 0;//前驱、后继个数
     public HashMap<String, Phi> insertPhi;//要插入的phi，局部变量名->phi指令
     public boolean renamed = false;//是否已经重命名过各操作
+    public boolean visited = false;//用于建图时消除死块
 
     public Block(String label_) {
         label = label_;

@@ -2,101 +2,119 @@ package src.mem2Reg;
 
 import java.util.*;
 
-public class Dom {
-    public static class DomInfo {//节点的支配集、直接支配节点和支配边界
-        public String blockName;
-        public HashMap<String, DomInfo> domSet;//支配集
-        public DomInfo immeDom;//直接支配节点
-        public HashSet<String> domFrontier;//支配边界
+import static java.lang.Math.min;
 
-        public DomInfo(String blockName_) {
+public class Dom {
+    private int cnt = 0;
+
+    public class DomInfo {//节点的支配集、直接支配节点和支配边界
+        public String blockName;
+        public DomInfo immeDom;//直接支配节点
+        public DomInfo semiDom;//半支配节点
+        public HashSet<String> domFrontier;//支配边界
+        public Stack<DomInfo> semiBucket;//被当前节点半支配的节点
+        public int dfn = -1;
+        public DomInfo dfsFather;
+
+        public DomInfo(String blockName_, DomInfo dfsFather_) {
             blockName = blockName_;
-            domSet = new HashMap<>();
+            semiBucket = new Stack<>();
             domFrontier = new HashSet<>();
+            dfsFather = dfsFather_;
+            semiDom = this;//半支配节点设为自身
+            dfn = cnt++;
+            dfnList.add(this);
         }
     }
 
     public HashMap<String, DomInfo> domMap;
+    public List<DomInfo> dfnList;//按照dfn从小到大排列
+    public int[] fatherDSU;//dfn->并查集中的fa
+    public int[] minSdomDfn;//dfn->(对应节点 到 逆dfn序遍历dfs树过程中当前遍历到所有点的LCA 的路径上，sdom的dfn最小的点的dfn)
     public CFG cfg;
 
     public Dom(CFG cfg_) {
         cfg = cfg_;
         domMap = new HashMap<>();
-        buildDomSet();
-        buildDomTree();
+        dfnList = new ArrayList<>();
+        DFS();
+        int size = dfnList.size();
+        fatherDSU = new int[size];
+        minSdomDfn = new int[size];
+        Arrays.fill(fatherDSU, -1);
+        for (int i = 0; i < size; ++i) {
+            minSdomDfn[i] = i;
+        }
+        LengauerTarjan();
         buildDomFrontier();
     }
 
-    private void buildDomSet() {
-        cfg.funcBlocks.keySet().forEach(label -> domMap.put(label, new DomInfo(label)));
-        for (DomInfo domInfo : domMap.values()) {
-            if (Objects.equals(domInfo.blockName, "entry")) {
-                domInfo.domSet.put("entry", domInfo);
-            } else {
-                for (String label : domMap.keySet()) {
-                    domInfo.domSet.put(label, domMap.get(label));
-                }
-            }
-        }
-        boolean flag = true;
-        while (flag) {
-            flag = false;
-            for (var entry : cfg.funcBlocks.entrySet()) {
-                if (getIntersection(entry.getValue().prev, entry.getKey())) {
-                    flag = true;
-                }
+    public void DFS() {
+        DomInfo rootDom = new DomInfo("entry", null);
+        domMap.put(rootDom.blockName, rootDom);
+        DFS(rootDom);
+    }
+
+    public void DFS(DomInfo domInfo) {
+        Block block = cfg.funcBlocks.get(domInfo.blockName);
+        for (int i = 0; i < block.suc; ++i) {
+            if (!domMap.containsKey(block.next[i].label)) {
+                DomInfo nextDomInfo = new DomInfo(block.next[i].label, domInfo);
+                domMap.put(block.next[i].label, nextDomInfo);
+                DFS(nextDomInfo);
             }
         }
     }
 
-    private boolean getIntersection(List<Block> prev, String nowLabel) {//发现前驱的支配集交集有元素要去除，返回true
-        if (prev.size() == 0) {
-            return false;
+    public int find(int now) {
+        if (fatherDSU[now] == -1) {
+            return now;
         }
-        boolean flag = false;
-        HashMap<String, Integer> intersection = new HashMap<>();
-        for (var block : prev) {
-            for (var domSet : domMap.get(block.label).domSet.values()) {
-                if (!intersection.containsKey(domSet.blockName)) {
-                    intersection.put(domSet.blockName, 1);
+        int tmp = fatherDSU[now];
+        fatherDSU[now] = find(fatherDSU[now]);
+        if (minSdomDfn[tmp] < minSdomDfn[now]) {
+            minSdomDfn[now] = minSdomDfn[tmp];
+        }
+        return fatherDSU[now];
+    }
+
+    public void LengauerTarjan() {
+        Block nowBlock;
+        DomInfo nowDom, tmpDom;
+        for (int i = dfnList.size() - 1; i > 0; --i) {//逆dfn序
+            nowDom = dfnList.get(i);
+            nowBlock = cfg.funcBlocks.get(nowDom.blockName);
+            for (var preBlock : nowBlock.prev) {//求半支配节点
+                tmpDom = domMap.get(preBlock.label);
+                if (tmpDom.dfn < nowDom.dfn) {
+                    if (tmpDom.semiDom.dfn < nowDom.semiDom.dfn) {
+                        nowDom.semiDom = tmpDom.semiDom;
+                    }
                 } else {
-                    intersection.put(domSet.blockName, intersection.get(domSet.blockName) + 1);
+                    find(tmpDom.dfn);
+                    if (minSdomDfn[tmpDom.dfn] < nowDom.semiDom.dfn) {
+                        nowDom.semiDom = dfnList.get(minSdomDfn[tmpDom.dfn]);
+                    }
+                }
+            }
+            (nowDom.semiDom).semiBucket.push(nowDom);
+            fatherDSU[nowDom.dfn] = nowDom.dfsFather.dfn;
+            while (!nowDom.dfsFather.semiBucket.isEmpty()) {
+                tmpDom = nowDom.dfsFather.semiBucket.pop();
+                find(tmpDom.dfn);
+                if (dfnList.get(minSdomDfn[tmpDom.dfn]).semiDom.dfn == tmpDom.semiDom.dfn) {
+                    tmpDom.immeDom = tmpDom.semiDom;
+                } else {
+                    //实际上，应该是dfnList.get(minSdomDfn[tmpDom.dfn]).immeDom，但由于逆序操作，immeDom还未算出，故用其本身暂代
+                    tmpDom.immeDom = dfnList.get(minSdomDfn[tmpDom.dfn]);
                 }
             }
         }
-        DomInfo nowDomInfo = domMap.get(nowLabel);
-        var iterator = nowDomInfo.domSet.entrySet().iterator();
-        while (iterator.hasNext()) {
-            var entry = iterator.next();
-            Integer num = intersection.get(entry.getKey());
-            if (!Objects.equals(entry.getKey(), nowLabel) && (num == null || num != prev.size())) {
-                flag = true;
-                iterator.remove();
+        for (int i = 1; i < dfnList.size(); ++i) {
+            nowDom = dfnList.get(i);
+            if (nowDom.immeDom != nowDom.semiDom) {
+                nowDom.immeDom = nowDom.immeDom.immeDom;
             }
-        }
-        return flag;
-    }
-
-    private void buildDomTree() {
-        DomInfo root = domMap.get("entry");
-        List<String> already = new ArrayList<>();
-        visitNode(root, already);
-    }
-
-    private void visitNode(DomInfo node, List<String> already) {
-        if (node.immeDom != null) {
-            return;
-        }
-        for (int i = already.size() - 1; i >= 0; --i) {
-            var dom = node.domSet.get(already.get(i));
-            if (dom != null) {
-                node.immeDom = dom;
-                break;
-            }
-        }
-        already.add(node.blockName);
-        for (int i = 0; i < cfg.funcBlocks.get(node.blockName).suc; ++i) {
-            visitNode(domMap.get(cfg.funcBlocks.get(node.blockName).next[i].label), already);
         }
     }
 
