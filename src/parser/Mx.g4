@@ -8,11 +8,6 @@ definition
     : classTypeDef
     | functionDef
     | variableDef ';'
-    | mainDef
-    ;
-
-mainDef
-    : INT 'main' '(' ')' suite
     ;
 
 classTypeDef
