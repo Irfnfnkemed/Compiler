@@ -1,4 +1,4 @@
-package src.parser;// Generated from Mx.g4 by ANTLR 4.13.0
+package src.parser;// Generated from src/parser/Mx.g4 by ANTLR 4.13.0
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
 /**
@@ -22,17 +22,11 @@ public interface MxVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitDefinition(MxParser.DefinitionContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link MxParser#mainDef}.
+	 * Visit a parse tree produced by {@link MxParser#classTypeDef}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitMainDef(MxParser.MainDefContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link MxParser#classDef}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitClassDef(MxParser.ClassDefContext ctx);
+	T visitClassTypeDef(MxParser.ClassTypeDefContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link MxParser#functionDef}.
 	 * @param ctx the parse tree

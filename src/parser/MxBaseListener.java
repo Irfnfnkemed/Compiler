@@ -1,4 +1,4 @@
-package src.parser;// Generated from Mx.g4 by ANTLR 4.13.0
+package src.parser;// Generated from src/parser/Mx.g4 by ANTLR 4.13.0
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ErrorNode;
@@ -40,25 +40,13 @@ public class MxBaseListener implements MxListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterMainDef(MxParser.MainDefContext ctx) { }
+	@Override public void enterClassTypeDef(MxParser.ClassTypeDefContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitMainDef(MxParser.MainDefContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void enterClassDef(MxParser.ClassDefContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void exitClassDef(MxParser.ClassDefContext ctx) { }
+	@Override public void exitClassTypeDef(MxParser.ClassTypeDefContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

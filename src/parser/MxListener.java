@@ -1,4 +1,4 @@
-package src.parser;// Generated from Mx.g4 by ANTLR 4.13.0
+package src.parser;// Generated from src/parser/Mx.g4 by ANTLR 4.13.0
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
 /**
@@ -27,25 +27,15 @@ public interface MxListener extends ParseTreeListener {
 	 */
 	void exitDefinition(MxParser.DefinitionContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link MxParser#mainDef}.
+	 * Enter a parse tree produced by {@link MxParser#classTypeDef}.
 	 * @param ctx the parse tree
 	 */
-	void enterMainDef(MxParser.MainDefContext ctx);
+	void enterClassTypeDef(MxParser.ClassTypeDefContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link MxParser#mainDef}.
+	 * Exit a parse tree produced by {@link MxParser#classTypeDef}.
 	 * @param ctx the parse tree
 	 */
-	void exitMainDef(MxParser.MainDefContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link MxParser#classDef}.
-	 * @param ctx the parse tree
-	 */
-	void enterClassDef(MxParser.ClassDefContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link MxParser#classDef}.
-	 * @param ctx the parse tree
-	 */
-	void exitClassDef(MxParser.ClassDefContext ctx);
+	void exitClassTypeDef(MxParser.ClassTypeDefContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link MxParser#functionDef}.
 	 * @param ctx the parse tree
