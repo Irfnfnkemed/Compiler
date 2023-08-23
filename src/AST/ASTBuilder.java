@@ -8,6 +8,7 @@ import src.AST.statement.loopStatement.*;
 import src.AST.statement.selectStatement.SelectStatement;
 import src.AST.statement.Statement;
 import src.Util.error.ParserErrors;
+import src.Util.error.SemanticErrors;
 import src.Util.type.Type;
 import src.AST.definition.variableDef.InitVariable;
 import src.AST.definition.variableDef.VariableDef;
@@ -16,10 +17,12 @@ import src.parser.MxBaseVisitor;
 import src.parser.MxParser;
 import src.AST.expression.*;
 
+import java.util.Objects;
+
 public class ASTBuilder extends MxBaseVisitor<ASTNode> {
     public Program ASTProgram;
 
-    public  ASTBuilder(ParseTree ctx) {
+    public ASTBuilder(ParseTree ctx) {
         ASTProgram = (Program) visit(ctx);
     }
 
@@ -40,16 +43,24 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
             return null;
         }
         Definition definition = new Definition();
-        definition.mainDef = (MainDef) visitMainDef(ctx.mainDef());
-        definition.classDef = (ClassDef) visitClassDef(ctx.classDef());
+        if (ctx.functionDef() != null) {
+            if (Objects.equals(ctx.functionDef().Identifier(0).getText(), "main")) {
+                if (!Objects.equals(ctx.functionDef().typeName(0).getText(), "int") ||
+                        ctx.functionDef().Identifier().size() > 1) {
+                    throw new SemanticErrors("[Program error] Wrong definition of main function.", new Position(ctx.functionDef()));
+                }
+                definition.mainDef = (MainDef) visitMainDef(ctx.functionDef());
+                return definition;
+            }
+        }
+        definition.classDef = (ClassDef) visitClassTypeDef(ctx.classTypeDef());
         definition.functionDef = (FunctionDef) visitFunctionDef(ctx.functionDef());
         definition.variableDef = (VariableDef) visitVariableDef(ctx.variableDef());
         definition.position = new Position(ctx);
         return definition;
     }
 
-    @Override
-    public ASTNode visitMainDef(MxParser.MainDefContext ctx) {
+    public ASTNode visitMainDef(MxParser.FunctionDefContext ctx) {
         if (ctx == null) {
             return null;
         }
@@ -60,7 +71,7 @@ public class ASTBuilder extends MxBaseVisitor<ASTNode> {
     }
 
     @Override
-    public ASTNode visitClassDef(MxParser.ClassDefContext ctx) {
+    public ASTNode visitClassTypeDef(MxParser.ClassTypeDefContext ctx) {
         if (ctx == null) {
             return null;
         }
