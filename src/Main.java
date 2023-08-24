@@ -3,16 +3,11 @@ package src;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
-import src.ASM.ASMBuilder;
-import src.ASM.ASMPrinter;
 import src.AST.ASTBuilder;
 import src.IR.IRBuilder;
 import src.IR.IRPrinter;
-import src.IR.statement.FuncDef;
-import src.mem2Reg.CFG;
-import src.mem2Reg.Dom;
-import src.mem2Reg.Mem2Reg;
-import src.mem2Reg.PutPhi;
+import src.optimize.CFGBase;
+import src.optimize.Mem2Reg.Mem2Reg;
 import src.Util.error.Errors;
 import src.Util.error.ParserErrorListener;
 import src.parser.MxLexer;
@@ -34,7 +29,6 @@ public class Main {
     public static void main(String[] args) throws Exception {
         Scanner scanner = new Scanner(System.in);
         try {
-
             String name = "./src/test";
             InputStream inputStream = new FileInputStream(name);
             MxLexer lexer = new MxLexer(CharStreams.fromStream(inputStream));

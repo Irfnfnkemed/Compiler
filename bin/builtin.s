@@ -9,7 +9,7 @@ print:                                  # @print
 .Lprint$local:
 # %bb.0:
 	mv	a1, a0
-.LBB0_1:                                # Label of block must be emitted
+.LBB0_1:                                # Label of blockDom must be emitted
 	auipc	a0, %pcrel_hi(.L.str)
 	addi	a0, a0, %pcrel_lo(.LBB0_1)
 	tail	printf
@@ -23,7 +23,7 @@ println:                                # @println
 .Lprintln$local:
 # %bb.0:
 	mv	a1, a0
-.LBB1_1:                                # Label of block must be emitted
+.LBB1_1:                                # Label of blockDom must be emitted
 	auipc	a0, %pcrel_hi(.L.str.1)
 	addi	a0, a0, %pcrel_lo(.LBB1_1)
 	tail	printf
@@ -37,7 +37,7 @@ printInt:                               # @printInt
 .LprintInt$local:
 # %bb.0:
 	mv	a1, a0
-.LBB2_1:                                # Label of block must be emitted
+.LBB2_1:                                # Label of blockDom must be emitted
 	auipc	a0, %pcrel_hi(.L.str.2)
 	addi	a0, a0, %pcrel_lo(.LBB2_1)
 	tail	printf
@@ -51,7 +51,7 @@ printlnInt:                             # @printlnInt
 .LprintlnInt$local:
 # %bb.0:
 	mv	a1, a0
-.LBB3_1:                                # Label of block must be emitted
+.LBB3_1:                                # Label of blockDom must be emitted
 	auipc	a0, %pcrel_hi(.L.str.3)
 	addi	a0, a0, %pcrel_lo(.LBB3_1)
 	tail	printf
@@ -70,7 +70,7 @@ getString:                              # @getString
 	call	malloc
 	mv	a1, a0
 	sw	a1, 8(sp)                       # 4-byte Folded Spill
-.LBB4_1:                                # Label of block must be emitted
+.LBB4_1:                                # Label of blockDom must be emitted
 	auipc	a0, %pcrel_hi(.L.str)
 	addi	a0, a0, %pcrel_lo(.LBB4_1)
 	call	scanf
@@ -90,7 +90,7 @@ getInt:                                 # @getInt
 # %bb.0:
 	addi	sp, sp, -16
 	sw	ra, 12(sp)                      # 4-byte Folded Spill
-.LBB5_1:                                # Label of block must be emitted
+.LBB5_1:                                # Label of blockDom must be emitted
 	auipc	a0, %pcrel_hi(.L.str.2)
 	addi	a0, a0, %pcrel_lo(.LBB5_1)
 	addi	a1, sp, 8
@@ -115,7 +115,7 @@ toString:                               # @toString
 	call	malloc
 	lw	a2, 4(sp)                       # 4-byte Folded Reload
 	sw	a0, 8(sp)                       # 4-byte Folded Spill
-.LBB6_1:                                # Label of block must be emitted
+.LBB6_1:                                # Label of blockDom must be emitted
 	auipc	a1, %pcrel_hi(.L.str.2)
 	addi	a1, a1, %pcrel_lo(.LBB6_1)
 	call	sprintf
@@ -177,7 +177,7 @@ string.parseInt:                        # @string.parseInt
 # %bb.0:
 	addi	sp, sp, -16
 	sw	ra, 12(sp)                      # 4-byte Folded Spill
-.LBB9_1:                                # Label of block must be emitted
+.LBB9_1:                                # Label of blockDom must be emitted
 	auipc	a1, %pcrel_hi(.L.str.2)
 	addi	a1, a1, %pcrel_lo(.LBB9_1)
 	addi	a2, sp, 8

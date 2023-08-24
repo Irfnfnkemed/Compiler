@@ -9,7 +9,7 @@ Origin Package: Semantic Extended
 int main(){
     int i = 0;
 
-    // test forStmt block
+    // test forStmt blockDom
     for(i = 0; i < 10; ++i){
         string i = "";
         print(i + "\n");
@@ -23,7 +23,7 @@ int main(){
         int i = 0;
     }
 
-    // test ifStmt block
+    // test ifStmt blockDom
     if(i == 0){
         string i = "";
         println(i + i);
@@ -43,7 +43,7 @@ int main(){
         int i = 0;
     }
 
-    // test WhileStmt block
+    // test WhileStmt blockDom
     while(toString(i) == "0"){
         string i = "11h";
         int i_ = i.parseInt();

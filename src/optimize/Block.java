@@ -1,4 +1,4 @@
-package src.mem2Reg;
+package src.optimize;
 
 import src.IR.IRNode;
 import src.IR.instruction.Instruction;
@@ -6,7 +6,7 @@ import src.IR.instruction.Phi;
 
 import java.util.*;
 
-public class Block extends IRNode {
+public class Block{
     public List<Instruction> instructionList;
     public String label;
     public Block[] next;
@@ -37,13 +37,4 @@ public class Block extends IRNode {
         next[suc++] = sucBlock;
     }
 
-    public void deletePre(String preLabel) {
-        for (int i = 0; i < prev.size(); ++i) {
-            if (Objects.equals(prev.get(i).label, preLabel)) {
-                prev.remove(i);
-                --pre;
-                break;
-            }
-        }
-    }
 }

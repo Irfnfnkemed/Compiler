@@ -1,8 +1,10 @@
-package src.mem2Reg;
+package src.optimize.Mem2Reg;
 
 import src.IR.IRProgram;
 import src.IR.instruction.*;
 import src.IR.statement.FuncDef;
+import src.optimize.Block;
+import src.optimize.RegAllocation.CFGReg;
 
 import java.util.HashMap;
 
@@ -13,7 +15,7 @@ public class Mem2Reg {
         for (var stmt : irProgram.stmtList) {
             if (stmt instanceof FuncDef) {
                 while (true) {
-                    CFG cfg = new CFG((FuncDef) stmt);
+                    CFGDom cfg = new CFGDom((FuncDef) stmt);
                     Dom dom = new Dom(cfg);
                     PutPhi putPhi = new PutPhi(dom, (FuncDef) stmt);
                     if (putPhi.replace.size() == 0 && !cfg.change) {
@@ -21,6 +23,7 @@ public class Mem2Reg {
                         break;
                     }
                 }
+                CFGReg cfgReg = new CFGReg((FuncDef) stmt);
             }
         }
     }
@@ -36,7 +39,7 @@ public class Mem2Reg {
     }
 
     private void merge(FuncDef stmt) {
-        CFG cfg = new CFG(stmt);
+        CFGDom cfg = new CFGDom(stmt);
         replaceLabel = new HashMap<>();
         for (var block : cfg.funcBlocks.values()) {//合并能合并的块
             if (block.pre == 1 && block.prev.get(0).suc == 1) {

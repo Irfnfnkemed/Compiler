@@ -1,8 +1,8 @@
-package src.mem2Reg;
+package src.optimize.Mem2Reg;
+
+import src.optimize.Block;
 
 import java.util.*;
-
-import static java.lang.Math.min;
 
 public class Dom {
     private int cnt = 0;
@@ -31,10 +31,10 @@ public class Dom {
     public List<DomInfo> dfnList;//按照dfn从小到大排列
     public int[] fatherDSU;//dfn->并查集中的fa
     public int[] minSdomDfn;//dfn->(对应节点 到 逆dfn序遍历dfs树过程中当前遍历到所有点的LCA 的路径上，sdom的dfn最小的点的dfn)
-    public CFG cfg;
+    public CFGDom cfgDom;
 
-    public Dom(CFG cfg_) {
-        cfg = cfg_;
+    public Dom(CFGDom cfgDom_) {
+        cfgDom = cfgDom_;
         domMap = new HashMap<>();
         dfnList = new ArrayList<>();
         DFS();
@@ -56,7 +56,7 @@ public class Dom {
     }
 
     public void DFS(DomInfo domInfo) {
-        Block block = cfg.funcBlocks.get(domInfo.blockName);
+        Block block = cfgDom.funcBlocks.get(domInfo.blockName);
         for (int i = 0; i < block.suc; ++i) {
             if (!domMap.containsKey(block.next[i].label)) {
                 DomInfo nextDomInfo = new DomInfo(block.next[i].label, domInfo);
@@ -83,7 +83,7 @@ public class Dom {
         DomInfo nowDom, tmpDom;
         for (int i = dfnList.size() - 1; i > 0; --i) {//逆dfn序
             nowDom = dfnList.get(i);
-            nowBlock = cfg.funcBlocks.get(nowDom.blockName);
+            nowBlock = cfgDom.funcBlocks.get(nowDom.blockName);
             for (var preBlock : nowBlock.prev) {//求半支配节点
                 tmpDom = domMap.get(preBlock.label);
                 if (tmpDom.dfn < nowDom.dfn) {
@@ -122,7 +122,7 @@ public class Dom {
         Block nowBlock;
         DomInfo domInfoPre, domInfoNow;
         for (var entry : domMap.entrySet()) {
-            nowBlock = cfg.funcBlocks.get(entry.getKey());
+            nowBlock = cfgDom.funcBlocks.get(entry.getKey());
             domInfoNow = domMap.get(entry.getKey());
             if (nowBlock.pre > 1) {//汇合点
                 for (var preBlock : nowBlock.prev) {

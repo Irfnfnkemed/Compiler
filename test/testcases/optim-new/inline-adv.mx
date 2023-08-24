@@ -44,8 +44,8 @@ int wpppp() {
     return wppp();
 }
 
-int block() {  // may be infinite loop in bad inline
-    return block();
+int blockDom() {  // may be infinite loop in bad inline
+    return blockDom();
 }
 
 int bblock() { // may be time-consuming
@@ -139,8 +139,8 @@ int wP() {
     }
     // N = 6
     if ((N + wpppp()) % 2 == 0) return add524288(N) - 524288 - 6;
-    block(); block();
-    block(); block();
+    blockDom(); blockDom();
+    blockDom(); blockDom();
     return bblock();
 }
 

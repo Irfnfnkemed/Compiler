@@ -1,7 +1,8 @@
-package src.mem2Reg;
+package src.optimize.Mem2Reg;
 
 import src.IR.instruction.*;
 import src.IR.statement.FuncDef;
+import src.optimize.Block;
 
 import java.util.*;
 
@@ -32,18 +33,18 @@ public class PutPhi {
 
     }
 
-    public CFG cfg;
+    public CFGDom cfgDom;
     public Dom dom;
     public HashMap<String, Stack<variable>> varRename;//重命名栈
     public HashMap<String, variable> replace;//替换变量
     public FuncDef funcDef;
 
     public PutPhi(Dom dom_, FuncDef funcDef_) {
-        cfg = dom_.cfg;
+        cfgDom = dom_.cfgDom;
         dom = dom_;
         funcDef = funcDef_;
         varRename = new HashMap<>();
-        cfg.allocaVar.keySet().forEach(varName -> varRename.put(varName, new Stack<>()));
+        cfgDom.allocaVar.keySet().forEach(varName -> varRename.put(varName, new Stack<>()));
         replace = new HashMap<>();
         setPhiPos();
         rename();
@@ -52,21 +53,21 @@ public class PutPhi {
 
     public void setPhiPos() {
         HashSet<String> defLabelSet = new HashSet<>();//有def的块
-        for (var entry : cfg.allocaVar.entrySet()) {
+        for (var entry : cfgDom.allocaVar.entrySet()) {
             int index = 0;
             defLabelSet.clear();
             String varName = entry.getKey();
             var defList = entry.getValue();
             defLabelSet.addAll(defList);
             while (index < defList.size()) {
-                if (!cfg.funcBlocks.containsKey(defList.get(index))) {
+                if (!cfgDom.funcBlocks.containsKey(defList.get(index))) {
                     ++index;
                     continue;
                 }
                 for (String putBlockLabel : dom.domMap.get(defList.get(index)).domFrontier) {
-                    if (!cfg.funcBlocks.get(putBlockLabel).insertPhi.containsKey(varName)) {
-                        cfg.funcBlocks.get(putBlockLabel).insertPhi.put(
-                                varName, new Phi(cfg.allocaVarType.get(varName), varName + "-" + putBlockLabel));
+                    if (!(cfgDom.funcBlocks.get(putBlockLabel)).insertPhi.containsKey(varName)) {
+                        (cfgDom.funcBlocks.get(putBlockLabel)).insertPhi.put(
+                                varName, new Phi(cfgDom.allocaVarType.get(varName), varName + "-" + putBlockLabel));
                     }
                     if (!defLabelSet.contains(putBlockLabel)) {
                         defList.add(putBlockLabel);
@@ -79,12 +80,12 @@ public class PutPhi {
     }
 
     public void rename() {
-        Block root = cfg.funcBlocks.get("entry");
+        Block root = cfgDom.funcBlocks.get("entry");
         renameBlock(root, null);
     }
 
-    private void renameBlock(Block block, String fromLabel) {
-        for (var entry : block.insertPhi.entrySet()) {//phi变量放置
+    private void renameBlock(Block blockDom, String fromLabel) {
+        for (var entry : blockDom.insertPhi.entrySet()) {//phi变量放置
             if (!varRename.get(entry.getKey()).isEmpty()) {
                 boolean newLabel = true;
                 var varDef = varRename.get(entry.getKey()).peek();
@@ -106,15 +107,15 @@ public class PutPhi {
             }
         }
         variable tmpVar;
-        for (var inst : block.instructionList) {
+        for (var inst : blockDom.instructionList) {
             if (inst instanceof Phi) {
-                if (((Phi) inst).assignBlockList.size() > block.pre) {
+                if (((Phi) inst).assignBlockList.size() > blockDom.pre) {
                     for (int j = 0; j < ((Phi) inst).assignBlockList.size(); ++j) {
                         boolean flag = true;
-                        if (!cfg.funcBlocks.containsKey(((Phi) inst).assignBlockList.get(j).label.substring(1))) {
+                        if (!cfgDom.funcBlocks.containsKey(((Phi) inst).assignBlockList.get(j).label.substring(1))) {
                             flag = false;
                         } else {
-                            for (var preBlock : block.prev) {
+                            for (var preBlock : blockDom.prev) {
                                 if (Objects.equals(preBlock.label, ((Phi) inst).assignBlockList.get(j).label.substring(1))) {
                                     flag = false;
                                     break;
@@ -141,7 +142,7 @@ public class PutPhi {
                     ((Phi) inst).result = null;//表明要移除phi
                 }
             } else {
-                if (block.renamed) {
+                if (blockDom.renamed) {
                     return;
                 }
                 if (inst instanceof Binary) {
@@ -208,7 +209,7 @@ public class PutPhi {
                         ((Icmp) inst).output = null;//表明要删去
                     }
                 } else if (inst instanceof Load) {
-                    if (cfg.allocaVar.containsKey(((Load) inst).fromPointer)) {
+                    if (cfgDom.allocaVar.containsKey(((Load) inst).fromPointer)) {
                         replace.put(((Load) inst).toVarName, new variable(varRename.get(((Load) inst).fromPointer).peek()));
                         ((Load) inst).toVarName = null;//表示改指令会在后续删去
                     }
@@ -220,7 +221,7 @@ public class PutPhi {
                             ((Store) inst).valueVar = tmpVar.varName;
                         }
                     }
-                    if (cfg.allocaVar.containsKey(((Store) inst).toPointer)) {
+                    if (cfgDom.allocaVar.containsKey(((Store) inst).toPointer)) {
                         if (((Store) inst).valueVar == null) {
                             varRename.get(((Store) inst).toPointer).push(new variable(((Store) inst).value));
                         } else {
@@ -235,7 +236,7 @@ public class PutPhi {
                             if (tmpVar.varName != null) {
                                 ((Br) inst).condition = tmpVar.varName;
                             } else {
-                                cfg.change = true;//控制流发生改变
+                                cfgDom.change = true;//控制流发生改变
                                 ((Br) inst).condition = null;
                                 if (tmpVar.varValue == 0) {
                                     ((Br) inst).trueLabel = ((Br) inst).falseLabel;
@@ -278,15 +279,15 @@ public class PutPhi {
                 }
             }
         }
-        block.renamed = true;
+        blockDom.renamed = true;
         HashMap<String, variable> restoreStack = new HashMap<>();
         for (var entry : varRename.entrySet()) {
             if (!entry.getValue().empty()) {
                 restoreStack.put(entry.getKey(), entry.getValue().peek());
             }
         }
-        for (int i = 0; i < block.suc; ++i) {
-            renameBlock(block.next[i], block.label);
+        for (int i = 0; i < blockDom.suc; ++i) {
+            renameBlock(blockDom.next[i], blockDom.label);
             for (var entry : varRename.entrySet()) {//恢复栈
                 var restore = restoreStack.get(entry.getKey());
                 var stack = entry.getValue();
@@ -308,7 +309,7 @@ public class PutPhi {
         Instruction instruction;
         for (int i = 0; i < funcDef.labelList.size(); ++i) {
             nowLabel = funcDef.labelList.get(i);
-            nowBlock = cfg.funcBlocks.get(nowLabel.labelName);
+            nowBlock = cfgDom.funcBlocks.get(nowLabel.labelName);
             if (nowBlock == null) {
                 funcDef.labelList.remove(i--);//移除的死块
                 continue;
