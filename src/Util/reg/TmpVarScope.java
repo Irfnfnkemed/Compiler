@@ -78,11 +78,11 @@ public class TmpVarScope {
         int i = 0;
         if (funcDef.isClassMethod) {
             for (int j = 0; j < funcDef.parameterTypeList.size() - 1; ++j) {
-                setExcept("%" + j);
+                setExcept("%_" + j);
             }
         } else {
             for (int j = 0; j < funcDef.parameterTypeList.size(); ++j) {
-                setExcept("%" + j);
+                setExcept("%_" + j);
             }
         }
         for (var inst : funcDef.irList) {

@@ -48,11 +48,11 @@ public class ASMBuilder {
                         if (Objects.equals(((FuncDef) stmt).functionName, "@.newArray")) {
                             String savedReg = reg.getSavedReg();
                             asmProgram.sectionText.pushInstr(new MV("a0", savedReg));
-                            reg.getTmpVar.put("%0", savedReg);
+                            reg.getTmpVar.put("%_0", savedReg);
                         } else {
-                            reg.getTmpVar.put("%0", "a0");
+                            reg.getTmpVar.put("%_0", "a0");
                             if (Objects.equals(((FuncDef) stmt).parameterTypeList.get(0).unitName, "ptr")) {
-                                reg.setHeap("%0");
+                                reg.setHeap("%_0");
                             }
                         }
                     }
@@ -65,28 +65,28 @@ public class ASMBuilder {
                 }
                 for (int i = 1; i < min(size, 8); ++i) {
                     if (((FuncDef) stmt).isClassMethod) {
-                        reg.getTmpVar.put("%" + (i - 1), "a" + i);
+                        reg.getTmpVar.put("%_" + (i - 1), "a" + i);
                         if (Objects.equals(((FuncDef) stmt).parameterTypeList.get(i).unitName, "ptr")) {
-                            reg.setHeap("%" + (i - 1));
+                            reg.setHeap("%_" + (i - 1));
                         }
                     } else {
-                        reg.getTmpVar.put("%" + i, "a" + i);
+                        reg.getTmpVar.put("%_" + i, "a" + i);
                         if (Objects.equals(((FuncDef) stmt).parameterTypeList.get(i).unitName, "ptr")) {
-                            reg.setHeap("%" + i);
+                            reg.setHeap("%_" + i);
                         }
                     }
                 }
                 if (size > 8) {//栈上传递变量
                     for (int i = 8; i < size; ++i) {
                         if (((FuncDef) stmt).isClassMethod) {
-                            reg.setStackVar("%" + (i - 1), (i - 8) << 2);
+                            reg.setStackVar("%_" + (i - 1), (i - 8) << 2);
                             if (Objects.equals(((FuncDef) stmt).parameterTypeList.get(i).unitName, "ptr")) {
-                                reg.setHeap("%" + (i - 1));
+                                reg.setHeap("%_" + (i - 1));
                             }
                         } else {
-                            reg.setStackVar("%" + i, (i - 8) << 2);
+                            reg.setStackVar("%_" + i, (i - 8) << 2);
                             if (Objects.equals(((FuncDef) stmt).parameterTypeList.get(i).unitName, "ptr")) {
-                                reg.setHeap("%" + i);
+                                reg.setHeap("%_" + i);
                             }
                         }
                     }
