@@ -20,7 +20,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Scanner;
 
-import static test.TestIR.testIR;
+//import static test.TestIR.testIR;
 
 //import static test.TestIR.testIR;
 //import static test.TestSemantic.testSemantic;
