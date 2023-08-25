@@ -3,8 +3,6 @@ package src.optimize.Mem2Reg;
 import src.IR.IRProgram;
 import src.IR.instruction.*;
 import src.IR.statement.FuncDef;
-import src.optimize.Block;
-import src.optimize.RegAllocation.CFGReg;
 
 import java.util.HashMap;
 
@@ -23,7 +21,6 @@ public class Mem2Reg {
                         break;
                     }
                 }
-                CFGReg cfgReg = new CFGReg((FuncDef) stmt);
             }
         }
     }
@@ -52,23 +49,29 @@ public class Mem2Reg {
         stmt.irList.clear();
         Label nowLabel;
         String findLabel;
-        Block nowBlock;
+        BlockDom nowBlockDom;
         Instruction instr;
         for (int i = 0; i < stmt.labelList.size(); ++i) {
             nowLabel = stmt.labelList.get(i);
-            nowBlock = cfg.funcBlocks.get(nowLabel.labelName);
+            nowBlockDom = cfg.funcBlocks.get(nowLabel.labelName);
             if (replaceLabel.containsKey(nowLabel.labelName)) {
                 stmt.labelList.remove(i--);
                 continue;
             }
             stmt.irList.add(nowLabel);
-            for (int j = 0; j < nowBlock.instructionList.size(); ++j) {
-                instr = nowBlock.instructionList.get(j);
-                if (instr instanceof Br && ((Br) instr).condition == null) {
-                    findLabel = replaceLabel.get(((Br) instr).trueLabel.substring(1));
-                    if (findLabel != null) {
-                        nowBlock.instructionList.addAll(cfg.funcBlocks.get(((Br) instr).trueLabel.substring(1)).instructionList);
-                        continue;
+            for (int j = 0; j < nowBlockDom.instructionList.size(); ++j) {
+                instr = nowBlockDom.instructionList.get(j);
+                if (instr instanceof Br) {
+                    String replace = replaceLabel.get(((Br) instr).nowLabel.substring(1));
+                    if (replace != null) {
+                        ((Br) instr).nowLabel = "%" + replace;
+                    }
+                    if (((Br) instr).condition == null) {
+                        findLabel = replaceLabel.get(((Br) instr).trueLabel.substring(1));
+                        if (findLabel != null) {
+                            nowBlockDom.instructionList.addAll(cfg.funcBlocks.get(((Br) instr).trueLabel.substring(1)).instructionList);
+                            continue;
+                        }
                     }
                 }
                 stmt.irList.add(instr);

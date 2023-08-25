@@ -2,7 +2,6 @@ package src.optimize.Mem2Reg;
 
 import src.IR.instruction.*;
 import src.IR.statement.FuncDef;
-import src.optimize.Block;
 
 import java.util.*;
 
@@ -80,11 +79,11 @@ public class PutPhi {
     }
 
     public void rename() {
-        Block root = cfgDom.funcBlocks.get("entry");
+        BlockDom root = cfgDom.funcBlocks.get("entry");
         renameBlock(root, null);
     }
 
-    private void renameBlock(Block blockDom, String fromLabel) {
+    private void renameBlock(BlockDom blockDom, String fromLabel) {
         for (var entry : blockDom.insertPhi.entrySet()) {//phi变量放置
             if (!varRename.get(entry.getKey()).isEmpty()) {
                 boolean newLabel = true;
@@ -304,23 +303,23 @@ public class PutPhi {
 
     private void recollect() {
         funcDef.irList.clear();
-        Block nowBlock;
+        BlockDom nowBlockDom;
         Label nowLabel;
         Instruction instruction;
         for (int i = 0; i < funcDef.labelList.size(); ++i) {
             nowLabel = funcDef.labelList.get(i);
-            nowBlock = cfgDom.funcBlocks.get(nowLabel.labelName);
-            if (nowBlock == null) {
+            nowBlockDom = cfgDom.funcBlocks.get(nowLabel.labelName);
+            if (nowBlockDom == null) {
                 funcDef.labelList.remove(i--);//移除的死块
                 continue;
             }
             funcDef.irList.add(nowLabel);
-            for (var phi : nowBlock.insertPhi.values()) {//放置phi
-                if (phi.assignBlockList.size() >= nowBlock.pre) {//分支数不够，表明实际上该变量不会在该块中作用；过多，需要去除多余
+            for (var phi : nowBlockDom.insertPhi.values()) {//放置phi
+                if (phi.assignBlockList.size() >= nowBlockDom.pre) {//分支数不够，表明实际上该变量不会在该块中作用；过多，需要去除多余
                     for (int j = 0; j < phi.assignBlockList.size(); ++j) {
                         var assign = phi.assignBlockList.get(j);
                         boolean flag = true;
-                        for (var preBlock : nowBlock.prev) {//确认phi来源的标签存在
+                        for (var preBlock : nowBlockDom.prev) {//确认phi来源的标签存在
                             if (assign.label.substring(1).equals(preBlock.label)) {
                                 flag = false;
                                 break;
@@ -330,13 +329,13 @@ public class PutPhi {
                             phi.assignBlockList.remove(j--);
                         }
                     }
-                    if (phi.assignBlockList.size() == nowBlock.pre) {
+                    if (phi.assignBlockList.size() == nowBlockDom.pre) {
                         funcDef.irList.add(phi);//确认分支数正确
                     }
                 }
             }
-            for (int j = 0; j < nowBlock.instructionList.size(); ++j) {
-                instruction = nowBlock.instructionList.get(j);
+            for (int j = 0; j < nowBlockDom.instructionList.size(); ++j) {
+                instruction = nowBlockDom.instructionList.get(j);
                 if ((instruction instanceof Load && ((Load) instruction).toVarName == null) ||
                         (instruction instanceof Store && ((Store) instruction).toPointer == null) ||
                         (instruction instanceof Binary && ((Binary) instruction).output == null) ||
@@ -346,11 +345,11 @@ public class PutPhi {
                     continue;
                 }
                 if (instruction instanceof Phi) {
-                    if (((Phi) instruction).assignBlockList.size() >= nowBlock.pre) {//分支数不够，表明实际上该变量不会在该块中作用；过多，需要去除多余
+                    if (((Phi) instruction).assignBlockList.size() >= nowBlockDom.pre) {//分支数不够，表明实际上该变量不会在该块中作用；过多，需要去除多余
                         for (int k = 0; k < ((Phi) instruction).assignBlockList.size(); ++k) {
                             var assign = ((Phi) instruction).assignBlockList.get(k);
                             boolean flag = true;
-                            for (var preBlock : nowBlock.prev) {//确认phi来源的标签存在
+                            for (var preBlock : nowBlockDom.prev) {//确认phi来源的标签存在
                                 if (assign.label.substring(1).equals(preBlock.label)) {
                                     flag = false;
                                     break;
@@ -360,7 +359,7 @@ public class PutPhi {
                                 ((Phi) instruction).assignBlockList.remove(k--);
                             }
                         }
-                        if (((Phi) instruction).assignBlockList.size() != nowBlock.pre) {
+                        if (((Phi) instruction).assignBlockList.size() != nowBlockDom.pre) {
                             continue;
                         }
                     }

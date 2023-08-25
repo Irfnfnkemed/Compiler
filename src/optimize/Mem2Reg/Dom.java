@@ -1,7 +1,5 @@
 package src.optimize.Mem2Reg;
 
-import src.optimize.Block;
-
 import java.util.*;
 
 public class Dom {
@@ -56,11 +54,11 @@ public class Dom {
     }
 
     public void DFS(DomInfo domInfo) {
-        Block block = cfgDom.funcBlocks.get(domInfo.blockName);
-        for (int i = 0; i < block.suc; ++i) {
-            if (!domMap.containsKey(block.next[i].label)) {
-                DomInfo nextDomInfo = new DomInfo(block.next[i].label, domInfo);
-                domMap.put(block.next[i].label, nextDomInfo);
+        BlockDom blockDom = cfgDom.funcBlocks.get(domInfo.blockName);
+        for (int i = 0; i < blockDom.suc; ++i) {
+            if (!domMap.containsKey(blockDom.next[i].label)) {
+                DomInfo nextDomInfo = new DomInfo(blockDom.next[i].label, domInfo);
+                domMap.put(blockDom.next[i].label, nextDomInfo);
                 DFS(nextDomInfo);
             }
         }
@@ -79,12 +77,12 @@ public class Dom {
     }
 
     public void LengauerTarjan() {
-        Block nowBlock;
+        BlockDom nowBlockDom;
         DomInfo nowDom, tmpDom;
         for (int i = dfnList.size() - 1; i > 0; --i) {//逆dfn序
             nowDom = dfnList.get(i);
-            nowBlock = cfgDom.funcBlocks.get(nowDom.blockName);
-            for (var preBlock : nowBlock.prev) {//求半支配节点
+            nowBlockDom = cfgDom.funcBlocks.get(nowDom.blockName);
+            for (var preBlock : nowBlockDom.prev) {//求半支配节点
                 tmpDom = domMap.get(preBlock.label);
                 if (tmpDom.dfn < nowDom.dfn) {
                     if (tmpDom.semiDom.dfn < nowDom.semiDom.dfn) {
@@ -119,13 +117,13 @@ public class Dom {
     }
 
     private void buildDomFrontier() {
-        Block nowBlock;
+        BlockDom nowBlockDom;
         DomInfo domInfoPre, domInfoNow;
         for (var entry : domMap.entrySet()) {
-            nowBlock = cfgDom.funcBlocks.get(entry.getKey());
+            nowBlockDom = cfgDom.funcBlocks.get(entry.getKey());
             domInfoNow = domMap.get(entry.getKey());
-            if (nowBlock.pre > 1) {//汇合点
-                for (var preBlock : nowBlock.prev) {
+            if (nowBlockDom.pre > 1) {//汇合点
+                for (var preBlock : nowBlockDom.prev) {
                     domInfoPre = domMap.get(preBlock.label);
                     while (domInfoPre != entry.getValue().immeDom) {
                         domMap.get(domInfoPre.blockName).domFrontier.add(domInfoNow.blockName);

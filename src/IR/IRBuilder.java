@@ -690,7 +690,6 @@ public class IRBuilder implements ASTVisitor {
                     phi.push(((Exp) now).popVar(), rhsNowLabel);
                 }
                 ((Exp) now).push(phi);
-                ((Exp) now).funcDef.setPhiList(phi);
                 ((Exp) now).set("%_" + anonymousVar++);
             }
             return;
@@ -721,7 +720,6 @@ public class IRBuilder implements ASTVisitor {
                     phi.push(((Exp) now).popVar(), rhsNowLabel);
                 }
                 ((Exp) now).push(phi);
-                ((Exp) now).funcDef.setPhiList(phi);
                 ((Exp) now).set("%_" + anonymousVar++);
             }
             return;
@@ -876,14 +874,12 @@ public class IRBuilder implements ASTVisitor {
         binary.output = "%_" + anonymousVar;
         ((Exp) now).push(binary);
         phi.push("%_" + anonymousVar++, ((Exp) now).funcDef.label);
-        ((Exp) now).funcDef.setPhiList(phi);
         ((Exp) now).push(new Br(condition, ((Exp) now).funcDef));
         ((Exp) now).push(new Label(to.substring(1)));
         if (var == null) {
             ((Exp) now).set(value);
         } else {
             ((Exp) now).set(var);
-            ((Exp) now).setTmpVarEnd(var);
         }
         return newPtr;
     }
@@ -971,7 +967,6 @@ public class IRBuilder implements ASTVisitor {
                     phi.push(((Exp) now).popVar(), trueNowLabel);
                 }
                 ((Exp) now).push(phi);
-                ((Exp) now).funcDef.setPhiList(phi);
                 ((Exp) now).set("%_" + anonymousVar++);
             }
         }

@@ -3,8 +3,8 @@ package src;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
-import src.ASM.ASMBuilder;
-import src.ASM.ASMPrinter;
+//import src.ASM.ASMBuilder;
+//import src.ASM.ASMPrinter;
 import src.AST.ASTBuilder;
 import src.IR.IRBuilder;
 import src.Util.error.ParserErrorListener;
@@ -46,9 +46,9 @@ public class Compiler {
             Semantic semantic = new Semantic(AST.ASTProgram);
             semantic.check();
             IRBuilder irBuilder = new IRBuilder(AST.ASTProgram, semantic.globalScope);
-            ASMBuilder asmBuilder = new ASMBuilder(irBuilder.irProgram);
-            ASMPrinter asmPrinter = new ASMPrinter(asmBuilder.asmProgram);
-            asmPrinter.print();
+           // ASMBuilder asmBuilder = new ASMBuilder(irBuilder.irProgram);
+           // ASMPrinter asmPrinter = new ASMPrinter(asmBuilder.asmProgram);
+           // asmPrinter.print();
             return;
         } else {
             System.out.println("Unknown option");

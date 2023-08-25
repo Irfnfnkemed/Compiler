@@ -3,11 +3,9 @@ package src.IR.statement;
 import src.IR.instruction.*;
 import src.Util.type.IRType;
 import src.Util.type.Type;
+import src.optimize.Mem2Reg.BlockDom;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 
 public class FuncDef extends IRStatement {
     public static class ifStatus {
@@ -22,16 +20,35 @@ public class FuncDef extends IRStatement {
         public boolean jump = false;
     }
 
-    public static class phiBlock {
-        public String fromVar, toVar;
-        public long value;
-        public String label;
+    public static class PhiInfo {//用于处理关于phi的变量
 
-        public phiBlock(String fromVar_, String toVar_, long value_, String label_) {
-            fromVar = fromVar_;
-            toVar = toVar_;
-            value = value_;
-            label = label_;
+        public static class PhiBlock {
+            public String fromVar, toVar;
+            public long value;
+
+            public PhiBlock(String fromVar_, String toVar_, long value_) {
+                fromVar = fromVar_;
+                toVar = toVar_;
+                value = value_;
+            }
+        }
+
+        public List<PhiBlock> phiTrueList;//节点到跳转目标块(true跳转)，所有需要赋值的phi
+        public List<PhiBlock> phiFalseList;//节点到跳转目标块(false跳转)，所有需要赋值的phi
+        public Br br;
+
+        public PhiInfo(Br br_) {
+            phiTrueList = new ArrayList<>();
+            phiFalseList = new ArrayList<>();
+            br = br_;
+        }
+
+        public void push(String fromVar_, String toVar_, long value_, String label_) {
+            if (Objects.equals(label_, br.trueLabel.substring(1))) {
+                phiTrueList.add(new PhiBlock(fromVar_, toVar_, value_));
+            } else {
+                phiFalseList.add(new PhiBlock(fromVar_, toVar_, value_));
+            }
         }
     }
 
@@ -53,7 +70,7 @@ public class FuncDef extends IRStatement {
     public boolean isClassMethod = false;
     public int allocaSize = 0;
     public int maxCallPara = -1;
-    public HashMap<String, phiBlock> phiList;//phi指令，跳转来源标签->目标标签及赋值语段，便于汇编处理
+    public HashMap<String, PhiInfo> phiMap;//phi指令，跳转来源标签->目标标签及赋值语段，便于汇编处理
 
 
     public FuncDef() {
@@ -62,7 +79,7 @@ public class FuncDef extends IRStatement {
         ifStatusStack = new Stack<>();
         loopStatusStack = new Stack<>();
         ifAndLoopOrder = new Stack<>();
-        phiList = new HashMap<>();
+        phiMap = new HashMap<>();
         labelList = new LinkedList<>();
     }
 
@@ -143,9 +160,29 @@ public class FuncDef extends IRStatement {
         return ifAndLoopOrder.peek();
     }
 
-    public void setPhiList(Phi phi) {
-        phi.assignBlockList.forEach(assignBlock ->
-                phiList.put(assignBlock.label, new phiBlock(
-                        assignBlock.var, phi.result, assignBlock.value, label)));
+    public void collectPhi() {
+        String nowLabel = null;
+        Stack<String> labelStack = new Stack<>();
+        Stack<Phi> phiStack = new Stack<>();
+        for (var instr : irList) {
+            if (instr instanceof Label) {
+                nowLabel = ((Label) instr).labelName;
+            } else if (instr instanceof Br) {
+                ((Br) instr).nowLabel = "%" + nowLabel;
+                phiMap.put(nowLabel, new PhiInfo((Br) instr));
+            } else if (instr instanceof Phi) {
+                labelStack.push(nowLabel);
+                phiStack.push((Phi) instr);
+            }
+        }
+        while (!phiStack.isEmpty()) {
+            var phi = phiStack.pop();
+            label = labelStack.pop();
+            for (var assignBlock : phi.assignBlockList) {
+                PhiInfo phiInfo = phiMap.get(assignBlock.label.substring(1));
+                phiInfo.push(assignBlock.var, phi.result, assignBlock.value, label);
+            }
+        }
     }
+
 }

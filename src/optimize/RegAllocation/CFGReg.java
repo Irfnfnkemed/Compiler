@@ -1,202 +1,174 @@
 package src.optimize.RegAllocation;
 
-import src.IR.instruction.*;
-import src.IR.statement.FuncDef;
-import src.optimize.Block;
-import src.optimize.CFGBase;
+import src.ASM.Section;
+import src.ASM.instruction.*;
+import src.ASM.instruction.binary.*;
+import src.ASM.instruction.binaryImme.*;
 
 import java.util.*;
 
-public class CFGReg extends CFGBase {
-    public static class BlockLive {
-        public Set<String> blockUse;
-        public Set<String> blockDef;
+public class CFGReg {
+    public HashMap<String, HashMap<String, BlockReg>> blocks;//函数名->(块名->Block节点)
+    public HashMap<String, BlockReg> outBlocks;//出口(出度为0)
+    public Section section;
 
-        public Set<String> liveIn;
-        public Set<String> liveOut;
-
-        public BlockLive() {
-            blockUse = new HashSet<>();
-            blockDef = new HashSet<>();
-            liveIn = new HashSet<>();
-            liveOut = new HashSet<>();
-        }
-
-        public void addDef(String varName) {
-            blockDef.add(varName);
-        }
-
-        public void addUse(String varName) {
-            if (!blockDef.contains(varName)) {
-                blockUse.add(varName);
-            }
-        }
-    }
-
-    public static class PhiInfo {//用于处理关于phi的变量
-
-        public static class PhiBlock {
-            public String fromVar, toVar;
-            public long value;
-            public String label;
-
-            public PhiBlock(String fromVar_, String toVar_, long value_, String label_) {
-                fromVar = fromVar_;
-                toVar = toVar_;
-                value = value_;
-                label = label_;
-            }
-        }
-
-        public HashSet<PhiBlock> phiBlockSet;//节点到跳转目标块，所有需要赋值的phi
-
-        public PhiInfo() {
-            phiBlockSet = new HashSet<>();
-        }
-
-        public void push(String fromVar_, String toVar_, long value_, String label_) {
-            phiBlockSet.add(new PhiBlock(fromVar_, toVar_, value_, label_));
-        }
-    }
-
-
-    public Block outBlock;
-    public HashMap<String, BlockLive> blockLiveMap;
-    public HashMap<String, PhiInfo> phiInfoMap;
-    public FuncDef funcDef;
-
-
-    public CFGReg(FuncDef funcDef_) {
-        super(funcDef_);
-        blockLiveMap = new HashMap<>();
-        phiInfoMap = new HashMap<>();
-        funcDef = funcDef_;
-        collectPhi();
+    public CFGReg(Section section_) {
+        section = section_;
+        blocks = new HashMap<>();
+        outBlocks = new HashMap<>();
+        buildCFG();
         getBlockUseDef();
         getBlockInOut();
+        RIG rig = new RIG(this);
     }
 
-    public void collectPhi() {
-        for (var block : funcBlocks.values()) {
-            for (var instr : block.instructionList) {
-                if (instr instanceof Phi) {
-                    for (var assignBlock : ((Phi) instr).assignBlockList) {
-                        PhiInfo phiInfo = phiInfoMap.get(assignBlock.label.substring(1));
-                        if (phiInfo == null) {
-                            phiInfo = new PhiInfo();
-                            phiInfoMap.put(assignBlock.label.substring(1), phiInfo);
-                        }
-                        phiInfo.push(assignBlock.var, ((Phi) instr).result, assignBlock.value, block.label);
+
+    public void buildCFG() {
+        BlockReg nowBlockReg = null;
+        HashMap<String, BlockReg> nowFuncBlockMap = null;
+        for (var instr : section.asmInstrList) {//建图
+            if (instr instanceof LABEL) {
+                if (((LABEL) instr).isFuncBeg) {
+                    nowFuncBlockMap = new HashMap<>();
+                    blocks.put(((LABEL) instr).label, nowFuncBlockMap);
+                }
+                assert nowFuncBlockMap != null;
+                nowBlockReg = nowFuncBlockMap.get(((LABEL) instr).label);
+                if (nowBlockReg == null) {
+                    nowBlockReg = new BlockReg(((LABEL) instr).label);
+                    nowFuncBlockMap.put(nowBlockReg.label, nowBlockReg);
+                }
+            } else {
+                assert nowBlockReg != null;
+                nowBlockReg.pushASM(instr);
+                if (instr instanceof BNEZ) {
+                    var nextBlock = nowFuncBlockMap.get(((BNEZ) instr).toLabel);
+                    if (nextBlock == null) {
+                        nextBlock = new BlockReg(((BNEZ) instr).toLabel);
+                        nowFuncBlockMap.put(nextBlock.label, nextBlock);
                     }
+                    nextBlock.setPre(nowBlockReg);
+                    nowBlockReg.setSuc(nextBlock);
+                } else if (instr instanceof J) {
+                    var nextBlock = nowFuncBlockMap.get(((J) instr).toLabel);
+                    if (nextBlock == null) {
+                        nextBlock = new BlockReg(((J) instr).toLabel);
+                        nowFuncBlockMap.put(nextBlock.label, nextBlock);
+                    }
+                    nextBlock.setPre(nowBlockReg);
+                    nowBlockReg.setSuc(nextBlock);
                 }
             }
         }
     }
+
 
     public void getBlockUseDef() {
-        for (var block : funcBlocks.values()) {//得到每个块的等效use和def
-            BlockLive blockLive = new BlockLive();
-            blockLiveMap.put(block.label, blockLive);
-            for (var inst : block.instructionList) {
-                if (inst instanceof Alloca) {
-                    blockLive.addDef(((Alloca) inst).varName);
-                } else if (inst instanceof Binary) {
-                    if (((Binary) inst).operandLeft != null) {
-                        blockLive.addUse(((Binary) inst).operandLeft);
-                    }
-                    if (((Binary) inst).operandRight != null) {
-                        blockLive.addUse(((Binary) inst).operandRight);
-                    }
-                    blockLive.addDef(((Binary) inst).output);
-                } else if (inst instanceof Br) {
-                    if (((Br) inst).condition != null) {
-                        blockLive.addUse(((Br) inst).condition);
-                    }
-                    var phiInfo = phiInfoMap.get(block.label);
-                    if (phiInfo != null) {
-                        for (var phiBlock : phiInfo.phiBlockSet) {
-                            if (phiBlock.fromVar != null) {
-                                blockLive.addUse(phiBlock.fromVar);
-                            }
-                            blockLive.addDef(phiBlock.toVar);
+        for (var funcEntry : blocks.entrySet()) {//得到每个块的等效use和def
+            BlockReg nowBlock = null;
+            for (var entry : funcEntry.getValue().entrySet()) {
+                nowBlock = entry.getValue();
+                for (var instr : nowBlock.instructionList) {
+                    if (instr instanceof LI) {
+                        nowBlock.blockLive.addDef(((LI) instr).to);
+                        instr.def = ((LI) instr).to;
+                    } else if (instr instanceof LW) {
+                        nowBlock.blockLive.addUse(((LW) instr).from);
+                        nowBlock.blockLive.addDef(((LW) instr).to);
+                        instr.use[0] = ((LW) instr).from;
+                        instr.def = ((LW) instr).to;
+                        instr.useNum = 1;
+                    } else if (instr instanceof SW) {
+                        nowBlock.blockLive.addUse(((SW) instr).from);
+                        nowBlock.blockLive.addDef(((SW) instr).to);
+                        instr.use[0] = ((SW) instr).from;
+                        instr.def = ((SW) instr).to;
+                        instr.useNum = 1;
+                    } else if (instr instanceof MV) {
+                        nowBlock.blockLive.addUse(((MV) instr).from);
+                        nowBlock.blockLive.addDef(((MV) instr).to);
+                        if (!((MV) instr).ignoreUse) {
+                            instr.use[0] = ((MV) instr).from;
+                            instr.useNum = 1;
+                        } else {
+                            instr.useNum = 0;
                         }
-                    }
-                } else if (inst instanceof Call) {
-                    for (var variable : ((Call) inst).callList) {
-                        if (variable.varName != null) {
-                            blockLive.addUse(variable.varName);
+                        if (!((MV) instr).ignoreDef) {
+                            instr.def = ((MV) instr).to;
                         }
+                    } else if (instr instanceof binBase) {
+                        nowBlock.blockLive.addUse(((binBase) instr).lhs);
+                        nowBlock.blockLive.addUse(((binBase) instr).rhs);
+                        nowBlock.blockLive.addDef(((binBase) instr).to);
+                        instr.use[0] = ((binBase) instr).lhs;
+                        instr.use[1] = ((binBase) instr).rhs;
+                        instr.def = ((binBase) instr).to;
+                        instr.useNum = 2;
+                    } else if (instr instanceof binImmeBase) {
+                        nowBlock.blockLive.addUse(((binImmeBase) instr).from);
+                        nowBlock.blockLive.addDef(((binImmeBase) instr).to);
+                        instr.use[0] = ((binImmeBase) instr).from;
+                        instr.def = ((binImmeBase) instr).to;
+                        instr.useNum = 1;
+                    } else if (instr instanceof SEQZ) {
+                        nowBlock.blockLive.addUse(((SEQZ) instr).from);
+                        nowBlock.blockLive.addDef(((SEQZ) instr).to);
+                        instr.use[0] = ((SEQZ) instr).from;
+                        instr.def = ((SEQZ) instr).to;
+                        instr.useNum = 1;
+                    } else if (instr instanceof SNEZ) {
+                        nowBlock.blockLive.addUse(((SNEZ) instr).from);
+                        nowBlock.blockLive.addDef(((SNEZ) instr).to);
+                        instr.use[0] = ((SNEZ) instr).from;
+                        instr.def = ((SNEZ) instr).to;
+                        instr.useNum = 1;
+                    } else if (instr instanceof BNEZ) {
+                        nowBlock.blockLive.addUse(((BNEZ) instr).condition);
+                        instr.use[0] = ((BNEZ) instr).condition;
+                        instr.useNum = 1;
                     }
-                    if (((Call) inst).resultVar != null) {
-                        blockLive.addDef(((Call) inst).resultVar);
-                    }
-                } else if (inst instanceof Getelementptr) {
-                    if (((Getelementptr) inst).indexVar != null) {
-                        blockLive.addUse(((Getelementptr) inst).indexVar);
-                    }
-                    blockLive.addUse(((Getelementptr) inst).from);
-                    blockLive.addDef(((Getelementptr) inst).result);
-                } else if (inst instanceof Icmp) {
-                    if (((Icmp) inst).operandLeft != null) {
-                        blockLive.addUse(((Icmp) inst).operandLeft);
-                    }
-                    if (((Icmp) inst).operandRight != null) {
-                        blockLive.addUse(((Icmp) inst).operandRight);
-                    }
-                    blockLive.addDef(((Icmp) inst).output);
-                } else if (inst instanceof Load) {
-                    blockLive.addUse(((Load) inst).fromPointer);
-                    blockLive.addDef(((Load) inst).toVarName);
-                } else if (inst instanceof Ret) {
-                    if (((Ret) inst).var != null) {
-                        blockLive.addUse(((Ret) inst).var);
-                    }
-                } else if (inst instanceof Store) {
-                    if (((Store) inst).valueVar != null) {
-                        blockLive.addUse(((Store) inst).valueVar);
-                    }
-                    blockLive.addDef(((Store) inst).toPointer);
+                }
+                nowBlock.blockLive.liveIn.addAll(nowBlock.blockLive.blockUse);
+                if (nowBlock.suc == 0) {
+                    outBlocks.put(funcEntry.getKey(), nowBlock);
                 }
             }
-            if (block.suc == 0) {
-                outBlock = block;
+            if (!outBlocks.containsKey(funcEntry.getKey())) {//无出度为0的节点，实际上会死循环
+                outBlocks.put(funcEntry.getKey(), nowBlock);
             }
-        }
-        if (outBlock == null) {//无出度为0的节点，实际上会死循环
-            outBlock = funcBlocks.get(funcDef.labelList.get(funcDef.labelList.size() - 1).labelName);
         }
     }
 
     public void getBlockInOut() {
-        Block block;
-        BlockLive blockLive;
-        Queue<Block> queue = new ArrayDeque<>();
-        HashSet<Block> visited = new HashSet<>();
-        boolean flag = true;
-        while (flag) {
-            flag = false;
-            queue.add(outBlock);
-            visited.clear();
-            while (!queue.isEmpty()) {
-                block = queue.poll();
-                blockLive = blockLiveMap.get(block.label);
-                visited.add(block);
-                for (int i = 0; i < block.suc; ++i) {
-                    if (blockLive.liveOut.addAll(blockLiveMap.get(block.next[i].label).liveIn)) {
-                        flag = true;
-                    }
-                }
-                blockLive.liveIn.addAll(blockLive.blockUse);
-                for (String var : blockLive.liveOut) {
-                    if (!blockLive.blockDef.contains(var)) {
-                        if (blockLive.liveIn.add(var)) {
+        BlockReg blockReg, outBlock;
+        Queue<BlockReg> queue = new ArrayDeque<>();
+        HashSet<BlockReg> visited = new HashSet<>();
+        for (var funcEntry : blocks.entrySet()) {
+            outBlock = outBlocks.get(funcEntry.getKey());
+            boolean flag = true;
+            while (flag) {
+                flag = false;
+                queue.add(outBlock);
+                visited.clear();
+                while (!queue.isEmpty()) {
+                    blockReg = queue.poll();
+                    for (int i = 0; i < blockReg.suc; ++i) {
+                        if (blockReg.blockLive.liveOut.addAll(funcEntry.getValue().get(blockReg.next[i].label).blockLive.liveIn)) {
                             flag = true;
                         }
                     }
-                }
-                for (int i = 0; i < block.suc; ++i) {
-                    if (!visited.contains(block.next[i])) {
-                        queue.add(block.next[i]);
+                    for (String var : blockReg.blockLive.liveOut) {
+                        if (!blockReg.blockLive.blockDef.contains(var)) {
+                            if (blockReg.blockLive.liveIn.add(var)) {
+                                flag = true;
+                            }
+                        }
+                    }
+                    for (int i = 0; i < blockReg.pre; ++i) {
+                        if (!visited.contains(blockReg.prev.get(i))) {
+                            queue.add(blockReg.prev.get(i));
+                            visited.add(blockReg.prev.get(i));
+                        }
                     }
                 }
             }

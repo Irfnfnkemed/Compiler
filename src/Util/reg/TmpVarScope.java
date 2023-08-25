@@ -86,11 +86,11 @@ public class TmpVarScope {
             }
         }
         for (var inst : funcDef.irList) {
-            if (inst.tmpVarScopeEnd != null) {
-                for (var tmpVar : inst.tmpVarScopeEnd) {
-                    setEnd(tmpVar, i);
-                }
-            }
+//            if (inst.tmpVarScopeEnd != null) {
+//                for (var tmpVar : inst.tmpVarScopeEnd) {
+//                    setEnd(tmpVar, i);
+//                }
+//            }
             if (inst instanceof Alloca) {
                 setExcept(((Alloca) inst).varName);
             } else if (inst instanceof Binary) {
@@ -105,10 +105,10 @@ public class TmpVarScope {
                 if (((Br) inst).condition != null) {
                     setEnd(((Br) inst).condition, i);
                 }
-                var phi = (((Br) inst).funcDef.phiList.get(((Br) inst).nowLabel));
-                if (phi != null) {
-                    setBeg(phi.toVar, i - 1);
-                }
+//                var phi = (((Br) inst).funcDef.phiList.get(((Br) inst).nowLabel));
+//                if (phi != null) {
+//                    setBeg(phi.toVar, i - 1);
+//                }
             } else if (inst instanceof Call) {
                 for (var variable : ((Call) inst).callList) {
                     if (variable.varName != null) {

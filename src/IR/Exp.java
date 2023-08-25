@@ -84,15 +84,4 @@ public class Exp extends IRNode {
     public void push(Instruction instruction) {
         funcDef.push(instruction);
     }
-
-    public void reset() {
-        expCateStack.clear();
-        varNameStack.clear();
-        constValueStack.clear();
-    }
-
-    public void setTmpVarEnd(String varName) {
-        var tmp = funcDef.irList.get(funcDef.irList.size() - 1);
-        tmp.setTmpVarScopeEnd(varName);
-    }
 }

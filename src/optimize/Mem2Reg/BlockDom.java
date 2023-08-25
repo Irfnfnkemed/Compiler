@@ -1,25 +1,24 @@
-package src.optimize;
+package src.optimize.Mem2Reg;
 
-import src.IR.IRNode;
 import src.IR.instruction.Instruction;
 import src.IR.instruction.Phi;
 
 import java.util.*;
 
-public class Block{
+public class BlockDom {
     public List<Instruction> instructionList;
     public String label;
-    public Block[] next;
-    public List<Block> prev;
+    public BlockDom[] next;
+    public List<BlockDom> prev;
     public int pre = 0, suc = 0;//前驱、后继个数
     public HashMap<String, Phi> insertPhi;//要插入的phi，局部变量名->phi指令
     public boolean renamed = false;//是否已经重命名过各操作
     public boolean visited = false;//用于建图时消除死块
 
-    public Block(String label_) {
+    public BlockDom(String label_) {
         label = label_;
         instructionList = new LinkedList<>();
-        next = new Block[2];
+        next = new BlockDom[2];
         prev = new LinkedList<>();
         insertPhi = new HashMap<>();
     }
@@ -28,13 +27,13 @@ public class Block{
         instructionList.add(instruction);
     }
 
-    public void setPre(Block preBlock) {
-        prev.add(preBlock);
+    public void setPre(BlockDom preBlockDom) {
+        prev.add(preBlockDom);
         ++pre;
     }
 
-    public void setSuc(Block sucBlock) {
-        next[suc++] = sucBlock;
+    public void setSuc(BlockDom sucBlockDom) {
+        next[suc++] = sucBlockDom;
     }
 
 }
