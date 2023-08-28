@@ -70,8 +70,10 @@ public class CFGReg {
                 nowBlock = entry.getValue();
                 for (var instr : nowBlock.instructionList) {
                     if (instr instanceof LI) {
-                        nowBlock.blockLive.addDef(((LI) instr).to);
-                        instr.def = ((LI) instr).to;
+                        if (!((LI) instr).ignoreDef) {
+                            nowBlock.blockLive.addDef(((LI) instr).to);
+                            instr.def = ((LI) instr).to;
+                        }
                     } else if (instr instanceof LW) {
                         nowBlock.blockLive.addUse(((LW) instr).from);
                         nowBlock.blockLive.addDef(((LW) instr).to);
@@ -85,15 +87,15 @@ public class CFGReg {
                         instr.def = ((SW) instr).to;
                         instr.useNum = 1;
                     } else if (instr instanceof MV) {
-                        nowBlock.blockLive.addUse(((MV) instr).from);
-                        nowBlock.blockLive.addDef(((MV) instr).to);
                         if (!((MV) instr).ignoreUse) {
+                            nowBlock.blockLive.addUse(((MV) instr).from);
                             instr.use[0] = ((MV) instr).from;
                             instr.useNum = 1;
                         } else {
                             instr.useNum = 0;
                         }
                         if (!((MV) instr).ignoreDef) {
+                            nowBlock.blockLive.addDef(((MV) instr).to);
                             instr.def = ((MV) instr).to;
                         }
                     } else if (instr instanceof binBase) {

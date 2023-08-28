@@ -7,13 +7,26 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 public class RIG {
-    public static class RIGNode {
+    public static class RIGNode implements Comparable<RIGNode> {
         public HashMap<String, RIGNode> toNode;//无向边连接的对象
         public HashMap<String, RIGNode> mvNode;//传送有关指令
+        public String varName;
+        public int colour = -1;
+        public boolean aboutMove = false;//是否是传送相关的(可能后续被冻结)
+        public boolean preColored = false;//是否是预着色的
 
-        public RIGNode() {
+        public RIGNode(String varName_) {
             toNode = new HashMap<>();
             mvNode = new HashMap<>();
+            varName = varName_;
+        }
+
+        public int compareTo(RIGNode obj) {
+            if (toNode.size() < obj.toNode.size()) {
+                return -1;
+            } else if (toNode.size() > obj.toNode.size()) {
+                return 1;
+            } else return Integer.compare(this.hashCode(), obj.hashCode());
         }
     }
 
@@ -24,6 +37,8 @@ public class RIG {
         cfgReg = cfgReg_;
         rigNodes = new HashMap<>();
         buildRIG();
+        GraphColor graphColor = new GraphColor(this);
+        graphColor.graphColor();
     }
 
     public void buildRIG() {
@@ -46,14 +61,18 @@ public class RIG {
                                 rigNodeTo = getNode(rigNodeMap, liveVar);
                                 rigNodeTo.toNode.put(asmInstr.def, rigNodeNow);
                                 rigNodeNow.toNode.put(liveVar, rigNodeTo);
-                                if (flag) {
-                                    rigNodeTo.mvNode.put(asmInstr.def, rigNodeNow);
-                                    rigNodeNow.mvNode.put(liveVar, rigNodeTo);
-                                }
                             }
+                            if (flag && asmInstr.use[0] != null && !rigNodeNow.toNode.containsKey(asmInstr.use[0])) {
+                                rigNodeTo = getNode(rigNodeMap, asmInstr.use[0]);
+                                rigNodeTo.mvNode.put(asmInstr.def, rigNodeNow);
+                                rigNodeNow.mvNode.put(asmInstr.use[0], rigNodeTo);
+                                rigNodeTo.aboutMove = true;
+                                rigNodeNow.aboutMove = true;
+                            }
+                            rigNodeNow.preColored = asmInstr.preColored;
                         }
-                        block.blockLive.liveOut.addAll(Arrays.asList(asmInstr.use).subList(0, asmInstr.useNum));
                     }
+                    block.blockLive.liveOut.addAll(Arrays.asList(asmInstr.use).subList(0, asmInstr.useNum));
                 }
             }
         }
@@ -62,7 +81,7 @@ public class RIG {
     public RIGNode getNode(HashMap<String, RIGNode> rigNodeMap, String varName) {
         RIGNode rigNode = rigNodeMap.get(varName);
         if (rigNode == null) {
-            rigNode = new RIGNode();
+            rigNode = new RIGNode(varName);
             rigNodeMap.put(varName, rigNode);
         }
         return rigNode;

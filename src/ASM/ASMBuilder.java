@@ -42,6 +42,7 @@ public class ASMBuilder {
                         mv = new MV("a0", "%_0");
                     }
                     mv.ignoreUse = true;
+                    mv.preColored = true;
                     asmProgram.sectionText.pushInstr(mv);
                 }
                 for (int i = 1; i < min(size, 8); ++i) {
@@ -52,15 +53,19 @@ public class ASMBuilder {
                         mv = new MV("a" + i, "%_" + i);
                     }
                     mv.ignoreUse = true;
+                    mv.preColored = true;
                     asmProgram.sectionText.pushInstr(mv);
                 }
                 if (size > 8) {//栈上传递变量
                     for (int i = 8; i < size; ++i) {
+                        LW lw;
                         if (((FuncDef) stmt).isClassMethod) {
-                            asmProgram.sectionText.pushInstr(new LW("stackTop", "%_" + (i - 1), (i - 8) << 2));
+                            lw = new LW("stackTop", "%_" + (i - 1), (i - 8) << 2);
                         } else {
-                            asmProgram.sectionText.pushInstr(new LW("stackTop", "%_" + i, (i - 8) << 2));
+                            lw = new LW("stackTop", "%_" + i, (i - 8) << 2);
                         }
+                        lw.preColored = true;
+                        asmProgram.sectionText.pushInstr(lw);
                     }
                 }
                 for (var irInstr : ((FuncDef) stmt).irList) {
@@ -125,7 +130,7 @@ public class ASMBuilder {
         }
         if (globalVar.contains(store.toPointer)) {
             to = "tmp" + cnt++;
-            section.pushInstr(new LA(to, store.toPointer));
+            section.pushInstr(new LA(to, store.toPointer.substring(1)));
         } else {
             to = store.toPointer;
         }
@@ -133,7 +138,7 @@ public class ASMBuilder {
     }
 
     void visit(Section section, Load load) {
-        section.pushInstr(new LA("tmp" + cnt, load.fromPointer));
+        section.pushInstr(new LA("tmp" + cnt, load.fromPointer.substring(1)));
         section.pushInstr(new LW("tmp" + cnt++, load.toVarName, 0));
     }
 
@@ -374,16 +379,34 @@ public class ASMBuilder {
         for (int i = 0; i < min(size, 8); ++i) {
             variable = call.callList.get(i);
             if (variable.varName != null) {
-                section.pushInstr(new MV(variable.varName, "a" + i));
+                String from;
+                if (variable.varName.charAt(0) == '@') {
+                    section.pushInstr(new LA("tmp" + cnt, variable.varName.substring(1)));
+                    from = "tmp" + cnt++;
+                } else {
+                    from = variable.varName;
+                }
+                MV mv = new MV(from, "a" + i);
+                mv.ignoreDef = true;
+                section.pushInstr(mv);
             } else {
-                section.pushInstr(new LI("a" + i, (int) variable.varValue));
+                LI li = new LI("a" + i, (int) variable.varValue);
+                li.ignoreDef = true;
+                section.pushInstr(li);
             }
         }
         if (size > 8) {
             for (int i = 8; i < size; ++i) {
                 variable = call.callList.get(i);
                 if (variable.varName != null) {
-                    section.pushInstr(new SW(variable.varName, "stackTop", (i - 8) << 2));
+                    String from;
+                    if (variable.varName.charAt(0) == '@') {
+                        section.pushInstr(new LA("tmp" + cnt, variable.varName.substring(1)));
+                        from = "tmp" + cnt++;
+                    } else {
+                        from = variable.varName;
+                    }
+                    section.pushInstr(new SW(from, "stackTop", (i - 8) << 2));
                 } else {
                     section.pushInstr(new LI("tmp" + cnt, (int) variable.varValue));
                     section.pushInstr(new SW("tmp" + cnt++, "stackTop", (i - 8) << 2));
@@ -392,7 +415,9 @@ public class ASMBuilder {
         }
         section.pushInstr(new CALL(call.functionName.substring(1)));
         if (call.resultVar != null) {
-            section.pushInstr(new MV("a0", call.resultVar));
+            MV mv = new MV("a0", call.resultVar);
+            mv.ignoreUse = true;
+            section.pushInstr(mv);
         }
     }
 
@@ -459,6 +484,7 @@ public class ASMBuilder {
             } else {
                 LI li = new LI("a0", ret.value);
                 li.notRemove = true;
+                li.ignoreDef = true;
                 section.pushInstr(li);
             }
 
