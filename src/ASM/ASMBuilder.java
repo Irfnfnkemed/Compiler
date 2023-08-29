@@ -37,23 +37,23 @@ public class ASMBuilder {
                 if (size > 0) {
                     MV mv;
                     if (((FuncDef) stmt).isClassMethod) {
-                        mv = new MV("a0", "%this");
+                        mv = new MV("tmp" + cnt++, "%this");
                     } else {
-                        mv = new MV("a0", "%_0");
+                        mv = new MV("tmp" + cnt++, "%_0");
                     }
-                    mv.ignoreUse = true;
-                    mv.preColored = true;
+                    mv.preColoredFrom = "a0";
+                    mv.preColoredTo = "s0";
                     asmProgram.sectionText.pushInstr(mv);
                 }
                 for (int i = 1; i < min(size, 8); ++i) {
                     MV mv;
                     if (((FuncDef) stmt).isClassMethod) {
-                        mv = new MV("a" + i, "%_" + (i - 1));
+                        mv = new MV("tmp" + cnt++, "%_" + (i - 1));
                     } else {
-                        mv = new MV("a" + i, "%_" + i);
+                        mv = new MV("tmp" + cnt++, "%_" + i);
                     }
-                    mv.ignoreUse = true;
-                    mv.preColored = true;
+                    mv.preColoredFrom = "a" + i;
+                    mv.preColoredTo = "s" + i;
                     asmProgram.sectionText.pushInstr(mv);
                 }
                 if (size > 8) {//栈上传递变量
@@ -64,7 +64,6 @@ public class ASMBuilder {
                         } else {
                             lw = new LW("stackTop", "%_" + i, (i - 8) << 2);
                         }
-                        lw.preColored = true;
                         asmProgram.sectionText.pushInstr(lw);
                     }
                 }
@@ -119,16 +118,12 @@ public class ASMBuilder {
     void visit(Section section, Store store) {
         String from, to;
         if (store.valueVar == null) {
-            if (store.value == 0) {
-                from = "zero";
-            } else {
-                from = "tmp" + cnt++;
-                section.pushInstr(new LI(from, (int) store.value));
-            }
+            from = "tmp" + cnt++;
+            section.pushInstr(new LI(from, (int) store.value));
         } else {
             from = store.valueVar;
         }
-        if (globalVar.contains(store.toPointer)) {
+        if (store.toPointer.charAt(0) == '@') {
             to = "tmp" + cnt++;
             section.pushInstr(new LA(to, store.toPointer.substring(1)));
         } else {
@@ -138,8 +133,12 @@ public class ASMBuilder {
     }
 
     void visit(Section section, Load load) {
-        section.pushInstr(new LA("tmp" + cnt, load.fromPointer.substring(1)));
-        section.pushInstr(new LW("tmp" + cnt++, load.toVarName, 0));
+        if (load.fromPointer.charAt(0) == '@') {
+            section.pushInstr(new LA(load.toVarName, load.fromPointer.substring(1)));
+        } else {
+            section.pushInstr(new LW(load.fromPointer, load.toVarName, 0));
+        }
+
     }
 
     void visit(Section section, Binary binary) {
@@ -300,54 +299,62 @@ public class ASMBuilder {
     }
 
     void visit(Section section, Icmp icmp) {
+        SLT slt = null;
+        SLTI slti = null;
         switch (icmp.cond) {
             case "slt", "sge" -> {
                 if (icmp.operandLeft != null && icmp.operandRight != null) {
-                    section.pushInstr(new SLT(icmp.operandLeft, icmp.operandRight, "tmp" + cnt));
+                    slt = new SLT(icmp.operandLeft, icmp.operandRight, "tmp" + cnt);
+                    section.pushInstr(slt);
                 } else {
                     if (icmp.operandRight != null) {
                         section.pushInstr(new LI("tmp" + cnt++, (int) icmp.valueLeft));
-                        section.pushInstr(new SLT("tmp" + (cnt - 1), icmp.operandRight, "tmp" + cnt));
+                        slt = new SLT("tmp" + (cnt - 1), icmp.operandRight, "tmp" + cnt);
+                        section.pushInstr(slt);
                     } else if (icmp.operandLeft != null) {
-                        section.pushInstr(new SLTI("tmp" + cnt, icmp.operandLeft, (int) icmp.valueRight));
+                        slti = new SLTI("tmp" + cnt, icmp.operandLeft, (int) icmp.valueRight);
+                        section.pushInstr(slti);
                     } else {
                         section.pushInstr(new LI("tmp" + cnt++, (int) icmp.valueLeft));
-                        section.pushInstr(new SLTI("tmp" + cnt, "tmp" + (cnt - 1), (int) icmp.valueRight));
+                        slti = new SLTI("tmp" + cnt, "tmp" + (cnt - 1), (int) icmp.valueRight);
+                        section.pushInstr(slti);
                     }
                 }
                 if (Objects.equals(icmp.cond, "sge")) {
                     section.pushInstr(new XORI(icmp.output, "tmp" + cnt++, 1));
                 } else {
-                    var instr = section.asmInstrList.get(section.asmInstrList.size() - 1);
-                    if (instr instanceof SLT) {
-                        ((SLT) instr).to = icmp.output;
+                    if (slt != null) {
+                        slt.to = icmp.output;
                     } else {
-                        ((SLTI) instr).to = icmp.output;
+                        slti.to = icmp.output;
                     }
                 }
             }
             case "sgt", "sle" -> {
                 if (icmp.operandLeft != null && icmp.operandRight != null) {
-                    section.pushInstr(new SLT(icmp.operandRight, icmp.operandLeft, "tmp" + cnt));
+                    slt = new SLT(icmp.operandRight, icmp.operandLeft, "tmp" + cnt);
+                    section.pushInstr(slt);
                 } else {
                     if (icmp.operandRight != null) {
-                        section.pushInstr(new SLTI("tmp" + cnt, icmp.operandRight, (int) icmp.valueLeft));
+                        slti = new SLTI("tmp" + cnt, icmp.operandRight, (int) icmp.valueLeft);
+                        section.pushInstr(slti);
                     } else if (icmp.operandLeft != null) {
                         section.pushInstr(new LI("tmp" + cnt++, (int) icmp.valueRight));
-                        section.pushInstr(new SLT("tmp" + (cnt - 1), icmp.operandLeft, "tmp" + cnt));
+                        slt = new SLT("tmp" + (cnt - 1), icmp.operandLeft, "tmp" + cnt);
+                        section.pushInstr(slt);
                     } else {
                         section.pushInstr(new LI("tmp" + cnt++, (int) icmp.valueRight));
-                        section.pushInstr(new SLTI("tmp" + cnt, "tmp" + (cnt - 1), (int) icmp.valueLeft));
+                        slti = new SLTI("tmp" + cnt, "tmp" + (cnt - 1), (int) icmp.valueLeft);
+                        section.pushInstr(slti);
                     }
                 }
                 if (Objects.equals(icmp.cond, "sle")) {
                     section.pushInstr(new XORI(icmp.output, "tmp" + cnt++, 1));
                 } else {
-                    var instr = section.asmInstrList.get(section.asmInstrList.size() - 1);
-                    if (instr instanceof SLT) {
-                        ((SLT) instr).to = icmp.output;
+                    if (slt != null) {
+                        slt.to = icmp.output;
                     } else {
-                        ((SLTI) instr).to = icmp.output;
+                        slti.to = icmp.output;
                     }
                 }
             }
@@ -386,12 +393,12 @@ public class ASMBuilder {
                 } else {
                     from = variable.varName;
                 }
-                MV mv = new MV(from, "a" + i);
-                mv.ignoreDef = true;
+                MV mv = new MV(from, "tmp" + cnt++);
+                mv.preColoredTo = "a" + i;
                 section.pushInstr(mv);
             } else {
-                LI li = new LI("a" + i, (int) variable.varValue);
-                li.ignoreDef = true;
+                LI li = new LI("tmp" + cnt++, (int) variable.varValue);
+                li.preColoredTo = "a" + i;
                 section.pushInstr(li);
             }
         }
@@ -415,8 +422,8 @@ public class ASMBuilder {
         }
         section.pushInstr(new CALL(call.functionName.substring(1)));
         if (call.resultVar != null) {
-            MV mv = new MV("a0", call.resultVar);
-            mv.ignoreUse = true;
+            MV mv = new MV("tmp" + cnt++, call.resultVar);
+            mv.preColoredFrom = "a0";
             section.pushInstr(mv);
         }
     }
@@ -466,25 +473,24 @@ public class ASMBuilder {
 
     void visit(Section section, Getelementptr getelementptr) {
         if (getelementptr.indexVar == null) {
-            section.pushInstr(new ADDI("tmp" + cnt, getelementptr.from, getelementptr.indexValue << 2));
+            section.pushInstr(new ADDI(getelementptr.result, getelementptr.from, getelementptr.indexValue << 2));
         } else {
-            section.pushInstr(new SLLI("tmp" + cnt++, getelementptr.indexVar, 2));
-            section.pushInstr(new ADD(getelementptr.from, "tmp" + (cnt - 1), "tmp" + cnt));
+            section.pushInstr(new SLLI("tmp" + cnt, getelementptr.indexVar, 2));
+            section.pushInstr(new ADD(getelementptr.from, "tmp" + cnt++, getelementptr.result));
         }
-        section.pushInstr(new LW("tmp" + cnt++, getelementptr.result, 0));
     }
 
     void visit(Section section, Ret ret) {
         if (ret.irType != null && ret.irType.unitSize != -1) {
             if (ret.var != null) {
-                MV mv = new MV(ret.var, "a0");
+                MV mv = new MV(ret.var, "tmp" + cnt++);
                 mv.notRemove = true;
-                mv.ignoreDef = true;
+                mv.preColoredTo = "a0";
                 section.pushInstr(mv);
             } else {
-                LI li = new LI("a0", ret.value);
+                LI li = new LI("tmp" + cnt++, ret.value);
                 li.notRemove = true;
-                li.ignoreDef = true;
+                li.preColoredTo = "a0";
                 section.pushInstr(li);
             }
 

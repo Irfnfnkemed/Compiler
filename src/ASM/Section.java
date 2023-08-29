@@ -3,6 +3,7 @@ package src.ASM;
 import src.ASM.instruction.*;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 
@@ -28,7 +29,7 @@ public class Section {
 
     public String sectionName;
     public List<String> globalList;
-    public List<ASMInstr> asmInstrList;
+    public List<List<ASMInstr>> asmInstrList;
     public List<word> wordList;
     public List<constString> constStringList;
 
@@ -50,6 +51,8 @@ public class Section {
         if (asmInstr instanceof LABEL) {
             if (!Objects.equals(((LABEL) asmInstr).label, nowFuncName)) {
                 ((LABEL) asmInstr).label = "." + nowFuncName + "-" + ((LABEL) asmInstr).label;
+            } else {
+                asmInstrList.add(new LinkedList<>());
             }
         }
         if (asmInstr instanceof J) {
@@ -67,7 +70,7 @@ public class Section {
                 return;
             }
         }
-        asmInstrList.add(asmInstr);
+        asmInstrList.get(asmInstrList.size() - 1).add(asmInstr);
     }
 
     public void pushWord(String varName, int value) {

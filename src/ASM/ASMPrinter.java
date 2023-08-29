@@ -57,7 +57,7 @@ public class ASMPrinter {
     public void print(Section section) {
         printOut(" .section ", section.sectionName, "\n");
         section.globalList.forEach(global -> printOut(" .globl ", global, "\n"));
-        section.asmInstrList.forEach(this::print);
+        section.asmInstrList.forEach(list -> list.forEach(this::print));
         section.wordList.forEach(word -> printOut(word.varName, ":\n", "  .word ", Integer.toString(word.value), "\n"));
         section.constStringList.forEach(constString -> printOut(constString.varName, ":\n", "  .asciz ", constString.value, "\n"));
         printOut("\n");

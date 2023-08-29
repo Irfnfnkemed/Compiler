@@ -56,7 +56,12 @@ public class Main {
             b.print();
             var c = new ASMBuilder(a.irProgram);
             var d = new ASMPrinter(c.asmProgram);
-            var e = new CFGReg(d.asmProgram.sectionText);
+            fileOutputStream = new FileOutputStream("./src/builtin/test_standard.s");
+            printStream = new PrintStream(fileOutputStream);
+            System.setOut(printStream);
+            d.print();
+            var e = new CFGReg(d.asmProgram.sectionText.asmInstrList.get(0));
+            var f = new CFGReg(d.asmProgram.sectionText.asmInstrList.get(1));
             fileOutputStream = new FileOutputStream("./src/builtin/test.s");
             printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);

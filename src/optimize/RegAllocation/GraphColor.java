@@ -1,6 +1,12 @@
 package src.optimize.RegAllocation;
 
+import src.ASM.instruction.*;
+import src.ASM.instruction.binary.binBase;
+import src.ASM.instruction.binaryImme.binImmeBase;
+
 import java.util.*;
+
+import static src.optimize.RegAllocation.GraphColor.REG.*;
 
 public class GraphColor {
     final int k = 27;
@@ -23,7 +29,6 @@ public class GraphColor {
     public TreeSet<RIG.RIGNode> simplifyList;
     public TreeSet<RIG.RIGNode> moveList;
     public HashMap<String, String> coalesceMap;
-    public HashMap<String, RIG.RIGNode> nodes;
 
     public GraphColor(RIG rig_) {
         rig = rig_;
@@ -42,10 +47,12 @@ public class GraphColor {
         coalesceMap.clear();
         for (var node : nodes.values()) {
             node.colour = -1;
-            if (node.aboutMove) {
-                moveList.add(node);
-            } else {
-                simplifyList.add(node);
+            if (node.preColored == null) {
+                if (node.aboutMove) {
+                    moveList.add(node);
+                } else {
+                    simplifyList.add(node);
+                }
             }
         }
     }
@@ -67,6 +74,9 @@ public class GraphColor {
             return false;
         }
         var nowNode = moveList.first();
+        if (nowNode.preColored != null) {
+            return false;
+        }
         for (var mvNode : nowNode.mvNode.values()) {
             if (judgeGeorge(nowNode, mvNode)) {
                 coalesceMap.put(nowNode.varName, mvNode.varName);
@@ -80,21 +90,31 @@ public class GraphColor {
                     }
                     if (nowMvNode.mvNode.size() == 0) {
                         nowMvNode.aboutMove = false;//不再传送相关
-                        moveList.remove(nowMvNode);
-                        simplifyList.add(nowMvNode);
+                        if (nowMvNode.preColored == null) {
+                            moveList.remove(nowMvNode);
+                            simplifyList.add(nowMvNode);
+                        }
                     }
                 }
                 for (var toNode : nowNode.toNode.values()) {//合并边
                     mvNode.toNode.put(toNode.varName, toNode);
                     if (toNode.toNode.containsKey(mvNode.varName)) {
-                        if (toNode.aboutMove) {
-                            moveList.remove(toNode);
-                            toNode.toNode.remove(nowNode.varName);
-                            moveList.add(toNode);
+                        if (toNode.preColored != null) {
+                            if (toNode.aboutMove) {
+                                toNode.toNode.remove(nowNode.varName);
+                            } else {
+                                toNode.toNode.remove(nowNode.varName);
+                            }
                         } else {
-                            simplifyList.remove(toNode);
-                            toNode.toNode.remove(nowNode.varName);
-                            simplifyList.add(toNode);
+                            if (toNode.aboutMove) {
+                                moveList.remove(toNode);
+                                toNode.toNode.remove(nowNode.varName);
+                                moveList.add(toNode);
+                            } else {
+                                simplifyList.remove(toNode);
+                                toNode.toNode.remove(nowNode.varName);
+                                simplifyList.add(toNode);
+                            }
                         }
                     } else {
                         toNode.toNode.remove(nowNode.varName);
@@ -104,8 +124,10 @@ public class GraphColor {
                             mvNode.mvNode.remove(toNode.varName);
                             if (toNode.mvNode.size() == 0) {
                                 toNode.aboutMove = false;//不再传送相关
-                                moveList.remove(toNode);
-                                simplifyList.add(toNode);
+                                if (toNode.preColored == null) {
+                                    moveList.remove(toNode);
+                                    simplifyList.add(toNode);
+                                }
                             }
                             if (mvNode.mvNode.size() == 0) {
                                 mvNode.aboutMove = false;//不再传送相关
@@ -113,10 +135,12 @@ public class GraphColor {
                         }
                     }
                 }
-                if (mvNode.aboutMove) {
-                    moveList.add(mvNode);
-                } else {
-                    simplifyList.add(mvNode);
+                if (mvNode.preColored == null) {
+                    if (mvNode.aboutMove) {
+                        moveList.add(mvNode);
+                    } else {
+                        simplifyList.add(mvNode);
+                    }
                 }
                 return true;
             }
@@ -133,8 +157,10 @@ public class GraphColor {
             mvNode.mvNode.remove(nowNode.varName);
             if (mvNode.mvNode.size() == 0) {//不再传送相关
                 mvNode.aboutMove = false;
-                moveList.remove(mvNode);
-                simplifyList.add(mvNode);
+                if (mvNode.preColored == null) {
+                    moveList.remove(mvNode);
+                    simplifyList.add(mvNode);
+                }
             }
         }
         nowNode.mvNode.clear();
@@ -156,22 +182,28 @@ public class GraphColor {
         selectStack.push(node);
         simplifyList.remove(node);
         for (var toNode : node.toNode.values()) {//移除边，重新排序
-            if (toNode.aboutMove) {
-                moveList.remove(toNode);
+            if (toNode.preColored != null) {
                 toNode.toNode.remove(node.varName);
-                moveList.add(toNode);
             } else {
-                simplifyList.remove(toNode);
-                toNode.toNode.remove(node.varName);
-                simplifyList.add(toNode);
+                if (toNode.aboutMove) {
+                    moveList.remove(toNode);
+                    toNode.toNode.remove(node.varName);
+                    moveList.add(toNode);
+                } else {
+                    simplifyList.remove(toNode);
+                    toNode.toNode.remove(node.varName);
+                    simplifyList.add(toNode);
+                }
             }
         }
         for (var mvNode : node.mvNode.values()) {
             mvNode.mvNode.remove(node.varName);
             if (mvNode.mvNode.size() == 0) {//不再传送相关
                 mvNode.aboutMove = false;
-                moveList.remove(mvNode);
-                simplifyList.add(mvNode);
+                if (mvNode.preColored == null) {
+                    moveList.remove(mvNode);
+                    simplifyList.add(mvNode);
+                }
             }
         }
     }
@@ -187,10 +219,13 @@ public class GraphColor {
 
 
     public boolean setColor(RIG.RIGNode rigNode) {
+        if (rigNode.preColored != null) {
+            return true;
+        }
         int tmp = 0;
         for (var node : rigNode.toNode.values()) {
             if (coalesceMap.containsKey(node.varName)) {
-                node = nodes.get(find(node.varName));
+                node = rig.rigNodes.get(find(node.varName));
             }
             if (node.colour == -1) {
                 continue;
@@ -207,6 +242,7 @@ public class GraphColor {
         return false;
     }
 
+
     public String find(String varName) {
         String faName = coalesceMap.get(varName);
         if (faName == null) {
@@ -219,8 +255,6 @@ public class GraphColor {
 
     public void assignColor() {
         RIG.RIGNode nowNode;
-        nowNode = selectStack.pop();
-        nowNode.colour = 1;
         while (!selectStack.isEmpty()) {
             nowNode = selectStack.pop();
             if (!setColor(nowNode)) {
@@ -229,31 +263,77 @@ public class GraphColor {
         }
     }
 
+    public String getReg(String varName) {
+        var node = rig.rigNodes.get(varName);
+        if (node.preColored != null) {
+            return node.preColored;
+        }
+        if (node.colour == -1) {
+            node = rig.rigNodes.get(find(node.varName));
+        }
+        if (node.colour == -1) {
+            return node.preColored;//预着色点
+        }
+        return reg[node.colour];
+    }
+
     public void graphColor() {
-        for (var entry : rig.rigNodes.values()) {
-            assert check(entry);
-            nodes = entry;
-            init(entry);
-            while (!simplifyList.isEmpty() || !moveList.isEmpty()) {
-                if (!simplify()) {
-                    if (!coalesce()) {
-                        if (!freeze()) {
-                            if (!spilt()) {
-                                assert false;
-                            }
+        assert check();
+        init(rig.rigNodes);
+        while (!simplifyList.isEmpty() || !moveList.isEmpty()) {
+            if (!simplify()) {
+                if (!coalesce()) {
+                    if (!freeze()) {
+                        if (!spilt()) {
+                            assert false;
                         }
                     }
                 }
             }
-            assignColor();
-            if (spillStack.isEmpty()) {
-
+        }
+        assignColor();
+        if (spillStack.isEmpty()) {
+            for (int i = 0; i < rig.cfgReg.asmInstrList.size(); ++i) {
+                var instr = rig.cfgReg.asmInstrList.get(i);
+                if (instr instanceof LI) {
+                    ((LI) instr).to = getReg(((LI) instr).to);
+                } else if (instr instanceof LW) {
+                    ((LW) instr).from = getReg(((LW) instr).from);
+                    ((LW) instr).to = getReg(((LW) instr).to);
+                } else if (instr instanceof LA) {
+                    ((LA) instr).to = getReg(((LA) instr).to);
+                } else if (instr instanceof SW) {
+                    ((SW) instr).from = getReg(((SW) instr).from);
+                    ((SW) instr).to = getReg(((SW) instr).to);
+                } else if (instr instanceof MV) {
+                    ((MV) instr).from = getReg(((MV) instr).from);
+                    ((MV) instr).to = getReg(((MV) instr).to);
+                    if (Objects.equals(((MV) instr).from, ((MV) instr).to)) {
+                        rig.cfgReg.asmInstrList.remove(i--);
+                    }
+                } else if (instr instanceof binBase) {
+                    ((binBase) instr).lhs = getReg(((binBase) instr).lhs);
+                    ((binBase) instr).rhs = getReg(((binBase) instr).rhs);
+                    ((binBase) instr).to = getReg(((binBase) instr).to);
+                } else if (instr instanceof binImmeBase) {
+                    ((binImmeBase) instr).from = getReg(((binImmeBase) instr).from);
+                    ((binImmeBase) instr).to = getReg(((binImmeBase) instr).to);
+                } else if (instr instanceof SEQZ) {
+                    ((SEQZ) instr).from = getReg(((SEQZ) instr).from);
+                    ((SEQZ) instr).to = getReg(((SEQZ) instr).to);
+                } else if (instr instanceof SNEZ) {
+                    ((SNEZ) instr).from = getReg(((SNEZ) instr).from);
+                    ((SNEZ) instr).to = getReg(((SNEZ) instr).to);
+                } else if (instr instanceof BNEZ) {
+                    ((BNEZ) instr).condition = getReg(((BNEZ) instr).condition);
+                }
             }
         }
     }
 
-    public boolean check(HashMap<String, RIG.RIGNode> p) {
-        for (var entry : p.values()) {
+
+    public boolean check() {
+        for (var entry : rig.rigNodes.values()) {
             for (var mv : entry.mvNode.values()) {
                 if (entry.toNode.containsKey(mv.varName)) {
                     return false;

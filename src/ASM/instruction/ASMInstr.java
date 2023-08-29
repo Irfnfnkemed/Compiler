@@ -5,5 +5,5 @@ abstract public class ASMInstr {
     public String def;
     public int useNum = 0;
     public boolean notRemove = false;//在活跃分析时，不会被去除(主要用于最后ret)
-    public boolean preColored = false;//是否是预着色的
+    public String preColoredFrom, preColoredTo;//预着色寄存器
 }
