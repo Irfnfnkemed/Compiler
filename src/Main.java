@@ -60,8 +60,9 @@ public class Main {
             printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);
             d.print();
-            var e = new CFGReg(d.asmProgram.sectionText.asmInstrList.get(0));
-            var f = new CFGReg(d.asmProgram.sectionText.asmInstrList.get(1));
+            for (int i = 0; i < d.asmProgram.sectionText.asmInstrList.size(); ++i) {
+                var e = new CFGReg(d.asmProgram.sectionText.asmInstrList.get(i));
+            }
             fileOutputStream = new FileOutputStream("./src/builtin/test.s");
             printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);

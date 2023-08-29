@@ -60,10 +60,11 @@ public class ASMBuilder {
                     for (int i = 8; i < size; ++i) {
                         LW lw;
                         if (((FuncDef) stmt).isClassMethod) {
-                            lw = new LW("stackTop", "%_" + (i - 1), (i - 8) << 2);
+                            lw = new LW("tmp" + cnt++, "%_" + (i - 1), (i - 8) << 2);
                         } else {
-                            lw = new LW("stackTop", "%_" + i, (i - 8) << 2);
+                            lw = new LW("tmp" + cnt++, "%_" + i, (i - 8) << 2);
                         }
+                        lw.preColoredFrom = "stackTop";
                         asmProgram.sectionText.pushInstr(lw);
                     }
                 }
@@ -383,6 +384,7 @@ public class ASMBuilder {
     void visit(Section section, Call call) {
         int size = call.callTypeList.size();
         Call.variable variable;
+        CallerSave callerSave = new CallerSave(size);
         for (int i = 0; i < min(size, 8); ++i) {
             variable = call.callList.get(i);
             if (variable.varName != null) {
@@ -413,14 +415,20 @@ public class ASMBuilder {
                     } else {
                         from = variable.varName;
                     }
-                    section.pushInstr(new SW(from, "stackTop", (i - 8) << 2));
+                    SW sw = new SW(from, "tmp" + cnt++, (i - 8) << 2);
+                    section.pushInstr(sw);
+                    sw.preColoredTo = "sp";
                 } else {
-                    section.pushInstr(new LI("tmp" + cnt, (int) variable.varValue));
-                    section.pushInstr(new SW("tmp" + cnt++, "stackTop", (i - 8) << 2));
+                    section.pushInstr(new LI("tmp" + cnt++, (int) variable.varValue));
+                    SW sw = new SW("tmp" + (cnt - 1), "tmp" + cnt++, (i - 8) << 2);
+                    section.pushInstr(sw);
+                    sw.preColoredTo = "sp";
                 }
             }
         }
+        section.pushInstr(callerSave);
         section.pushInstr(new CALL(call.functionName.substring(1)));
+        section.pushInstr(new CallerRestore(callerSave));
         if (call.resultVar != null) {
             MV mv = new MV("tmp" + cnt++, call.resultVar);
             mv.preColoredFrom = "a0";

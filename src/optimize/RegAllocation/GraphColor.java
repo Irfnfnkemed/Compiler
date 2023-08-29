@@ -97,7 +97,9 @@ public class GraphColor {
                     }
                 }
                 for (var toNode : nowNode.toNode.values()) {//合并边
-                    mvNode.toNode.put(toNode.varName, toNode);
+                    if (mvNode != toNode) {
+                        mvNode.toNode.put(toNode.varName, toNode);
+                    }
                     if (toNode.toNode.containsKey(mvNode.varName)) {
                         if (toNode.preColored != null) {
                             if (toNode.aboutMove) {
@@ -118,7 +120,9 @@ public class GraphColor {
                         }
                     } else {
                         toNode.toNode.remove(nowNode.varName);
-                        toNode.toNode.put(mvNode.varName, mvNode);
+                        if (toNode != mvNode) {
+                            toNode.toNode.put(mvNode.varName, mvNode);
+                        }
                         if (toNode.mvNode.containsKey(mvNode.varName)) {
                             toNode.mvNode.remove(mvNode.varName);
                             mvNode.mvNode.remove(toNode.varName);
@@ -214,6 +218,13 @@ public class GraphColor {
                 return false;
             }
         }
+        if (mvNode.preColored != null) {//合并目标已经预染色
+            for (var toNode : fromNode.toNode.values()) {
+                if (toNode.preColored != null && toNode.preColored.equals(mvNode.preColored)) {
+                    return false;
+                }
+            }
+        }
         return true;
     }
 
@@ -278,7 +289,9 @@ public class GraphColor {
     }
 
     public void graphColor() {
-        assert check();
+        if (!check()) {
+            System.err.println("!!!!");
+        }
         init(rig.rigNodes);
         while (!simplifyList.isEmpty() || !moveList.isEmpty()) {
             if (!simplify()) {
@@ -326,6 +339,19 @@ public class GraphColor {
                     ((SNEZ) instr).to = getReg(((SNEZ) instr).to);
                 } else if (instr instanceof BNEZ) {
                     ((BNEZ) instr).condition = getReg(((BNEZ) instr).condition);
+                } else if (instr instanceof CallerSave) {
+                    for (String varName : ((CallerSave) instr).varName) {
+                        ((CallerSave) instr).setCallerReg(getReg(varName));
+                    }
+                    int tmp = 0;
+                    for (String reg : ((CallerSave) instr).callerReg) {
+                        rig.cfgReg.asmInstrList.add(i++, new SW(reg, "stackTmp" + tmp++, 0));
+                    }
+                } else if (instr instanceof CallerRestore) {
+                    int tmp = 0;
+                    for (String reg : ((CallerRestore) instr).callerSave.callerReg) {
+                        rig.cfgReg.asmInstrList.add(i++, new LW("stackTmp" + tmp++, reg, 0));
+                    }
                 }
             }
         }

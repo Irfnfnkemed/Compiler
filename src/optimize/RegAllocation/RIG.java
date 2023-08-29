@@ -1,7 +1,9 @@
 package src.optimize.RegAllocation;
 
 import src.ASM.instruction.ASMInstr;
+import src.ASM.instruction.CallerSave;
 import src.ASM.instruction.MV;
+import src.ASM.instruction.SW;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -47,34 +49,50 @@ public class RIG {
         for (var block : cfgReg.blocks.values()) {
             for (int i = block.instructionList.size() - 1; i >= 0; --i) {
                 asmInstr = block.instructionList.get(i);
-                if (asmInstr.def != null && !asmInstr.notRemove && asmInstr.preColoredFrom == null &&
-                        asmInstr.preColoredTo == null && !block.blockLive.liveOut.contains(asmInstr.def)) {
-                    block.instructionList.remove(i);
+                if (asmInstr instanceof CallerSave) {
+                    ((CallerSave) asmInstr).varName.addAll(block.blockLive.liveOut);
                 } else {
-                    if (asmInstr.def != null) {
-                        block.blockLive.liveOut.remove(asmInstr.def);//此处破坏了liveOut，因为后续不会再用到
-                        rigNodeNow = getNode(asmInstr.def);
-                        boolean flag = asmInstr instanceof MV;
-                        for (var liveVar : block.blockLive.liveOut) {
-                            rigNodeTo = getNode(liveVar);
-                            rigNodeTo.toNode.put(asmInstr.def, rigNodeNow);
-                            rigNodeNow.toNode.put(liveVar, rigNodeTo);
+                    if (asmInstr.def != null && !asmInstr.notRemove && asmInstr.preColoredFrom == null &&
+                            asmInstr.preColoredTo == null && !block.blockLive.liveOut.contains(asmInstr.def)) {
+                        block.instructionList.remove(i);
+                    } else {
+                        if (asmInstr.def != null) {
+                            block.blockLive.liveOut.remove(asmInstr.def);//此处破坏了liveOut，因为后续不会再用到
+                            rigNodeNow = getNode(asmInstr.def);
+                            boolean flag = asmInstr instanceof MV;
+                            for (var liveVar : block.blockLive.liveOut) {
+                                rigNodeTo = getNode(liveVar);
+                                if (rigNodeTo.mvNode.containsKey(asmInstr.def)) {
+                                    rigNodeTo.mvNode.remove(asmInstr.def);
+                                    rigNodeNow.mvNode.remove(liveVar);
+                                }
+                                rigNodeTo.toNode.put(asmInstr.def, rigNodeNow);
+                                rigNodeNow.toNode.put(liveVar, rigNodeTo);
+                            }
+                            if (flag && asmInstr.use[0] != null && !rigNodeNow.toNode.containsKey(asmInstr.use[0])) {
+                                rigNodeTo = getNode(asmInstr.use[0]);
+                                rigNodeTo.mvNode.put(asmInstr.def, rigNodeNow);
+                                rigNodeNow.mvNode.put(asmInstr.use[0], rigNodeTo);
+                                rigNodeTo.aboutMove = true;
+                                rigNodeNow.aboutMove = true;
+                            }
+                            rigNodeNow.preColored = asmInstr.preColoredTo;
                         }
-                        if (flag && asmInstr.use[0] != null && !rigNodeNow.toNode.containsKey(asmInstr.use[0])) {
-                            rigNodeTo = getNode(asmInstr.use[0]);
-                            rigNodeTo.mvNode.put(asmInstr.def, rigNodeNow);
-                            rigNodeNow.mvNode.put(asmInstr.use[0], rigNodeTo);
-                            rigNodeTo.aboutMove = true;
-                            rigNodeNow.aboutMove = true;
+                        if (asmInstr.use[0] != null) {
+                            rigNodeNow = getNode(asmInstr.use[0]);
+                            rigNodeNow.preColored = asmInstr.preColoredFrom;
                         }
-                        rigNodeNow.preColored = asmInstr.preColoredTo;
+                        if (asmInstr instanceof SW && asmInstr.use[1] != null) {
+                            rigNodeNow = getNode(asmInstr.use[1]);
+                            rigNodeNow.preColored = asmInstr.preColoredTo;
+                        }
                     }
-                    if (asmInstr.use[0] != null) {
-                        rigNodeNow = getNode(asmInstr.use[0]);
-                        rigNodeNow.preColored = asmInstr.preColoredFrom;
+                    for (int j = 0; j < asmInstr.useNum; ++j) {
+                        if (getNode(asmInstr.use[j]).preColored == null) {
+                            block.blockLive.liveOut.add(asmInstr.use[j]);
+                        }
                     }
                 }
-                block.blockLive.liveOut.addAll(Arrays.asList(asmInstr.use).subList(0, asmInstr.useNum));
             }
         }
     }
