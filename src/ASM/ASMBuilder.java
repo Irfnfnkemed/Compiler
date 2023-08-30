@@ -432,7 +432,7 @@ public class ASMBuilder {
         }
         section.pushInstr(callerSave);
         section.pushInstr(new CALL(call.functionName.substring(1)));
-        section.pushInstr(new CallerRestore(callerSave));
+        section.pushInstr(new CallerRestore(callerSave, call.functionName.substring(1)));
         if (call.resultVar != null) {
             MV mv = new MV("tmp" + cnt++, call.resultVar);
             mv.preColoredFrom = "a0";

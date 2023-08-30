@@ -45,6 +45,10 @@ public class ASMPrinter {
         instrHandlers.put(J.class, this::printJ);
         instrHandlers.put(CALL.class, this::printCALL);
         instrHandlers.put(RET.class, this::printRET);
+        instrHandlers.put(Init.class, this::printInit);
+        instrHandlers.put(Restore.class, this::printRestore);
+        instrHandlers.put(CallerSave.class, this::printCallerSave);
+        instrHandlers.put(CallerRestore.class, this::printCallerRestore);
     }
 
 
@@ -57,11 +61,7 @@ public class ASMPrinter {
     public void print(Section section) {
         printOut(" .section ", section.sectionName, "\n");
         section.globalList.forEach(global -> printOut(" .globl ", global, "\n"));
-        section.asmInstrList.forEach(list -> list.forEach(asmInstr -> {
-            if (!(asmInstr instanceof CallerSave) && !(asmInstr instanceof CallerRestore)) {
-                print(asmInstr);
-            }
-        }));
+        section.asmInstrList.forEach(list -> list.forEach(this::print));
         section.wordList.forEach(word -> printOut(word.varName, ":\n", "  .word ", Integer.toString(word.value), "\n"));
         section.constStringList.forEach(constString -> printOut(constString.varName, ":\n", "  .asciz ", constString.value, "\n"));
         printOut("\n");
@@ -219,6 +219,26 @@ public class ASMPrinter {
     public void printCALL(ASMInstr asmInstr) {
         var call = (CALL) asmInstr;
         printOut("  call ", call.func, "\n");
+    }
+
+    public void printInit(ASMInstr asmInstr) {
+        var init = (Init) asmInstr;
+        init.initList.forEach(this::print);
+    }
+
+    public void printRestore(ASMInstr asmInstr) {
+        var restore = (Restore) asmInstr;
+        restore.restoreList.forEach(this::print);
+    }
+
+    public void printCallerSave(ASMInstr asmInstr) {
+        var callerSave = (CallerSave) asmInstr;
+        callerSave.callerList.forEach(this::print);
+    }
+
+    public void printCallerRestore(ASMInstr asmInstr) {
+        var callerRestore = (CallerRestore) asmInstr;
+        callerRestore.callerList.forEach(this::print);
     }
 
     public void printRET(ASMInstr asmInstr) {

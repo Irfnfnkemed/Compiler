@@ -46,6 +46,7 @@ public class RIG {
     public void buildRIG() {
         ASMInstr asmInstr;
         RIGNode rigNodeNow, rigNodeTo;
+        int x = 35;
         for (var block : cfgReg.blocks.values()) {
             for (int i = block.instructionList.size() - 1; i >= 0; --i) {
                 asmInstr = block.instructionList.get(i);

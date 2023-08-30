@@ -29,9 +29,11 @@ public class GraphColor {
     public HashMap<String, String> coalesceMap;
     public HashSet<String> globalVar;
     public HashMap<String, Integer> stack;//栈上变量
+    public HashSet<String> used;
     public int cnt;
+    public List<CallerRestore> callerRestoreList;//用于最后确定call
 
-    public GraphColor(RIG rig_, HashSet<String> globalVar_, HashMap<String, Integer> stack_, int cnt_) {
+    public GraphColor(RIG rig_, HashSet<String> globalVar_, HashMap<String, Integer> stack_) {
         rig = rig_;
         selectStack = new Stack<>();
         spillSet = new HashSet<>();
@@ -40,7 +42,8 @@ public class GraphColor {
         coalesceMap = new HashMap<>();
         globalVar = globalVar_;
         stack = stack_;
-        cnt = cnt_;
+        used = new HashSet<>();
+        cnt = 0;
     }
 
     public void init(HashMap<String, RIG.RIGNode> nodes) {
@@ -289,14 +292,17 @@ public class GraphColor {
             }
         }
         if (node.preColored != null) {
+            used.add(node.preColored);
             return node.preColored;
         }
         if (node.colour == -1) {
             node = rig.rigNodes.get(find(node.varName));
         }
         if (node.colour == -1) {
+            used.add(node.preColored);
             return node.preColored;//预着色点
         }
+        used.add(reg[node.colour]);
         return reg[node.colour];
     }
 
@@ -310,7 +316,7 @@ public class GraphColor {
                 if (!coalesce()) {
                     if (!freeze()) {
                         if (!spilt()) {
-                            assert false;
+                            System.err.println("<<<<<<<");
                         }
                     }
                 }
@@ -327,6 +333,7 @@ public class GraphColor {
     }
 
     public void replace() {
+        callerRestoreList = new ArrayList<>();
         for (int i = 0; i < rig.cfgReg.asmInstrList.size(); ++i) {
             var instr = rig.cfgReg.asmInstrList.get(i);
             if (instr instanceof LI) {
@@ -356,6 +363,7 @@ public class GraphColor {
                 ((MV) instr).to = getReg(((MV) instr).to);
                 if (((MV) instr).from == null || ((MV) instr).to == null) {
                     rig.cfgReg.asmInstrList.remove(i--);
+                    continue;
                 }
                 if (Objects.equals(((MV) instr).from, ((MV) instr).to)) {
                     rig.cfgReg.asmInstrList.remove(i--);
@@ -392,16 +400,20 @@ public class GraphColor {
                 }
             } else if (instr instanceof CallerSave) {
                 for (String varName : ((CallerSave) instr).varName) {
-                    ((CallerSave) instr).setCallerReg(getReg(varName));
+                    String reg = getReg(varName);
+                    if (reg != null) {
+                        ((CallerSave) instr).setCallerReg(reg);
+                    }
                 }
                 int tmp = 0;
                 for (String reg : ((CallerSave) instr).callerReg) {
-                    rig.cfgReg.asmInstrList.add(i++, new SW(reg, "stackTmp", tmp++));
+                    //rig.cfgReg.asmInstrList.add(i++, new SW(reg, "stackTmp", tmp++));
                 }
             } else if (instr instanceof CallerRestore) {
+                callerRestoreList.add((CallerRestore) instr);
                 int tmp = 0;
                 for (String reg : ((CallerRestore) instr).callerSave.callerReg) {
-                    rig.cfgReg.asmInstrList.add(i++, new LW("stackTmp", reg, tmp++));
+                    // rig.cfgReg.asmInstrList.add(i++, new LW("stackTmp", reg, tmp++));
                 }
             }
         }

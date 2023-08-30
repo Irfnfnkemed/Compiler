@@ -63,7 +63,9 @@ public class CFGReg {
             nowBlock = entry.getValue();
             for (var instr : nowBlock.instructionList) {
                 if (instr instanceof LI) {
-                    nowBlock.blockLive.addDef(((LI) instr).to);
+                    if (instr.preColoredTo == null) {
+                        nowBlock.blockLive.addDef(((LI) instr).to);
+                    }
                     instr.def = ((LI) instr).to;
                 } else if (instr instanceof LW) {
                     if (((LW) instr).offset != -1 && !Objects.equals(((LW) instr).from, "stack#") &&
@@ -88,9 +90,13 @@ public class CFGReg {
                         ++instr.useNum;
                     }
                 } else if (instr instanceof MV) {
-                    nowBlock.blockLive.addUse(((MV) instr).from);
+                    if (instr.preColoredFrom == null) {
+                        nowBlock.blockLive.addUse(((MV) instr).from);
+                    }
                     instr.use[0] = ((MV) instr).from;
-                    nowBlock.blockLive.addDef(((MV) instr).to);
+                    if (instr.preColoredTo == null) {
+                        nowBlock.blockLive.addDef(((MV) instr).to);
+                    }
                     instr.def = ((MV) instr).to;
                     instr.useNum = 1;
                 } else if (instr instanceof binBase) {

@@ -1,16 +1,20 @@
 package src.ASM.instruction;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 public class CallerSave extends ASMInstr {
     public HashSet<String> varName;//调用前活跃的虚拟寄存器
     public HashSet<String> callerReg;//需要保存的寄存器
+    public List<ASMInstr> callerList;
     public int paraSize = 0;
 
     public CallerSave(int paraSize_) {
         varName = new HashSet<>();
         callerReg = new HashSet<>();
         paraSize = paraSize_;
+        callerList = new ArrayList<>();
     }
 
     public void setCallerReg(String reg) {

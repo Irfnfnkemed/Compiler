@@ -8,7 +8,6 @@ public class BlockReg {
     public static class BlockLive {
         public Set<String> blockUse;
         public Set<String> blockDef;
-
         public Set<String> liveIn;
         public Set<String> liveOut;
 
