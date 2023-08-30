@@ -1,13 +1,8 @@
 package src.ASM.instruction;
 
 public class SW extends ASMInstr {
-    public String from, to = "sp";
-    public int offset = 0;
-
-    public SW(String from_, int offset_) {
-        from = from_;
-        offset = offset_;
-    }
+    public String from, to;
+    public int offset;
 
     public SW(String from_, String to_, int offset_) {
         from = from_;

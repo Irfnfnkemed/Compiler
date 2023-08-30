@@ -58,7 +58,7 @@ public class ASMPrinter {
         printOut(" .section ", section.sectionName, "\n");
         section.globalList.forEach(global -> printOut(" .globl ", global, "\n"));
         section.asmInstrList.forEach(list -> list.forEach(asmInstr -> {
-            if (!(asmInstr instanceof CallerSave) && !(asmInstr instanceof CallerRestore)){
+            if (!(asmInstr instanceof CallerSave) && !(asmInstr instanceof CallerRestore)) {
                 print(asmInstr);
             }
         }));
@@ -84,7 +84,11 @@ public class ASMPrinter {
 
     public void printLW(ASMInstr asmInstr) {
         var lw = (LW) asmInstr;
-        printOut("  lw ", lw.to, " ", Integer.toString(lw.offset), "(", lw.from, ")\n");
+        if (lw.offset == -1) {
+            printOut("  lw ", lw.to, " ", lw.from, "\n");
+        } else {
+            printOut("  lw ", lw.to, " ", Integer.toString(lw.offset), "(", lw.from, ")\n");
+        }
     }
 
     public void printLA(ASMInstr asmInstr) {

@@ -12,6 +12,7 @@ import src.optimize.Mem2Reg.Mem2Reg;
 import src.Util.error.Errors;
 import src.Util.error.ParserErrorListener;
 import src.optimize.RegAllocation.CFGReg;
+import src.optimize.RegAllocation.RegAllocation;
 import src.parser.MxLexer;
 import src.parser.MxParser;
 import src.semantic.Semantic;
@@ -60,9 +61,7 @@ public class Main {
             printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);
             d.print();
-            for (int i = 0; i < d.asmProgram.sectionText.asmInstrList.size(); ++i) {
-                var e = new CFGReg(d.asmProgram.sectionText.asmInstrList.get(i));
-            }
+            var e = new RegAllocation(c);
             fileOutputStream = new FileOutputStream("./src/builtin/test.s");
             printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);

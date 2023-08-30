@@ -64,7 +64,7 @@ public class ASMBuilder {
                         } else {
                             lw = new LW("tmp" + cnt++, "%_" + i, (i - 8) << 2);
                         }
-                        lw.preColoredFrom = "stackTop";
+                        lw.preColoredFrom = "stackTop#";
                         asmProgram.sectionText.pushInstr(lw);
                     }
                 }
@@ -75,12 +75,12 @@ public class ASMBuilder {
             } else if (stmt instanceof GlobalVarDef) {
                 asmProgram.sectionData.pushGlobal(((GlobalVarDef) stmt).varName.substring(1));
                 asmProgram.sectionData.pushWord(((GlobalVarDef) stmt).varName.substring(1), (int) ((GlobalVarDef) stmt).value);
-                globalVar.add(((GlobalVarDef) stmt).varName);
+                globalVar.add(((GlobalVarDef) stmt).varName.substring(1));
             } else if (stmt instanceof ConstString) {
                 for (int i = 0; i < ((ConstString) stmt).constStringList.size(); ++i) {
                     asmProgram.sectionRodata.pushConstString(
                             "constString-" + i, ((ConstString) stmt).constStringList.get(i));
-                    globalVar.add("@constString-" + i);
+                    globalVar.add("constString-" + i);
                 }
             }
         }
@@ -135,7 +135,11 @@ public class ASMBuilder {
 
     void visit(Section section, Load load) {
         if (load.fromPointer.charAt(0) == '@') {
-            section.pushInstr(new LA(load.toVarName, load.fromPointer.substring(1)));
+            if (load.fromPointer.contains("-")) {
+                section.pushInstr(new LA(load.toVarName, load.fromPointer.substring(1)));
+            } else {
+                section.pushInstr(new LW(load.fromPointer.substring(1), load.toVarName));
+            }
         } else {
             section.pushInstr(new LW(load.fromPointer, load.toVarName, 0));
         }

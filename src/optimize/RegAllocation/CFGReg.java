@@ -11,14 +11,15 @@ public class CFGReg {
     public HashMap<String, BlockReg> blocks;//块名->Block节点
     public BlockReg outBlock;//出口(出度为0)
     public List<ASMInstr> asmInstrList;
+    public HashSet<String> globalVar;
 
-    public CFGReg(List<ASMInstr> asmInstrList_) {
+    public CFGReg(List<ASMInstr> asmInstrList_, HashSet<String> globalVar_) {
         asmInstrList = asmInstrList_;
         blocks = new HashMap<>();
         buildCFG();
         getBlockUseDef();
         getBlockInOut();
-        RIG rig = new RIG(this);
+        globalVar = globalVar_;
     }
 
 
@@ -65,20 +66,27 @@ public class CFGReg {
                     nowBlock.blockLive.addDef(((LI) instr).to);
                     instr.def = ((LI) instr).to;
                 } else if (instr instanceof LW) {
-                    nowBlock.blockLive.addUse(((LW) instr).from);
+                    if (((LW) instr).offset != -1 && !Objects.equals(((LW) instr).from, "stack#") &&
+                            !Objects.equals(((LW) instr).from, "stackTmp#") && !Objects.equals(((LW) instr).from, "stackTop#")) {
+                        nowBlock.blockLive.addUse(((LW) instr).from);
+                        instr.use[0] = ((LW) instr).from;
+                        instr.useNum = 1;
+                    }
                     nowBlock.blockLive.addDef(((LW) instr).to);
-                    instr.use[0] = ((LW) instr).from;
                     instr.def = ((LW) instr).to;
-                    instr.useNum = 1;
                 } else if (instr instanceof LA) {
                     nowBlock.blockLive.addDef(((LA) instr).to);
                     instr.def = ((LA) instr).to;
                 } else if (instr instanceof SW) {
                     nowBlock.blockLive.addUse(((SW) instr).from);
-                    nowBlock.blockLive.addUse(((SW) instr).to);
                     instr.use[0] = ((SW) instr).from;
-                    instr.use[1] = ((SW) instr).to;
-                    instr.useNum = 2;
+                    instr.useNum = 1;
+                    if (!Objects.equals(((SW) instr).to, "stack#") && !Objects.equals(((SW) instr).to, "stackTmp#") &&
+                            !Objects.equals(((SW) instr).to, "stackTop#")) {
+                        nowBlock.blockLive.addUse(((SW) instr).to);
+                        instr.use[1] = ((SW) instr).to;
+                        ++instr.useNum;
+                    }
                 } else if (instr instanceof MV) {
                     nowBlock.blockLive.addUse(((MV) instr).from);
                     instr.use[0] = ((MV) instr).from;

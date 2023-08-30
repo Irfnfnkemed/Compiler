@@ -14,6 +14,9 @@ public class CallerSave extends ASMInstr {
     }
 
     public void setCallerReg(String reg) {
+        if (reg == null) {
+            return;
+        }
         if (reg.charAt(0) == 's') {
             return;
         }
