@@ -122,7 +122,16 @@ public class ASMBuilder {
             from = "tmp" + cnt++;
             section.pushInstr(new LI(from, (int) store.value));
         } else {
-            from = store.valueVar;
+            if (store.valueVar.charAt(0) == '@') {
+                from = "tmp" + cnt++;
+                if (store.valueVar.contains("-")) {
+                    section.pushInstr(new LA(from, store.valueVar.substring(1)));
+                } else {
+                    section.pushInstr(new LW(store.valueVar.substring(1), from));
+                }
+            } else {
+                from = store.valueVar;
+            }
         }
         if (store.toPointer.charAt(0) == '@') {
             to = "tmp" + cnt++;
@@ -131,6 +140,7 @@ public class ASMBuilder {
             to = store.toPointer;
         }
         section.pushInstr(new SW(from, to, 0));
+
     }
 
     void visit(Section section, Load load) {
@@ -432,12 +442,12 @@ public class ASMBuilder {
         }
         section.pushInstr(callerSave);
         section.pushInstr(new CALL(call.functionName.substring(1)));
-        section.pushInstr(new CallerRestore(callerSave, call.functionName.substring(1)));
         if (call.resultVar != null) {
             MV mv = new MV("tmp" + cnt++, call.resultVar);
             mv.preColoredFrom = "a0";
             section.pushInstr(mv);
         }
+        section.pushInstr(new CallerRestore(callerSave, call.functionName.substring(1)));
     }
 
     void visit(Section section, Br br) {
