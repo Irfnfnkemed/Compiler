@@ -5,13 +5,18 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 //import src.ASM.ASMBuilder;
 //import src.ASM.ASMPrinter;
+import src.ASM.ASMBuilder;
+import src.ASM.ASMPrinter;
 import src.AST.ASTBuilder;
 import src.IR.IRBuilder;
 import src.Util.error.ParserErrorListener;
+import src.optimize.Mem2Reg.Mem2Reg;
+import src.optimize.RegAllocation.RegAllocation;
 import src.parser.MxLexer;
 import src.parser.MxParser;
 import src.semantic.Semantic;
 
+import java.io.FileOutputStream;
 import java.io.InputStream;
 
 
@@ -46,9 +51,11 @@ public class Compiler {
             Semantic semantic = new Semantic(AST.ASTProgram);
             semantic.check();
             IRBuilder irBuilder = new IRBuilder(AST.ASTProgram, semantic.globalScope);
-           // ASMBuilder asmBuilder = new ASMBuilder(irBuilder.irProgram);
-           // ASMPrinter asmPrinter = new ASMPrinter(asmBuilder.asmProgram);
-           // asmPrinter.print();
+            Mem2Reg mem2Reg = new Mem2Reg(irBuilder.irProgram);
+            ASMBuilder asmBuilder = new ASMBuilder(irBuilder.irProgram);
+            ASMPrinter asmPrinter = new ASMPrinter(asmBuilder.asmProgram);
+            RegAllocation regAllocation = new RegAllocation(asmBuilder);
+            asmPrinter.print();
             return;
         } else {
             System.out.println("Unknown option");

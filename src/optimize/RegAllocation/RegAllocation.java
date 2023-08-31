@@ -20,9 +20,9 @@ public class RegAllocation {
             int max = -1;
             for (var call : function.color.callerRestoreList) {
                 var callFunc = functions.get(call.funcName);
-                if (callFunc != null) {
-                    call.callerSave.callerReg.retainAll(callFunc.unsavedReg);
-                }
+//                if (callFunc != null) {
+//                    call.callerSave.callerReg.retainAll(callFunc.unsavedReg);
+//                }
                 int callParaStack = call.callerSave.paraSize > 8 ? call.callerSave.paraSize - 8 : 0;
                 if (call.callerSave.callerReg.size() + callParaStack > max) {
                     max = call.callerSave.callerReg.size() + callParaStack;
@@ -30,6 +30,7 @@ public class RegAllocation {
             }
             if (max > -1) {
                 function.call = true;
+            } else {
                 max = 0;
             }
             function.stackSize = (((function.call ? 1 : 0) + function.savedReg.size() +
@@ -68,7 +69,7 @@ public class RegAllocation {
                 int callTmp = 0, callParaStack = call.callerSave.paraSize > 8 ? call.callerSave.paraSize - 8 : 0;
                 for (var reg : call.callerSave.callerReg) {
                     call.callerSave.callerList.add(new SW(reg, "sp", (callParaStack + callTmp) << 2));
-                    call.callerList.add(new LW("sp", reg, (callParaStack + callTmp) << 2));
+                    call.callerList.add(new LW("sp", reg, (callParaStack + callTmp++) << 2));
                 }
             }
             Restore restore = new Restore(init);

@@ -405,16 +405,8 @@ public class GraphColor {
                         ((CallerSave) instr).setCallerReg(reg);
                     }
                 }
-                int tmp = 0;
-                for (String reg : ((CallerSave) instr).callerReg) {
-                    //rig.cfgReg.asmInstrList.add(i++, new SW(reg, "stackTmp", tmp++));
-                }
             } else if (instr instanceof CallerRestore) {
                 callerRestoreList.add((CallerRestore) instr);
-                int tmp = 0;
-                for (String reg : ((CallerRestore) instr).callerSave.callerReg) {
-                    // rig.cfgReg.asmInstrList.add(i++, new LW("stackTmp", reg, tmp++));
-                }
             }
         }
     }
