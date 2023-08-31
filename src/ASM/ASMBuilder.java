@@ -42,7 +42,7 @@ public class ASMBuilder {
                         mv = new MV("tmp" + cnt++, "%_0");
                     }
                     mv.preColoredFrom = "a0";
-                    mv.preColoredTo = "s0";
+                   // mv.preColoredTo = "s0";
                     asmProgram.sectionText.pushInstr(mv);
                 }
                 for (int i = 1; i < min(size, 8); ++i) {
@@ -53,7 +53,7 @@ public class ASMBuilder {
                         mv = new MV("tmp" + cnt++, "%_" + i);
                     }
                     mv.preColoredFrom = "a" + i;
-                    mv.preColoredTo = "s" + i;
+                   // mv.preColoredTo = "s" + i;
                     asmProgram.sectionText.pushInstr(mv);
                 }
                 if (size > 8) {//栈上传递变量
