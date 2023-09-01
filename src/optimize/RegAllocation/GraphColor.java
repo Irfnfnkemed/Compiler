@@ -43,6 +43,7 @@ public class GraphColor {
         put("s10", 1 << 25);
         put("s11", 1 << 26);
         put("stackTop#", 0);
+        put("sp", 0);
     }};
 
 
