@@ -8,8 +8,12 @@ import java.util.List;
 public class Restore extends ASMInstr {
     public List<ASMInstr> restoreList;
 
-    public Restore(Init init) {
+    public Restore(){
         restoreList = new ArrayList<>();
+    }
+
+
+    public void set(Init init) {
         for (int i = init.initList.size() - 1; i >= 0; --i) {
             var instr = init.initList.get(i);
             if (instr instanceof SW) {

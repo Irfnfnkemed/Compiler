@@ -35,15 +35,8 @@ public class RegAllocation {
             }
             function.stackSize = (((function.call ? 1 : 0) + function.savedReg.size() +
                     function.color.stack.size() + max + 3) >> 2) << 4;//+3为了对16字节取整
-            Init init = new Init();
-            init.initList.add(new ADDI("sp", "sp", -function.stackSize));
-            int tmp = 1;
-            for (String reg : function.savedReg) {
-                init.initList.add(new SW(reg, "sp", function.stackSize - (tmp++ << 2)));
-            }
-            if (function.call) {
-                init.initList.add(new SW("ra", "sp", function.stackSize - (tmp++ << 2)));
-            }
+            Init init = null;
+            int tmp = 2 + function.savedReg.size();
             for (int i = 0; i < function.asmInstrList.size(); ++i) {
                 var instr = function.asmInstrList.get(i);
                 if (instr instanceof LW) {
@@ -54,8 +47,7 @@ public class RegAllocation {
                         ((LW) instr).from = "sp";
                         ((LW) instr).offset = function.stackSize + ((LW) instr).offset;
                     }
-                }
-                if (instr instanceof SW) {
+                } else if (instr instanceof SW) {
                     if (Objects.equals(((SW) instr).to, "stack#")) {
                         ((SW) instr).to = "sp";
                         ((SW) instr).offset = function.stackSize - ((tmp + ((SW) instr).offset) << 2);
@@ -63,6 +55,19 @@ public class RegAllocation {
                         ((SW) instr).to = "sp";
                         ((SW) instr).offset = function.stackSize + ((SW) instr).offset;
                     }
+                } else if (instr instanceof Init) {
+                    init = (Init) instr;
+                    init.initList.add(new ADDI("sp", "sp", -function.stackSize));
+                    int initTmp = 1;
+                    for (String reg : function.savedReg) {
+                        init.initList.add(new SW(reg, "sp", function.stackSize - (initTmp++ << 2)));
+                    }
+                    if (function.call) {
+                        init.initList.add(new SW("ra", "sp", function.stackSize - (initTmp++ << 2)));
+                    }
+                } else if (instr instanceof Restore) {
+                    assert init != null;
+                    ((Restore) instr).set(init);
                 }
             }
             for (var call : function.color.callerRestoreList) {
@@ -72,9 +77,6 @@ public class RegAllocation {
                     call.callerList.add(new LW("sp", reg, (callParaStack + callTmp++) << 2));
                 }
             }
-            Restore restore = new Restore(init);
-            function.asmInstrList.add(1, init);
-            function.asmInstrList.add(function.asmInstrList.size() - 1, restore);
         }
 
 

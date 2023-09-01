@@ -32,6 +32,7 @@ public class ASMBuilder {
                 asmProgram.sectionText.pushGlobal(((FuncDef) stmt).functionName.substring(1));
                 asmProgram.sectionText.nowFuncName = ((FuncDef) stmt).functionName.substring(1);
                 asmProgram.sectionText.pushInstr(new LABEL(((FuncDef) stmt).functionName.substring(1), true));
+                asmProgram.sectionText.pushInstr(new Init());
                 //处理参数
                 int size = ((FuncDef) stmt).parameterTypeList.size();
                 if (size > 0) {
@@ -71,7 +72,6 @@ public class ASMBuilder {
                 for (var irInstr : ((FuncDef) stmt).irList) {
                     visitInstr(asmProgram.sectionText, irInstr);
                 }
-                asmProgram.sectionText.pushInstr(new RET());
             } else if (stmt instanceof GlobalVarDef) {
                 asmProgram.sectionData.pushGlobal(((GlobalVarDef) stmt).varName.substring(1));
                 asmProgram.sectionData.pushWord(((GlobalVarDef) stmt).varName.substring(1), (int) ((GlobalVarDef) stmt).value);
@@ -530,7 +530,8 @@ public class ASMBuilder {
                 li.preColoredTo = "a0";
                 section.pushInstr(li);
             }
-
         }
+        asmProgram.sectionText.pushInstr(new Restore());
+        asmProgram.sectionText.pushInstr(new RET());
     }
 }

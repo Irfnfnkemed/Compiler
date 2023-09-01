@@ -14,11 +14,36 @@ public class GraphColor {
             "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11"
     };
 
-    enum REG {
-        t0, t1, t2, t3, t4, t5, t6,
-        a7, a6, a5, a4, a3, a2, a1, a0,
-        s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
-    }
+    final HashMap<String, Integer> regId = new HashMap<String, Integer>() {{
+        put("t0", 1);
+        put("t1", 1 << 1);
+        put("t2", 1 << 2);
+        put("t3", 1 << 3);
+        put("t4", 1 << 4);
+        put("t5", 1 << 5);
+        put("t6", 1 << 6);
+        put("a7", 1 << 7);
+        put("a6", 1 << 8);
+        put("a5", 1 << 9);
+        put("a4", 1 << 10);
+        put("a3", 1 << 11);
+        put("a2", 1 << 12);
+        put("a1", 1 << 13);
+        put("a0", 1 << 14);
+        put("s0", 1 << 15);
+        put("s1", 1 << 16);
+        put("s2", 1 << 17);
+        put("s3", 1 << 18);
+        put("s4", 1 << 19);
+        put("s5", 1 << 20);
+        put("s6", 1 << 21);
+        put("s7", 1 << 22);
+        put("s8", 1 << 23);
+        put("s9", 1 << 24);
+        put("s10", 1 << 25);
+        put("s11", 1 << 26);
+        put("stackTop#", 0);
+    }};
 
 
     public RIG rig;
@@ -246,9 +271,12 @@ public class GraphColor {
                 node = rig.rigNodes.get(find(node.varName));
             }
             if (node.colour == -1) {
-                continue;
+                if (node.preColored != null) {
+                    tmp = tmp | regId.get(node.preColored);
+                }
+            } else {
+                tmp = tmp | (1 << node.colour);
             }
-            tmp = tmp | (1 << node.colour);
         }
         for (int i = 0; i < k; ++i) {
             if ((tmp & 1) == 0) {

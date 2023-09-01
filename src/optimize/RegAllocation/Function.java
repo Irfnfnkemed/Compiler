@@ -18,10 +18,9 @@ public class Function {
     public Function(List<ASMInstr> asmInstrList_, HashSet<String> globalVar_) {
         asmInstrList = asmInstrList_;
         HashMap<String, Integer> stack = new HashMap<>();
-        HashMap<String, String> preColor = new HashMap<>();
         while (true) {
             CFGReg cfgReg = new CFGReg(asmInstrList, globalVar_);
-            RIG rig = new RIG(cfgReg, preColor);
+            RIG rig = new RIG(cfgReg);
             GraphColor graphColor = new GraphColor(rig, cfgReg.globalVar, stack);
             if (graphColor.graphColor()) {
                 color = graphColor;
