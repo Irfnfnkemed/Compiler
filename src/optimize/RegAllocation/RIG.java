@@ -35,11 +35,13 @@ public class RIG {
     public CFGReg cfgReg;
     public HashMap<String, RIGNode> rigNodes;
     public HashSet<String> removeList;//移除
+    public HashMap<String, String> preColor;
 
-    public RIG(CFGReg cfgReg_) {
+    public RIG(CFGReg cfgReg_, HashMap<String, String> preColor_) {
         cfgReg = cfgReg_;
         rigNodes = new HashMap<>();
         removeList = new HashSet<>();
+        preColor = preColor_;
         buildRIG();
     }
 
@@ -102,11 +104,27 @@ public class RIG {
                     }
                     if (asmInstr.use[0] != null) {
                         rigNodeNow = getNode(asmInstr.use[0]);
-                        rigNodeNow.preColored = asmInstr.preColoredFrom;
+                        if (asmInstr.preColoredFrom == null) {
+                            String pre = preColor.get(rigNodeNow.varName);
+                            if (pre != null) {
+                                rigNodeNow.preColored = pre;
+                            }
+                        } else {
+                            rigNodeNow.preColored = asmInstr.preColoredFrom;
+                            preColor.put(rigNodeNow.varName, rigNodeNow.preColored);
+                        }
                     }
                     if (asmInstr instanceof SW && asmInstr.use[1] != null) {
                         rigNodeNow = getNode(asmInstr.use[1]);
-                        rigNodeNow.preColored = asmInstr.preColoredTo;
+                        if (asmInstr.preColoredTo == null) {
+                            String pre = preColor.get(rigNodeNow.varName);
+                            if (pre != null) {
+                                rigNodeNow.preColored = pre;
+                            }
+                        } else {
+                            rigNodeNow.preColored = asmInstr.preColoredTo;
+                            preColor.put(rigNodeNow.varName, rigNodeNow.preColored);
+                        }
                     }
                     for (int j = 0; j < asmInstr.useNum; ++j) {
                         if (getNode(asmInstr.use[j]).preColored == null) {

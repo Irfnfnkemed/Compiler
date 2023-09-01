@@ -325,9 +325,11 @@ public class GraphColor {
         assignColor();
         if (spillSet.isEmpty()) {
             replace();
+            used.remove("stackTop#");
             return true;
         } else {
             rewrite();
+            used.remove("stackTop#");
             return false;
         }
     }
@@ -417,7 +419,19 @@ public class GraphColor {
         }
         for (int i = 0; i < rig.cfgReg.asmInstrList.size(); ++i) {
             var instr = rig.cfgReg.asmInstrList.get(i);
-            if (instr instanceof MV) {
+            if (instr instanceof LW) {
+                Integer from = stack.get(((LW) instr).to);
+                if (from != null) {
+                    rig.cfgReg.asmInstrList.add(++i, new SW("cnt" + cnt, "stack#", from));
+                    ((LW) instr).to = "cnt" + cnt++;
+                }
+            } else if (instr instanceof SW) {
+                Integer from = stack.get(((SW) instr).from);
+                if (from != null) {
+                    rig.cfgReg.asmInstrList.add(i++, new LW("stack#", "cnt" + cnt, from));
+                    ((SW) instr).from = "cnt" + cnt++;
+                }
+            } else if (instr instanceof MV) {
                 Integer from = stack.get(((MV) instr).from), to = stack.get(((MV) instr).to);
                 if (from != null) {
                     rig.cfgReg.asmInstrList.add(i++, new LW("stack#", "cnt" + cnt, from));

@@ -42,7 +42,7 @@ public class ASMBuilder {
                         mv = new MV("tmp" + cnt++, "%_0");
                     }
                     mv.preColoredFrom = "a0";
-                   // mv.preColoredTo = "s0";
+                    // mv.preColoredTo = "s0";
                     asmProgram.sectionText.pushInstr(mv);
                 }
                 for (int i = 1; i < min(size, 8); ++i) {
@@ -53,7 +53,7 @@ public class ASMBuilder {
                         mv = new MV("tmp" + cnt++, "%_" + i);
                     }
                     mv.preColoredFrom = "a" + i;
-                   // mv.preColoredTo = "s" + i;
+                    // mv.preColoredTo = "s" + i;
                     asmProgram.sectionText.pushInstr(mv);
                 }
                 if (size > 8) {//栈上传递变量
@@ -424,7 +424,7 @@ public class ASMBuilder {
                 if (variable.varName != null) {
                     String from;
                     if (variable.varName.charAt(0) == '@') {
-                        section.pushInstr(new LA("tmp" + cnt, variable.varName.substring(1)));
+                        section.pushInstr(new LW(variable.varName.substring(1), "tmp" + cnt));
                         from = "tmp" + cnt++;
                     } else {
                         from = variable.varName;
@@ -481,9 +481,24 @@ public class ASMBuilder {
         List<String> toVarList = new ArrayList<>();//目标变量
         for (var phi : phiList) {
             if (phi.fromVar == null) {
-                section.pushInstr(new LI(phi.toVar, (int) phi.value));
+                LI li = new LI(phi.toVar, (int) phi.value);
+                if (phi.toVar.contains(".returnValue")) {
+                    li.notRemove = true;
+                }
+                section.pushInstr(li);
             } else {
-                section.pushInstr(new MV(phi.fromVar, "tmp" + cnt));
+                String from;
+                if (phi.fromVar.contains("@")) {
+                    section.pushInstr(new LA("tmp" + cnt, phi.fromVar.substring(1)));
+                    from = "tmp" + cnt++;
+                } else {
+                    from = phi.fromVar;
+                }
+                MV mv = new MV(from, "tmp" + cnt);
+                if (phi.toVar.contains(".returnValue")) {
+                    mv.notRemove = true;
+                }
+                section.pushInstr(mv);
                 tmpVarList.add("tmp" + cnt++);
                 toVarList.add(phi.toVar);
             }

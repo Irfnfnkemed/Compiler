@@ -52,7 +52,7 @@ public class RegAllocation {
                         ((LW) instr).offset = function.stackSize - ((tmp + ((LW) instr).offset) << 2);
                     } else if (Objects.equals(((LW) instr).from, "stackTop#")) {
                         ((LW) instr).from = "sp";
-                        ((LW) instr).offset = function.stackSize + ((tmp + ((LW) instr).offset) << 2);
+                        ((LW) instr).offset = function.stackSize + ((LW) instr).offset;
                     }
                 }
                 if (instr instanceof SW) {
@@ -61,7 +61,7 @@ public class RegAllocation {
                         ((SW) instr).offset = function.stackSize - ((tmp + ((SW) instr).offset) << 2);
                     } else if (Objects.equals(((SW) instr).to, "stackTop#")) {
                         ((SW) instr).to = "sp";
-                        ((SW) instr).offset = function.stackSize + ((tmp + ((SW) instr).offset) << 2);
+                        ((SW) instr).offset = function.stackSize + ((SW) instr).offset;
                     }
                 }
             }
