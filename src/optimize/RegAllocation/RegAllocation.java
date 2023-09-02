@@ -21,10 +21,13 @@ public class RegAllocation {
             for (var call : function.color.callerRestoreList) {
                 var callFunc = functions.get(call.funcName);
                 if (callFunc != null && !asmBuilder.funcNodeMap.get(call.funcName).restore) {
-                    boolean flag = call.callerSave.callerReg.contains("t1");
-                    call.callerSave.callerReg.retainAll(callFunc.unsavedReg);
-                    if (flag) {
-                        call.callerSave.callerReg.add("t1");
+                    var iter = call.callerSave.callerReg.iterator();
+                    while (iter.hasNext()) {
+                        String reg = iter.next();
+                        if (!Objects.equals(reg, "t1") && reg.charAt(0) != 'a' &&
+                                !call.callerSave.callerReg.contains(reg)) {
+                           iter.remove();
+                        }
                     }
                 }
                 int callParaStack = call.callerSave.paraSize > 8 ? call.callerSave.paraSize - 8 : 0;
@@ -82,7 +85,5 @@ public class RegAllocation {
                 }
             }
         }
-
-
     }
 }
