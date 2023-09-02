@@ -356,8 +356,8 @@ public class GraphColor {
         }
         init(rig.rigNodes);
         while (!simplifyList.isEmpty() || !moveList.isEmpty()) {
-            if (!coalesce()) {
-                if (!simplify()) {
+            if (!simplify()) {
+                if (!coalesce()) {
                     if (!freeze()) {
                         if (!spilt()) {
                             System.err.println("<<<<<<<");
