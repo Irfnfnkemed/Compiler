@@ -13,6 +13,7 @@ public class RIG {
         public int colour = -1;
         public boolean aboutMove = false;//是否是传送相关的(可能后续被冻结)
         public String preColored;//预着色
+        public boolean call = false;//在存活期间是否有函数调用
 
         public RIGNode(String varName_) {
             toNode = new HashMap<>();
@@ -118,6 +119,7 @@ public class RIG {
                         }
                     }
                     if (asmInstr instanceof CALL) {
+                        block.blockLive.liveOut.forEach(node->getNode(node).call = true);
                         block.blockLive.liveOut.addAll(((CALL) asmInstr).useList);
                     }
                 }

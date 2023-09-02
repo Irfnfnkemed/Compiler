@@ -279,12 +279,27 @@ public class GraphColor {
                 tmp = tmp | (1 << node.colour);
             }
         }
-        for (int i = 0; i < k; ++i) {
-            if ((tmp & 1) == 0) {
-                rigNode.colour = i;
-                return true;
+        if (rigNode.call) {
+            for (int i = 15; i < k; ++i) {
+                if ((tmp & (1 << i)) == 0) {
+                    rigNode.colour = i;
+                    return true;
+                }
             }
-            tmp = tmp >> 1;
+            for (int i = 0; i < 15; ++i) {
+                if ((tmp & (1 << i)) == 0) {
+                    rigNode.colour = i;
+                    return true;
+                }
+            }
+        } else {
+            for (int i = 0; i < k; ++i) {
+                if ((tmp & 1) == 0) {
+                    rigNode.colour = i;
+                    return true;
+                }
+                tmp = tmp >> 1;
+            }
         }
         return false;
     }
@@ -341,8 +356,8 @@ public class GraphColor {
         }
         init(rig.rigNodes);
         while (!simplifyList.isEmpty() || !moveList.isEmpty()) {
-            if (!simplify()) {
-                if (!coalesce()) {
+            if (!coalesce()) {
+                if (!simplify()) {
                     if (!freeze()) {
                         if (!spilt()) {
                             System.err.println("<<<<<<<");
