@@ -17,16 +17,29 @@ import java.util.*;
 import static java.lang.Math.min;
 
 public class ASMBuilder {
+    public static class FuncNode {//函数调用图
+        public HashSet<FuncNode> fromNode;
+        public boolean restore = true;//true表示函数调用会改变t0-t7
+
+        public FuncNode() {
+            fromNode = new HashSet<>();
+        }
+    }
+
     public ASMProgram asmProgram;
     public HashSet<String> globalVar;
+    public HashMap<String, FuncNode> funcNodeMap;
     public int cnt = 0, label = 0;
     private HashMap<String, FuncDef.PhiInfo> phiMap;
 
     public ASMBuilder(IRProgram irProgram) {
         asmProgram = new ASMProgram();
         globalVar = new HashSet<>();
+        funcNodeMap = new HashMap<>();
         for (var stmt : irProgram.stmtList) {
             if (stmt instanceof FuncDef) {
+                FuncNode funcNode = getNode(((FuncDef) stmt).functionName.substring(1));
+                funcNode.restore = false;
                 ((FuncDef) stmt).collectPhi();
                 phiMap = ((FuncDef) stmt).phiMap;
                 asmProgram.sectionText.pushGlobal(((FuncDef) stmt).functionName.substring(1));
@@ -70,7 +83,7 @@ public class ASMBuilder {
                     }
                 }
                 for (var irInstr : ((FuncDef) stmt).irList) {
-                    visitInstr(asmProgram.sectionText, irInstr);
+                    visitInstr(asmProgram.sectionText, irInstr, funcNode);
                 }
             } else if (stmt instanceof GlobalVarDef) {
                 asmProgram.sectionData.pushGlobal(((GlobalVarDef) stmt).varName.substring(1));
@@ -84,10 +97,10 @@ public class ASMBuilder {
                 }
             }
         }
-
+        setFuncRestore();
     }
 
-    void visitInstr(Section section, Instruction instruction) {
+    void visitInstr(Section section, Instruction instruction, FuncNode funcNode) {
         if (instruction instanceof Label) {
             visit(section, (Label) instruction);
         } else if (instruction instanceof Store) {
@@ -99,7 +112,7 @@ public class ASMBuilder {
         } else if (instruction instanceof Icmp) {
             visit(section, (Icmp) instruction);
         } else if (instruction instanceof Call) {
-            visit(section, (Call) instruction);
+            visit(section, (Call) instruction, funcNode);
         } else if (instruction instanceof Br) {
             visit(section, (Br) instruction);
         } else if (instruction instanceof Getelementptr) {
@@ -395,7 +408,8 @@ public class ASMBuilder {
         }
     }
 
-    void visit(Section section, Call call) {
+    void visit(Section section, Call call, FuncNode funcNode) {
+        getNode(call.functionName.substring(1)).fromNode.add(funcNode);
         int size = call.callTypeList.size();
         Call.variable variable;
         CallerSave callerSave = new CallerSave(size);
@@ -536,5 +550,39 @@ public class ASMBuilder {
         }
         asmProgram.sectionText.pushInstr(new Restore());
         asmProgram.sectionText.pushInstr(new RET());
+    }
+
+    public FuncNode getNode(String funcName) {
+        var node = funcNodeMap.get(funcName);
+        if (node == null) {
+            node = new FuncNode();
+            funcNodeMap.put(funcName, node);
+        }
+        return node;
+    }
+
+    void setFuncRestore() {
+        HashSet<FuncNode> visit = new HashSet<>();
+        Queue<FuncNode> queue = new ArrayDeque<>();
+        for (var func : funcNodeMap.values()) {
+            if (!visit.contains(func)) {
+                if (func.restore) {
+                    queue.add(func);
+                    visit.add(func);
+                    while (!queue.isEmpty()) {
+                        FuncNode node = queue.poll();
+                        if (node.restore) {
+                            node.fromNode.forEach(funcNode -> {
+                                if(!visit.contains(funcNode)){
+                                    funcNode.restore = true;
+                                    queue.add(funcNode);
+                                    visit.add(funcNode);
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
     }
 }

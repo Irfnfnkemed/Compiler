@@ -20,9 +20,9 @@ public class RegAllocation {
             int max = -1;
             for (var call : function.color.callerRestoreList) {
                 var callFunc = functions.get(call.funcName);
-//                if (callFunc != null) {
-//                    call.callerSave.callerReg.retainAll(callFunc.unsavedReg);
-//                }
+                if (callFunc != null && !asmBuilder.funcNodeMap.get(call.funcName).restore) {
+                    call.callerSave.callerReg.retainAll(callFunc.unsavedReg);
+                }
                 int callParaStack = call.callerSave.paraSize > 8 ? call.callerSave.paraSize - 8 : 0;
                 if (call.callerSave.callerReg.size() + callParaStack > max) {
                     max = call.callerSave.callerReg.size() + callParaStack;
