@@ -11,7 +11,6 @@ import src.IR.IRPrinter;
 import src.optimize.Mem2Reg.Mem2Reg;
 import src.Util.error.Errors;
 import src.Util.error.ParserErrorListener;
-import src.optimize.RegAllocation.CFGReg;
 import src.optimize.RegAllocation.RegAllocation;
 import src.parser.MxLexer;
 import src.parser.MxParser;
@@ -62,7 +61,7 @@ public class Main {
             System.setOut(printStream);
             d.print();
             var e = new RegAllocation(c);
-            fileOutputStream = new FileOutputStream("./src/builtin/test.s");
+            fileOutputStream = new FileOutputStream("src/builtin/test.s");
             printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);
             d.print();
