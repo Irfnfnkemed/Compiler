@@ -399,6 +399,7 @@ public class ASMBuilder {
         int size = call.callTypeList.size();
         Call.variable variable;
         CallerSave callerSave = new CallerSave(size);
+        CALL ASMcall = new CALL(call.functionName.substring(1));
         for (int i = 0; i < min(size, 8); ++i) {
             variable = call.callList.get(i);
             if (variable.varName != null) {
@@ -409,14 +410,15 @@ public class ASMBuilder {
                 } else {
                     from = variable.varName;
                 }
-                MV mv = new MV(from, "tmp" + cnt++);
+                MV mv = new MV(from, "tmp" + cnt);
                 mv.preColoredTo = "a" + i;
                 section.pushInstr(mv);
             } else {
-                LI li = new LI("tmp" + cnt++, (int) variable.varValue);
+                LI li = new LI("tmp" + cnt, (int) variable.varValue);
                 li.preColoredTo = "a" + i;
                 section.pushInstr(li);
             }
+            ASMcall.useList.add("tmp" + cnt++);
         }
         if (size > 8) {
             for (int i = 8; i < size; ++i) {
@@ -441,9 +443,10 @@ public class ASMBuilder {
             }
         }
         section.pushInstr(callerSave);
-        section.pushInstr(new CALL(call.functionName.substring(1)));
+        section.pushInstr(ASMcall);
         if (call.resultVar != null) {
-            MV mv = new MV("tmp" + cnt++, call.resultVar);
+            MV mv = new MV("tmp" + cnt, call.resultVar);
+            ASMcall.def = "tmp" + cnt++;
             mv.preColoredFrom = "a0";
             section.pushInstr(mv);
         }

@@ -1,9 +1,6 @@
 package src.optimize.RegAllocation;
 
-import src.ASM.instruction.ASMInstr;
-import src.ASM.instruction.CallerSave;
-import src.ASM.instruction.MV;
-import src.ASM.instruction.SW;
+import src.ASM.instruction.*;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -81,7 +78,9 @@ public class RIG {
                     if (asmInstr.def != null) {
                         block.blockLive.liveOut.remove(asmInstr.def);//此处破坏了liveOut，因为后续不会再用到
                         rigNodeNow = getNode(asmInstr.def);
-                        rigNodeNow.preColored = asmInstr.preColoredTo;
+                        if (asmInstr.preColoredTo != null) {
+                            rigNodeNow.preColored = asmInstr.preColoredTo;
+                        }
                         boolean flag = asmInstr instanceof MV;
                         for (var liveVar : block.blockLive.liveOut) {
                             rigNodeTo = getNode(liveVar);
@@ -102,20 +101,27 @@ public class RIG {
                     }
                     if (asmInstr.use[0] != null) {
                         rigNodeNow = getNode(asmInstr.use[0]);
-                        rigNodeNow.preColored = asmInstr.preColoredFrom;
+                        if (asmInstr.preColoredFrom != null) {
+                            rigNodeNow.preColored = asmInstr.preColoredFrom;
+                        }
                     }
                     if (asmInstr instanceof SW && asmInstr.use[1] != null) {
                         rigNodeNow = getNode(asmInstr.use[1]);
-                        rigNodeNow.preColored = asmInstr.preColoredTo;
+                        if (asmInstr.preColoredTo != null) {
+                            rigNodeNow.preColored = asmInstr.preColoredTo;
+                        }
                     }
                     for (int j = 0; j < asmInstr.useNum; ++j) {
-                        if (getNode(asmInstr.use[j]).preColored == null) {
+                        if (getNode(asmInstr.use[j]).preColored == null ||
+                                getNode(asmInstr.use[j]).preColored.charAt(0) == 'a') {
                             block.blockLive.liveOut.add(asmInstr.use[j]);
                         }
                     }
+                    if (asmInstr instanceof CALL) {
+                        block.blockLive.liveOut.addAll(((CALL) asmInstr).useList);
+                    }
                 }
             }
-
         }
     }
 
