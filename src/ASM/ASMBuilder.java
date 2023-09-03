@@ -67,7 +67,6 @@ public class ASMBuilder {
                         mv = new MV("tmp" + cnt++, "%_" + i);
                     }
                     mv.preColoredFrom = "a" + i;
-                    // mv.preColoredTo = "s" + i;
                     asmProgram.sectionText.pushInstr(mv);
                 }
                 if (size > 8) {//栈上传递变量

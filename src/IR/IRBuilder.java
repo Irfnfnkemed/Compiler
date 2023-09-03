@@ -827,61 +827,78 @@ public class IRBuilder implements ASTVisitor {
 
     public String newArray(int indexDim) {
         String newPtr = null;
-        if (indexDim == 0) {
-            return null;
-        }
         long value = 0;
         String var = null;
-        Call call = new Call("@.newArray");
-        if (((Exp) now).isOperandConst()) {
-            value = ((Exp) now).popValue();
-            call.set(typeI32, value);
+        if (indexDim == 1) {
+            Call call = new Call("@.newArray");
+            if (((Exp) now).isOperandConst()) {
+                value = ((Exp) now).popValue();
+                call.set(typeI32, value);
+            } else {
+                var = ((Exp) now).popVar();
+                call.set(typeI32, var);
+            }
+            call.irType = typePtr;
+            newPtr = call.resultVar = "%_" + anonymousVar++;
+            ((Exp) now).push(call);
+            if (var == null) {
+                ((Exp) now).set(value);
+            } else {
+                ((Exp) now).set(var);
+            }
+            return newPtr;
         } else {
-            var = ((Exp) now).popVar();
-            call.set(typeI32, var);
+            Call call = new Call("@.newArray");
+            if (((Exp) now).isOperandConst()) {
+                value = ((Exp) now).popValue();
+                call.set(typeI32, value);
+            } else {
+                var = ((Exp) now).popVar();
+                call.set(typeI32, var);
+            }
+            call.irType = typePtr;
+            newPtr = call.resultVar = "%_" + anonymousVar++;
+            ((Exp) now).push(call);
+            String loopVar = "%_" + anonymousVar++;
+            String condition = "%newArrayCondition-" + anonymousLabel;
+            String body = "%newArrayBody-" + anonymousLabel;
+            String to = "%newArray-To-" + anonymousLabel++;
+            String nowLabel = ((Exp) now).funcDef.label;
+            ((Exp) now).push(new Br(condition, ((Exp) now).funcDef));
+            ((Exp) now).push(new Label(condition.substring(1)));
+            Phi phi = new Phi(typeI32, loopVar);
+            ((Exp) now).push(phi);
+            phi.push(0, nowLabel);
+            Icmp icmp = new Icmp("<", typeI32);
+            icmp.operandLeft = loopVar;
+            if (var == null) {
+                icmp.valueRight = value;
+            } else {
+                icmp.operandRight = var;
+            }
+            icmp.output = "%_" + anonymousVar;
+            ((Exp) now).push(icmp);
+            ((Exp) now).push(new Br("%_" + anonymousVar++, body, to, ((Exp) now).funcDef));
+            ((Exp) now).push(new Label(body.substring(1)));
+            String subNewPtr = newArray(indexDim - 1);
+            ((Exp) now).push(new Getelementptr("%_" + anonymousVar,
+                    typePtr, newPtr, -1, loopVar));
+            ((Exp) now).push(new Store(typePtr, subNewPtr, "%_" + anonymousVar++));
+            Binary binary = new Binary("+");
+            binary.operandLeft = loopVar;
+            binary.valueRight = 1;
+            binary.output = "%_" + anonymousVar;
+            ((Exp) now).push(binary);
+            phi.push("%_" + anonymousVar++, ((Exp) now).funcDef.label);
+            ((Exp) now).push(new Br(condition, ((Exp) now).funcDef));
+            ((Exp) now).push(new Label(to.substring(1)));
+            if (var == null) {
+                ((Exp) now).set(value);
+            } else {
+                ((Exp) now).set(var);
+            }
+            return newPtr;
         }
-        call.irType = typePtr;
-        newPtr = call.resultVar = "%_" + anonymousVar++;
-        ((Exp) now).push(call);
-        String loopVar = "%_" + anonymousVar++;
-        String condition = "%newArrayCondition-" + anonymousLabel;
-        String body = "%newArrayBody-" + anonymousLabel;
-        String to = "%newArray-To-" + anonymousLabel++;
-        String nowLabel = ((Exp) now).funcDef.label;
-        ((Exp) now).push(new Br(condition, ((Exp) now).funcDef));
-        ((Exp) now).push(new Label(condition.substring(1)));
-        Phi phi = new Phi(typeI32, loopVar);
-        ((Exp) now).push(phi);
-        phi.push(0, nowLabel);
-        Icmp icmp = new Icmp("<", typeI32);
-        icmp.operandLeft = loopVar;
-        if (var == null) {
-            icmp.valueRight = value;
-        } else {
-            icmp.operandRight = var;
-        }
-        icmp.output = "%_" + anonymousVar;
-        ((Exp) now).push(icmp);
-        ((Exp) now).push(new Br("%_" + anonymousVar++, body, to, ((Exp) now).funcDef));
-        ((Exp) now).push(new Label(body.substring(1)));
-        String subNewPtr = newArray(indexDim - 1);
-        ((Exp) now).push(new Getelementptr("%_" + anonymousVar,
-                typePtr, newPtr, -1, loopVar));
-        ((Exp) now).push(new Store(typePtr, subNewPtr, "%_" + anonymousVar++));
-        Binary binary = new Binary("+");
-        binary.operandLeft = loopVar;
-        binary.valueRight = 1;
-        binary.output = "%_" + anonymousVar;
-        ((Exp) now).push(binary);
-        phi.push("%_" + anonymousVar++, ((Exp) now).funcDef.label);
-        ((Exp) now).push(new Br(condition, ((Exp) now).funcDef));
-        ((Exp) now).push(new Label(to.substring(1)));
-        if (var == null) {
-            ((Exp) now).set(value);
-        } else {
-            ((Exp) now).set(var);
-        }
-        return newPtr;
     }
 
     @Override
