@@ -68,8 +68,7 @@ public class CFGReg {
                     }
                     instr.def = ((LI) instr).to;
                 } else if (instr instanceof LW) {
-                    if (((LW) instr).offset != -1 && !Objects.equals(((LW) instr).from, "stack#") &&
-                            !Objects.equals(((LW) instr).from, "stackTmp#") && !Objects.equals(((LW) instr).from, "stackTop#")) {
+                    if (((LW) instr).offset != -1 && !((LW) instr).from.contains("#")) {
                         nowBlock.blockLive.addUse(((LW) instr).from);
                         instr.use[0] = ((LW) instr).from;
                         instr.useNum = 1;
@@ -80,33 +79,36 @@ public class CFGReg {
                     nowBlock.blockLive.addDef(((LA) instr).to);
                     instr.def = ((LA) instr).to;
                 } else if (instr instanceof SW) {
-                    nowBlock.blockLive.addUse(((SW) instr).from);
-                    instr.use[0] = ((SW) instr).from;
-                    instr.useNum = 1;
-                    if (!Objects.equals(((SW) instr).to, "stack#") && !Objects.equals(((SW) instr).to, "stackTmp#") &&
-                            !Objects.equals(((SW) instr).to, "stackTop#")) {
+                    if (!Objects.equals(((SW) instr).from, "zero")) {
+                        nowBlock.blockLive.addUse(((SW) instr).from);
+                        instr.use[instr.useNum++] = ((SW) instr).from;
+                    }
+                    if (!((SW) instr).to.contains("#")) {
                         nowBlock.blockLive.addUse(((SW) instr).to);
-                        instr.use[1] = ((SW) instr).to;
-                        ++instr.useNum;
+                        instr.use[instr.useNum++] = ((SW) instr).to;
                     }
                 } else if (instr instanceof MV) {
-                    if (instr.preColoredFrom == null) {
-                        nowBlock.blockLive.addUse(((MV) instr).from);
+                    if (!Objects.equals(((MV) instr).from, "zero")) {
+                        if (instr.preColoredFrom == null) {
+                            nowBlock.blockLive.addUse(((MV) instr).from);
+                        }
+                        instr.use[instr.useNum++] = ((MV) instr).from;
                     }
-                    instr.use[0] = ((MV) instr).from;
                     if (instr.preColoredTo == null) {
                         nowBlock.blockLive.addDef(((MV) instr).to);
                     }
                     instr.def = ((MV) instr).to;
-                    instr.useNum = 1;
                 } else if (instr instanceof binBase) {
-                    nowBlock.blockLive.addUse(((binBase) instr).lhs);
-                    nowBlock.blockLive.addUse(((binBase) instr).rhs);
+                    if (!Objects.equals(((binBase) instr).lhs, "zero")) {
+                        nowBlock.blockLive.addUse(((binBase) instr).lhs);
+                        instr.use[instr.useNum++] = ((binBase) instr).lhs;
+                    }
+                    if (!Objects.equals(((binBase) instr).rhs, "zero")) {
+                        nowBlock.blockLive.addUse(((binBase) instr).rhs);
+                        instr.use[instr.useNum++] = ((binBase) instr).rhs;
+                    }
                     nowBlock.blockLive.addDef(((binBase) instr).to);
-                    instr.use[0] = ((binBase) instr).lhs;
-                    instr.use[1] = ((binBase) instr).rhs;
                     instr.def = ((binBase) instr).to;
-                    instr.useNum = 2;
                 } else if (instr instanceof binImmeBase) {
                     nowBlock.blockLive.addUse(((binImmeBase) instr).from);
                     nowBlock.blockLive.addDef(((binImmeBase) instr).to);

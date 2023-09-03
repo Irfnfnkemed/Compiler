@@ -4,6 +4,7 @@ import src.ASM.instruction.*;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Objects;
 
 public class RIG {
     public static class RIGNode implements Comparable<RIGNode> {
@@ -119,7 +120,7 @@ public class RIG {
                         }
                     }
                     if (asmInstr instanceof CALL) {
-                        block.blockLive.liveOut.forEach(node->getNode(node).call = true);
+                        block.blockLive.liveOut.forEach(node -> getNode(node).call = true);
                         block.blockLive.liveOut.addAll(((CALL) asmInstr).useList);
                     }
                 }

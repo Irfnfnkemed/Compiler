@@ -26,7 +26,7 @@ public class RegAllocation {
                         String reg = iter.next();
                         if (!Objects.equals(reg, "t1") && reg.charAt(0) != 'a' &&
                                 !call.callerSave.callerReg.contains(reg)) {
-                           iter.remove();
+                            iter.remove();
                         }
                     }
                 }
@@ -64,7 +64,9 @@ public class RegAllocation {
                     }
                 } else if (instr instanceof Init) {
                     init = (Init) instr;
-                    init.initList.add(new ADDI("sp", "sp", -function.stackSize));
+                    if (function.stackSize > 0) {
+                        init.initList.add(new ADDI("sp", "sp", -function.stackSize));
+                    }
                     int initTmp = 1;
                     for (String reg : function.savedReg) {
                         init.initList.add(new SW(reg, "sp", function.stackSize - (initTmp++ << 2)));

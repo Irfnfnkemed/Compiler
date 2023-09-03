@@ -176,9 +176,17 @@ public class ASMBuilder {
                     section.pushInstr(new ADD(binary.operandLeft, binary.operandRight, binary.output));
                 } else {
                     if (binary.operandRight != null) {
-                        section.pushInstr(new ADDI(binary.output, binary.operandRight, (int) binary.valueLeft));
+                        if (binary.valueLeft == 0) {
+                            section.pushInstr(new MV(binary.operandRight, binary.output));
+                        } else {
+                            section.pushInstr(new ADDI(binary.output, binary.operandRight, (int) binary.valueLeft));
+                        }
                     } else if (binary.operandLeft != null) {
-                        section.pushInstr(new ADDI(binary.output, binary.operandLeft, (int) binary.valueRight));
+                        if (binary.valueRight == 0) {
+                            section.pushInstr(new MV(binary.operandLeft, binary.output));
+                        } else {
+                            section.pushInstr(new ADDI(binary.output, binary.operandLeft, (int) binary.valueRight));
+                        }
                     } else {
                         section.pushInstr(new LI("tmp" + cnt, (int) binary.valueLeft));
                         section.pushInstr(new ADDI(binary.output, "tmp" + cnt++, (int) binary.valueRight));
@@ -190,10 +198,18 @@ public class ASMBuilder {
                     section.pushInstr(new SUB(binary.operandLeft, binary.operandRight, binary.output));
                 } else {
                     if (binary.operandRight != null) {
-                        section.pushInstr(new LI("tmp" + cnt, (int) binary.valueLeft));
-                        section.pushInstr(new SUB("tmp" + cnt++, binary.operandRight, binary.output));
+                        if (binary.valueLeft == 0) {
+                            section.pushInstr(new SUB("zero", binary.operandRight, binary.output));
+                        } else {
+                            section.pushInstr(new LI("tmp" + cnt, (int) binary.valueLeft));
+                            section.pushInstr(new SUB("tmp" + cnt++, binary.operandRight, binary.output));
+                        }
                     } else if (binary.operandLeft != null) {
-                        section.pushInstr(new ADDI(binary.output, binary.operandLeft, -(int) binary.valueRight));
+                        if (binary.valueRight == 0) {
+                            section.pushInstr(new MV(binary.operandLeft, binary.output));
+                        } else {
+                            section.pushInstr(new ADDI(binary.output, binary.operandLeft, -(int) binary.valueRight));
+                        }
                     } else {
                         section.pushInstr(new LI("tmp" + cnt, (int) binary.valueLeft));
                         section.pushInstr(new ADDI(binary.output, "tmp" + cnt++, -(int) binary.valueRight));
@@ -205,11 +221,37 @@ public class ASMBuilder {
                     section.pushInstr(new MUL(binary.operandLeft, binary.operandRight, binary.output));
                 } else {
                     if (binary.operandRight != null) {
-                        section.pushInstr(new LI("tmp" + cnt, (int) binary.valueLeft));
-                        section.pushInstr(new MUL("tmp" + cnt++, binary.operandRight, binary.output));
+                        if (binary.valueLeft == 0) {
+                            section.pushInstr(new MV("zero", binary.output));
+                        } else if (binary.valueLeft == 1) {
+                            section.pushInstr(new MV(binary.operandRight, binary.output));
+                        } else if ((binary.valueLeft & (binary.valueLeft - 1)) == 0) {
+                            int shift = -1, tmp = (int) binary.valueLeft;
+                            while (tmp != 0) {
+                                ++shift;
+                                tmp = tmp >> 1;
+                            }
+                            section.pushInstr(new SLLI(binary.output, binary.operandRight, shift));
+                        } else {
+                            section.pushInstr(new LI("tmp" + cnt, (int) binary.valueLeft));
+                            section.pushInstr(new MUL("tmp" + cnt++, binary.operandRight, binary.output));
+                        }
                     } else if (binary.operandLeft != null) {
-                        section.pushInstr(new LI("tmp" + cnt, (int) binary.valueRight));
-                        section.pushInstr(new MUL(binary.operandLeft, "tmp" + cnt++, binary.output));
+                        if (binary.valueRight == 0) {
+                            section.pushInstr(new MV("zero", binary.output));
+                        } else if (binary.valueRight == 1) {
+                            section.pushInstr(new MV(binary.operandLeft, binary.output));
+                        } else if ((binary.valueRight & (binary.valueRight - 1)) == 0) {
+                            int shift = -1, tmp = (int) binary.valueRight;
+                            while (tmp != 0) {
+                                ++shift;
+                                tmp = tmp >> 1;
+                            }
+                            section.pushInstr(new SLLI(binary.output, binary.operandLeft, shift));
+                        } else {
+                            section.pushInstr(new LI("tmp" + cnt, (int) binary.valueRight));
+                            section.pushInstr(new MUL(binary.operandLeft, "tmp" + cnt++, binary.output));
+                        }
                     } else {
                         section.pushInstr(new LI("tmp" + cnt++, (int) binary.valueLeft));
                         section.pushInstr(new LI("tmp" + cnt, (int) binary.valueRight));
@@ -573,7 +615,7 @@ public class ASMBuilder {
                         FuncNode node = queue.poll();
                         if (node.restore) {
                             node.fromNode.forEach(funcNode -> {
-                                if(!visit.contains(funcNode)){
+                                if (!visit.contains(funcNode)) {
                                     funcNode.restore = true;
                                     queue.add(funcNode);
                                     visit.add(funcNode);

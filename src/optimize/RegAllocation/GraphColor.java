@@ -326,10 +326,12 @@ public class GraphColor {
     }
 
     public String getReg(String varName) {
+        if (Objects.equals(varName, "zero")) {
+            return varName;
+        }
         var node = rig.rigNodes.get(varName);
         if (node == null) {
-            if (globalVar.contains(varName) || Objects.equals(varName, "stack#") ||
-                    Objects.equals(varName, "stackTmp#") || Objects.equals(varName, "stackTop#")) {
+            if (globalVar.contains(varName) || varName.contains("#")) {
                 return varName;
             } else {
                 return null;
