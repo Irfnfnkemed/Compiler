@@ -15,11 +15,11 @@ public class CFGReg {
 
     public CFGReg(List<ASMInstr> asmInstrList_, HashSet<String> globalVar_) {
         asmInstrList = asmInstrList_;
+        globalVar = globalVar_;
         blocks = new HashMap<>();
         buildCFG();
         getBlockUseDef();
         getBlockInOut();
-        globalVar = globalVar_;
     }
 
 
@@ -62,81 +62,7 @@ public class CFGReg {
         for (var entry : blocks.entrySet()) {
             nowBlock = entry.getValue();
             for (var instr : nowBlock.instructionList) {
-                if (instr instanceof LI) {
-                    if (instr.preColoredTo == null) {
-                        nowBlock.blockLive.addDef(((LI) instr).to);
-                    }
-                    instr.def = ((LI) instr).to;
-                } else if (instr instanceof LW) {
-                    instr.useNum = 0;
-                    if (((LW) instr).offset != -1 && !((LW) instr).from.contains("#")) {
-                        nowBlock.blockLive.addUse(((LW) instr).from);
-                        instr.use[0] = ((LW) instr).from;
-                        instr.useNum = 1;
-                    }
-                    nowBlock.blockLive.addDef(((LW) instr).to);
-                    instr.def = ((LW) instr).to;
-                } else if (instr instanceof LA) {
-                    nowBlock.blockLive.addDef(((LA) instr).to);
-                    instr.def = ((LA) instr).to;
-                } else if (instr instanceof SW) {
-                    instr.useNum = 0;
-                    if (!Objects.equals(((SW) instr).from, "zero")) {
-                        nowBlock.blockLive.addUse(((SW) instr).from);
-                        instr.use[instr.useNum++] = ((SW) instr).from;
-                    }
-                    if (!((SW) instr).to.contains("#")) {
-                        nowBlock.blockLive.addUse(((SW) instr).to);
-                        instr.use[instr.useNum++] = ((SW) instr).to;
-                    }
-                } else if (instr instanceof MV) {
-                    instr.useNum = 0;
-                    if (!Objects.equals(((MV) instr).from, "zero")) {
-                        if (instr.preColoredFrom == null) {
-                            nowBlock.blockLive.addUse(((MV) instr).from);
-                        }
-                        instr.use[instr.useNum++] = ((MV) instr).from;
-                    }
-                    if (instr.preColoredTo == null) {
-                        nowBlock.blockLive.addDef(((MV) instr).to);
-                    }
-                    instr.def = ((MV) instr).to;
-                } else if (instr instanceof binBase) {
-                    instr.useNum = 0;
-                    if (!Objects.equals(((binBase) instr).lhs, "zero")) {
-                        nowBlock.blockLive.addUse(((binBase) instr).lhs);
-                        instr.use[instr.useNum++] = ((binBase) instr).lhs;
-                    }
-                    if (!Objects.equals(((binBase) instr).rhs, "zero")) {
-                        nowBlock.blockLive.addUse(((binBase) instr).rhs);
-                        instr.use[instr.useNum++] = ((binBase) instr).rhs;
-                    }
-                    nowBlock.blockLive.addDef(((binBase) instr).to);
-                    instr.def = ((binBase) instr).to;
-                } else if (instr instanceof binImmeBase) {
-                    instr.useNum = 0;
-                    nowBlock.blockLive.addUse(((binImmeBase) instr).from);
-                    nowBlock.blockLive.addDef(((binImmeBase) instr).to);
-                    instr.use[0] = ((binImmeBase) instr).from;
-                    instr.def = ((binImmeBase) instr).to;
-                    instr.useNum = 1;
-                } else if (instr instanceof SEQZ) {
-                    instr.useNum = 0;
-                    nowBlock.blockLive.addUse(((SEQZ) instr).from);
-                    nowBlock.blockLive.addDef(((SEQZ) instr).to);
-                    instr.use[instr.useNum++] = ((SEQZ) instr).from;
-                    instr.def = ((SEQZ) instr).to;
-                } else if (instr instanceof SNEZ) {
-                    instr.useNum = 0;
-                    nowBlock.blockLive.addUse(((SNEZ) instr).from);
-                    nowBlock.blockLive.addDef(((SNEZ) instr).to);
-                    instr.use[instr.useNum++] = ((SNEZ) instr).from;
-                    instr.def = ((SNEZ) instr).to;
-                } else if (instr instanceof BNEZ) {
-                    instr.useNum = 0;
-                    nowBlock.blockLive.addUse(((BNEZ) instr).condition);
-                    instr.use[instr.useNum++] = ((BNEZ) instr).condition;
-                }
+                setInstrUseDef(instr, nowBlock);
             }
             nowBlock.blockLive.liveIn.addAll(nowBlock.blockLive.blockUse);
             if (nowBlock.suc == 0) {
@@ -179,6 +105,109 @@ public class CFGReg {
                 }
             }
         }
+        for (var block : blocks.values()) {
+            block.blockLive.liveOutBackup.clear();
+            block.blockLive.liveOutBackup.addAll(block.blockLive.liveOut);//备份
+        }
     }
 
+    public void reset(HashSet<String> spiltSet) {
+        for (var block : blocks.values()) {
+            block.instructionList.clear();
+            block.blockLive.liveOut.clear();
+            block.blockLive.liveOutBackup.removeAll(spiltSet);
+            block.blockLive.liveOut.addAll(block.blockLive.liveOutBackup);//备份
+        }
+        BlockReg nowBlockReg = null;
+        for (var instr : asmInstrList) {//更新图
+            if (instr instanceof LABEL) {
+                nowBlockReg = blocks.get(((LABEL) instr).label);
+            } else {
+                assert nowBlockReg != null;
+                nowBlockReg.pushASM(instr);
+            }
+            if (!instr.visited) {
+                setInstrUseDef(instr, nowBlockReg);
+            }
+        }
+    }
+
+    void setInstrUseDef(ASMInstr instr, BlockReg nowBlock) {
+        instr.visited = true;
+        if (instr instanceof LI) {
+            if (instr.preColoredTo == null) {
+                nowBlock.blockLive.addDef(((LI) instr).to);
+            }
+            instr.def = ((LI) instr).to;
+        } else if (instr instanceof LW) {
+            instr.useNum = 0;
+            if (((LW) instr).offset != -1 && !((LW) instr).from.contains("#")) {
+                nowBlock.blockLive.addUse(((LW) instr).from);
+                instr.use[0] = ((LW) instr).from;
+                instr.useNum = 1;
+            }
+            nowBlock.blockLive.addDef(((LW) instr).to);
+            instr.def = ((LW) instr).to;
+        } else if (instr instanceof LA) {
+            nowBlock.blockLive.addDef(((LA) instr).to);
+            instr.def = ((LA) instr).to;
+        } else if (instr instanceof SW) {
+            instr.useNum = 0;
+            if (!Objects.equals(((SW) instr).from, "zero")) {
+                nowBlock.blockLive.addUse(((SW) instr).from);
+                instr.use[instr.useNum++] = ((SW) instr).from;
+            }
+            if (!((SW) instr).to.contains("#")) {
+                nowBlock.blockLive.addUse(((SW) instr).to);
+                instr.use[instr.useNum++] = ((SW) instr).to;
+            }
+        } else if (instr instanceof MV) {
+            instr.useNum = 0;
+            if (!Objects.equals(((MV) instr).from, "zero")) {
+                if (instr.preColoredFrom == null) {
+                    nowBlock.blockLive.addUse(((MV) instr).from);
+                }
+                instr.use[instr.useNum++] = ((MV) instr).from;
+            }
+            if (instr.preColoredTo == null) {
+                nowBlock.blockLive.addDef(((MV) instr).to);
+            }
+            instr.def = ((MV) instr).to;
+        } else if (instr instanceof binBase) {
+            instr.useNum = 0;
+            if (!Objects.equals(((binBase) instr).lhs, "zero")) {
+                nowBlock.blockLive.addUse(((binBase) instr).lhs);
+                instr.use[instr.useNum++] = ((binBase) instr).lhs;
+            }
+            if (!Objects.equals(((binBase) instr).rhs, "zero")) {
+                nowBlock.blockLive.addUse(((binBase) instr).rhs);
+                instr.use[instr.useNum++] = ((binBase) instr).rhs;
+            }
+            nowBlock.blockLive.addDef(((binBase) instr).to);
+            instr.def = ((binBase) instr).to;
+        } else if (instr instanceof binImmeBase) {
+            instr.useNum = 0;
+            nowBlock.blockLive.addUse(((binImmeBase) instr).from);
+            nowBlock.blockLive.addDef(((binImmeBase) instr).to);
+            instr.use[0] = ((binImmeBase) instr).from;
+            instr.def = ((binImmeBase) instr).to;
+            instr.useNum = 1;
+        } else if (instr instanceof SEQZ) {
+            instr.useNum = 0;
+            nowBlock.blockLive.addUse(((SEQZ) instr).from);
+            nowBlock.blockLive.addDef(((SEQZ) instr).to);
+            instr.use[instr.useNum++] = ((SEQZ) instr).from;
+            instr.def = ((SEQZ) instr).to;
+        } else if (instr instanceof SNEZ) {
+            instr.useNum = 0;
+            nowBlock.blockLive.addUse(((SNEZ) instr).from);
+            nowBlock.blockLive.addDef(((SNEZ) instr).to);
+            instr.use[instr.useNum++] = ((SNEZ) instr).from;
+            instr.def = ((SNEZ) instr).to;
+        } else if (instr instanceof BNEZ) {
+            instr.useNum = 0;
+            nowBlock.blockLive.addUse(((BNEZ) instr).condition);
+            instr.use[instr.useNum++] = ((BNEZ) instr).condition;
+        }
+    }
 }

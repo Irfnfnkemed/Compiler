@@ -59,7 +59,7 @@ public class GraphColor {
     public int cnt;
     public List<CallerRestore> callerRestoreList;//用于最后确定call
 
-    public GraphColor(RIG rig_, HashSet<String> globalVar_, HashMap<String, Integer> stack_) {
+    public GraphColor(RIG rig_, HashSet<String> globalVar_, HashMap<String, Integer> stack_, int cnt_) {
         rig = rig_;
         selectStack = new Stack<>();
         spillSet = new HashSet<>();
@@ -69,7 +69,7 @@ public class GraphColor {
         globalVar = globalVar_;
         stack = stack_;
         used = new HashSet<>();
-        cnt = 0;
+        cnt = cnt_;
     }
 
     public void init(HashMap<String, RIG.RIGNode> nodes) {
@@ -115,31 +115,13 @@ public class GraphColor {
                 coalesceMap.put(nowNode.varName, mvNode.varName);
                 moveList.remove(nowNode);
                 moveList.remove(mvNode);
-                for (var nowMvNode : nowNode.mvNode.values()) {//更改合并对象
-                    nowMvNode.mvNode.remove(nowNode.varName);//不再传送
-                    if (nowMvNode != mvNode && !nowMvNode.toNode.containsKey(mvNode.varName)) {
-                        nowMvNode.mvNode.put(mvNode.varName, mvNode);
-                        mvNode.mvNode.put(nowMvNode.varName, nowMvNode);
-                    }
-                    if (nowMvNode.mvNode.size() == 0) {
-                        nowMvNode.aboutMove = false;//不再传送相关
-                        if (nowMvNode.preColored == null) {
-                            moveList.remove(nowMvNode);
-                            simplifyList.add(nowMvNode);
-                        }
-                    }
-                }
                 for (var toNode : nowNode.toNode.values()) {//合并边
                     if (mvNode != toNode) {
                         mvNode.toNode.put(toNode.varName, toNode);
                     }
                     if (toNode.toNode.containsKey(mvNode.varName)) {
                         if (toNode.preColored != null) {
-                            if (toNode.aboutMove) {
-                                toNode.toNode.remove(nowNode.varName);
-                            } else {
-                                toNode.toNode.remove(nowNode.varName);
-                            }
+                            toNode.toNode.remove(nowNode.varName);
                         } else {
                             if (toNode.aboutMove) {
                                 moveList.remove(toNode);
@@ -169,6 +151,20 @@ public class GraphColor {
                             if (mvNode.mvNode.size() == 0) {
                                 mvNode.aboutMove = false;//不再传送相关
                             }
+                        }
+                    }
+                }
+                for (var nowMvNode : nowNode.mvNode.values()) {//更改合并对象
+                    nowMvNode.mvNode.remove(nowNode.varName);//不再传送
+                    if (nowMvNode != mvNode && !nowMvNode.toNode.containsKey(mvNode.varName)) {
+                        nowMvNode.mvNode.put(mvNode.varName, mvNode);
+                        mvNode.mvNode.put(nowMvNode.varName, nowMvNode);
+                    }
+                    if (nowMvNode.mvNode.size() == 0) {
+                        nowMvNode.aboutMove = false;//不再传送相关
+                        if (nowMvNode.preColored == null) {
+                            moveList.remove(nowMvNode);
+                            simplifyList.add(nowMvNode);
                         }
                     }
                 }
@@ -353,9 +349,6 @@ public class GraphColor {
     }
 
     public boolean graphColor() {
-        if (!check()) {
-            System.err.println("!!!!");
-        }
         init(rig.rigNodes);
         while (!simplifyList.isEmpty() || !moveList.isEmpty()) {
             if (!simplify()) {
@@ -465,25 +458,36 @@ public class GraphColor {
         }
         for (int i = 0; i < rig.cfgReg.asmInstrList.size(); ++i) {
             var instr = rig.cfgReg.asmInstrList.get(i);
-            if (instr instanceof LW) {
+            if (instr instanceof LI) {
+                Integer from = stack.get(((LI) instr).to);
+                if (from != null) {
+                    instr.visited = false;
+                    rig.cfgReg.asmInstrList.add(++i, new SW("cnt" + cnt, "stack#", from));
+                    ((LI) instr).to = "cnt" + cnt++;
+                }
+            }else if (instr instanceof LW) {
                 Integer from = stack.get(((LW) instr).to);
                 if (from != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(++i, new SW("cnt" + cnt, "stack#", from));
                     ((LW) instr).to = "cnt" + cnt++;
                 }
             } else if (instr instanceof SW) {
                 Integer from = stack.get(((SW) instr).from);
                 if (from != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(i++, new LW("stack#", "cnt" + cnt, from));
                     ((SW) instr).from = "cnt" + cnt++;
                 }
             } else if (instr instanceof MV) {
                 Integer from = stack.get(((MV) instr).from), to = stack.get(((MV) instr).to);
                 if (from != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(i++, new LW("stack#", "cnt" + cnt, from));
                     ((MV) instr).from = "cnt" + cnt++;
                 }
                 if (to != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(++i, new SW("cnt" + cnt, "stack#", to));
                     ((MV) instr).to = "cnt" + cnt++;
                 }
@@ -491,69 +495,64 @@ public class GraphColor {
                 Integer lhs = stack.get(((binBase) instr).lhs), rhs = stack.get(((binBase) instr).rhs),
                         to = stack.get(((binBase) instr).to);
                 if (lhs != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(i++, new LW("stack#", "cnt" + cnt, lhs));
                     ((binBase) instr).lhs = "cnt" + cnt++;
                 }
                 if (rhs != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(i++, new LW("stack#", "cnt" + cnt, rhs));
                     ((binBase) instr).rhs = "cnt" + cnt++;
                 }
                 if (to != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(++i, new SW("cnt" + cnt, "stack#", to));
                     ((binBase) instr).to = "cnt" + cnt++;
                 }
             } else if (instr instanceof binImmeBase) {
                 Integer from = stack.get(((binImmeBase) instr).from), to = stack.get(((binImmeBase) instr).to);
                 if (from != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(i++, new LW("stack#", "cnt" + cnt, from));
                     ((binImmeBase) instr).from = "cnt" + cnt++;
                 }
                 if (to != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(++i, new SW("cnt" + cnt, "stack#", to));
                     ((binImmeBase) instr).to = "cnt" + cnt++;
                 }
             } else if (instr instanceof SEQZ) {
                 Integer from = stack.get(((SEQZ) instr).from), to = stack.get(((SEQZ) instr).to);
                 if (from != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(i++, new LW("stack#", "cnt" + cnt, from));
                     ((SEQZ) instr).from = "cnt" + cnt++;
                 }
                 if (to != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(++i, new SW("cnt" + cnt, "stack#", to));
                     ((SEQZ) instr).to = "cnt" + cnt++;
                 }
             } else if (instr instanceof SNEZ) {
                 Integer from = stack.get(((SNEZ) instr).from), to = stack.get(((SNEZ) instr).to);
                 if (from != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(i++, new LW("stack#", "cnt" + cnt, from));
                     ((SNEZ) instr).from = "cnt" + cnt++;
                 }
                 if (to != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(++i, new SW("cnt" + cnt, "stack#", to));
                     ((SNEZ) instr).to = "cnt" + cnt++;
                 }
             } else if (instr instanceof BNEZ) {
                 Integer condition = stack.get(((BNEZ) instr).condition);
                 if (condition != null) {
+                    instr.visited = false;
                     rig.cfgReg.asmInstrList.add(i++, new LW("stack#", "cnt" + cnt, condition));
                     ((BNEZ) instr).condition = "cnt" + cnt++;
                 }
             }
         }
-    }
-
-
-    public boolean check() {
-        for (var entry : rig.rigNodes.values()) {
-            for (var mv : entry.mvNode.values()) {
-                if (entry.toNode.containsKey(mv.varName)) {
-                    return false;
-                }
-            }
-            if (entry.toNode.containsKey(entry.varName) || entry.mvNode.containsKey(entry.varName)) {
-                return false;
-            }
-        }
-        return true;
     }
 }

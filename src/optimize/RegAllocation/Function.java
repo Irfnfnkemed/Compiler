@@ -14,18 +14,20 @@ public class Function {
     public int stackSize;
     public boolean call = false;//是否调用函数
 
-
     public Function(List<ASMInstr> asmInstrList_, HashSet<String> globalVar_) {
         asmInstrList = asmInstrList_;
         HashMap<String, Integer> stack = new HashMap<>();
+        CFGReg cfgReg = new CFGReg(asmInstrList, globalVar_);
+        int cnt = 0;
         while (true) {
-            CFGReg cfgReg = new CFGReg(asmInstrList, globalVar_);
             RIG rig = new RIG(cfgReg);
-            GraphColor graphColor = new GraphColor(rig, cfgReg.globalVar, stack);
+            GraphColor graphColor = new GraphColor(rig, cfgReg.globalVar, stack, cnt);
             if (graphColor.graphColor()) {
                 color = graphColor;
                 break;
             }
+            cnt = graphColor.cnt++;
+            cfgReg.reset(graphColor.spillSet);//重置
         }
         savedReg = new HashSet<>();
         unsavedReg = new HashSet<>();

@@ -10,12 +10,14 @@ public class BlockReg {
         public Set<String> blockDef;
         public Set<String> liveIn;
         public Set<String> liveOut;
+        public Set<String> liveOutBackup;
 
         public BlockLive() {
             blockUse = new HashSet<>();
             blockDef = new HashSet<>();
             liveIn = new HashSet<>();
             liveOut = new HashSet<>();
+            liveOutBackup = new HashSet<>();
         }
 
         public void addDef(String varName) {

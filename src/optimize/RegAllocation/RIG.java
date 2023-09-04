@@ -4,8 +4,6 @@ import src.ASM.instruction.*;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Objects;
-
 public class RIG {
     public static class RIGNode implements Comparable<RIGNode> {
         public HashMap<String, RIGNode> toNode;//无向边连接的对象
