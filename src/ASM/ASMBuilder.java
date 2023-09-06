@@ -18,24 +18,32 @@ import static java.lang.Math.min;
 
 public class ASMBuilder {
     public static class FuncNode {//函数调用图
-        public HashSet<FuncNode> fromNode;
+        public String funcName;
+        public HashSet<FuncNode> fromNode;//被调用的函数
+        public HashSet<FuncNode> toNode;//调用的函数
         public boolean restore = true;//true表示函数调用会改变t0-t7
+        public List<CALL> callList;//被调用列表
 
-        public FuncNode() {
+        public FuncNode(String funcName_) {
+            funcName = funcName_;
             fromNode = new HashSet<>();
+            toNode = new HashSet<>();
+            callList = new ArrayList<>();
         }
     }
 
     public ASMProgram asmProgram;
     public HashSet<String> globalVar;
     public HashMap<String, FuncNode> funcNodeMap;
-    public int cnt = 0, label = 0;
     private HashMap<String, FuncDef.PhiInfo> phiMap;
+    public Queue<String> inlineQueue;
+    public int cnt = 0, label = 0;
 
     public ASMBuilder(IRProgram irProgram) {
         asmProgram = new ASMProgram();
         globalVar = new HashSet<>();
         funcNodeMap = new HashMap<>();
+        inlineQueue = new ArrayDeque<>();
         for (var stmt : irProgram.stmtList) {
             if (stmt instanceof FuncDef) {
                 FuncNode funcNode = getNode(((FuncDef) stmt).functionName.substring(1));
@@ -45,7 +53,8 @@ public class ASMBuilder {
                 asmProgram.sectionText.pushGlobal(((FuncDef) stmt).functionName.substring(1));
                 asmProgram.sectionText.nowFuncName = ((FuncDef) stmt).functionName.substring(1);
                 asmProgram.sectionText.pushInstr(new LABEL(((FuncDef) stmt).functionName.substring(1), true));
-                asmProgram.sectionText.pushInstr(new Init());
+                Init init = new Init();
+                asmProgram.sectionText.pushInstr(init);
                 //处理参数
                 int size = ((FuncDef) stmt).parameterTypeList.size();
                 if (size > 0) {
@@ -56,8 +65,8 @@ public class ASMBuilder {
                         mv = new MV("tmp" + cnt++, "%_0");
                     }
                     mv.preColoredFrom = "a0";
-                    // mv.preColoredTo = "s0";
                     asmProgram.sectionText.pushInstr(mv);
+                    init.paraList.add(mv);
                 }
                 for (int i = 1; i < min(size, 8); ++i) {
                     MV mv;
@@ -68,6 +77,7 @@ public class ASMBuilder {
                     }
                     mv.preColoredFrom = "a" + i;
                     asmProgram.sectionText.pushInstr(mv);
+                    init.paraList.add(mv);
                 }
                 if (size > 8) {//栈上传递变量
                     for (int i = 8; i < size; ++i) {
@@ -79,10 +89,11 @@ public class ASMBuilder {
                         }
                         lw.preColoredFrom = "stackTop#";
                         asmProgram.sectionText.pushInstr(lw);
+                        init.paraList.add(lw);
                     }
                 }
                 for (var irInstr : ((FuncDef) stmt).irList) {
-                    visitInstr(asmProgram.sectionText, irInstr, funcNode);
+                    visitInstr(asmProgram.sectionText, irInstr, funcNode, init);
                 }
             } else if (stmt instanceof GlobalVarDef) {
                 asmProgram.sectionData.pushGlobal(((GlobalVarDef) stmt).varName.substring(1));
@@ -99,7 +110,7 @@ public class ASMBuilder {
         setFuncRestore();
     }
 
-    void visitInstr(Section section, Instruction instruction, FuncNode funcNode) {
+    void visitInstr(Section section, Instruction instruction, FuncNode funcNode, Init init) {
         if (instruction instanceof Label) {
             visit(section, (Label) instruction);
         } else if (instruction instanceof Store) {
@@ -117,7 +128,7 @@ public class ASMBuilder {
         } else if (instruction instanceof Getelementptr) {
             visit(section, (Getelementptr) instruction);
         } else if (instruction instanceof Ret) {
-            visit(section, (Ret) instruction);
+            visit(section, (Ret) instruction, init);
         }
     }
 
@@ -450,7 +461,9 @@ public class ASMBuilder {
     }
 
     void visit(Section section, Call call, FuncNode funcNode) {
-        getNode(call.functionName.substring(1)).fromNode.add(funcNode);
+        FuncNode callNode = getNode(call.functionName.substring(1));
+        callNode.fromNode.add(funcNode);
+        funcNode.toNode.add(callNode);
         int size = call.callTypeList.size();
         Call.variable variable;
         CallerSave callerSave = new CallerSave(size);
@@ -468,10 +481,12 @@ public class ASMBuilder {
                 MV mv = new MV(from, "tmp" + cnt);
                 mv.preColoredTo = "a" + i;
                 section.pushInstr(mv);
+                ASMcall.paraList.add(mv);
             } else {
                 LI li = new LI("tmp" + cnt, (int) variable.varValue);
                 li.preColoredTo = "a" + i;
                 section.pushInstr(li);
+                ASMcall.paraList.add(li);
             }
             ASMcall.useList.add("tmp" + cnt++);
         }
@@ -489,21 +504,25 @@ public class ASMBuilder {
                     SW sw = new SW(from, "tmp" + cnt++, (i - 8) << 2);
                     section.pushInstr(sw);
                     sw.preColoredTo = "sp";
+                    ASMcall.paraList.add(sw);
                 } else {
                     section.pushInstr(new LI("tmp" + cnt++, (int) variable.varValue));
                     SW sw = new SW("tmp" + (cnt - 1), "tmp" + cnt++, (i - 8) << 2);
                     section.pushInstr(sw);
                     sw.preColoredTo = "sp";
+                    ASMcall.paraList.add(sw);
                 }
             }
         }
         section.pushInstr(callerSave);
         section.pushInstr(ASMcall);
+        callNode.callList.add(ASMcall);
         if (call.resultVar != null) {
             MV mv = new MV("tmp" + cnt, call.resultVar);
             ASMcall.def = "tmp" + cnt++;
             mv.preColoredFrom = "a0";
             section.pushInstr(mv);
+            ASMcall.retMV = mv;
         }
         section.pushInstr(new CallerRestore(callerSave, call.functionName.substring(1)));
     }
@@ -575,18 +594,20 @@ public class ASMBuilder {
         }
     }
 
-    void visit(Section section, Ret ret) {
+    void visit(Section section, Ret ret, Init init) {
         if (ret.irType != null && ret.irType.unitSize != -1) {
             if (ret.var != null) {
                 MV mv = new MV(ret.var, "tmp" + cnt++);
                 mv.notRemove = true;
                 mv.preColoredTo = "a0";
                 section.pushInstr(mv);
+                init.retInstr = mv;
             } else {
                 LI li = new LI("tmp" + cnt++, ret.value);
                 li.notRemove = true;
                 li.preColoredTo = "a0";
                 section.pushInstr(li);
+                init.retInstr = li;
             }
         }
         asmProgram.sectionText.pushInstr(new Restore());
@@ -596,7 +617,7 @@ public class ASMBuilder {
     public FuncNode getNode(String funcName) {
         var node = funcNodeMap.get(funcName);
         if (node == null) {
-            node = new FuncNode();
+            node = new FuncNode(funcName);
             funcNodeMap.put(funcName, node);
         }
         return node;
@@ -605,6 +626,24 @@ public class ASMBuilder {
     void setFuncRestore() {
         HashSet<FuncNode> visit = new HashSet<>();
         Queue<FuncNode> queue = new ArrayDeque<>();
+        for (var func : funcNodeMap.values()) {//将未调用除内建函数外其他函数的函数入队
+            if (func.toNode.size() == 0) {
+                if (!func.restore) {
+                    inlineQueue.add(func.funcName);
+                }
+            } else {
+                boolean flag = true;
+                for (var toNode : func.toNode) {
+                    if (!toNode.restore) {
+                        flag = false;
+                        break;
+                    }
+                }
+                if (flag && !Objects.equals(func.funcName, "main")) {
+                    inlineQueue.add(func.funcName);
+                }
+            }
+        }
         for (var func : funcNodeMap.values()) {
             if (!visit.contains(func)) {
                 if (func.restore) {
@@ -625,5 +664,6 @@ public class ASMBuilder {
                 }
             }
         }
+
     }
 }

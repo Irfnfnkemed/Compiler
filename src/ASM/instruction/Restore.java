@@ -7,7 +7,6 @@ import java.util.List;
 
 public class Restore extends ASMInstr {
     public List<ASMInstr> restoreList;
-
     public Restore(){
         restoreList = new ArrayList<>();
     }

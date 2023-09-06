@@ -25,7 +25,7 @@ public class RIG {
                 return -1;
             } else if (toNode.size() > obj.toNode.size()) {
                 return 1;
-            } else return Integer.compare(this.hashCode(), obj.hashCode());
+            } else return varName.compareTo(obj.varName);
         }
     }
 

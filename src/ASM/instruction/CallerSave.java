@@ -7,7 +7,7 @@ import java.util.List;
 public class CallerSave extends ASMInstr {
     public HashSet<String> varName;//调用前活跃的虚拟寄存器
     public HashSet<String> callerReg;//需要保存的寄存器
-    public List<ASMInstr> callerList;
+    public List<SW> callerList;
     public int paraSize = 0;
 
     public CallerSave(int paraSize_) {

@@ -25,7 +25,8 @@ public class CFGReg {
 
     public void buildCFG() {
         BlockReg nowBlockReg = null;
-        for (var instr : asmInstrList) {//建图
+        for (int i = 0; i < asmInstrList.size(); ++i) {//建图
+            var instr = asmInstrList.get(i);
             if (instr instanceof LABEL) {
                 nowBlockReg = blocks.get(((LABEL) instr).label);
                 if (nowBlockReg == null) {
@@ -51,6 +52,46 @@ public class CFGReg {
                     }
                     nextBlock.setPre(nowBlockReg);
                     nowBlockReg.setSuc(nextBlock);
+                } else if (instr instanceof CALL) {
+                    if (((CALL) instr).inlineCache.size() > 0) {
+                        nowBlockReg.instructionList.remove(nowBlockReg.instructionList.size() - 1);//移除call
+                        nowBlockReg.instructionList.remove(nowBlockReg.instructionList.size() - 1);//移除callerSave
+                        asmInstrList.remove(i--);
+                        asmInstrList.remove(i);
+                        for (var inlineInstr : ((CALL) instr).inlineCache) {
+                            asmInstrList.add(i++, inlineInstr);
+                            if (inlineInstr instanceof LABEL) {
+                                nowBlockReg = blocks.get(((LABEL) inlineInstr).label);
+                                if (nowBlockReg == null) {
+                                    nowBlockReg = new BlockReg(((LABEL) inlineInstr).label);
+                                    blocks.put(nowBlockReg.label, nowBlockReg);
+                                }
+                            } else {
+                                if (inlineInstr instanceof BNEZ) {
+                                    var nextBlock = blocks.get(((BNEZ) inlineInstr).toLabel);
+                                    if (nextBlock == null) {
+                                        nextBlock = new BlockReg(((BNEZ) inlineInstr).toLabel);
+                                        blocks.put(nextBlock.label, nextBlock);
+                                    }
+                                    nextBlock.setPre(nowBlockReg);
+                                    nowBlockReg.setSuc(nextBlock);
+                                } else if (inlineInstr instanceof J) {
+                                    var nextBlock = blocks.get(((J) inlineInstr).toLabel);
+                                    if (nextBlock == null) {
+                                        nextBlock = new BlockReg(((J) inlineInstr).toLabel);
+                                        blocks.put(nextBlock.label, nextBlock);
+                                    }
+                                    nextBlock.setPre(nowBlockReg);
+                                    nowBlockReg.setSuc(nextBlock);
+                                }
+                            }
+                            nowBlockReg.pushASM(inlineInstr);
+                        }
+                        if (((CALL) instr).retMV != null) {
+                            nowBlockReg.pushASM(asmInstrList.get(i++));
+                        }
+                        asmInstrList.remove(i--);
+                    }
                 }
             }
         }
