@@ -113,13 +113,13 @@ public class GraphColor {
         if (nowNode.preColored != null) {
             return false;
         }
-        boolean flag = false;
+        RIG.RIGNode node = null;
         for (var mvNode : nowNode.mvNode.values()) {
-            if (judgeGeorge(nowNode, mvNode) && !flag) {
+            if (judgeGeorge(nowNode, mvNode)) {
+                node = mvNode;
                 coalesceMap.put(nowNode.varName, mvNode.varName);
                 moveList.remove(nowNode);
                 moveList.remove(mvNode);
-                mvNode.mvNode.remove(nowNode.varName);
                 for (var toNode : nowNode.toNode.values()) {//合并边
                     if (mvNode != toNode) {
                         mvNode.toNode.put(toNode.varName, toNode);
@@ -139,31 +139,32 @@ public class GraphColor {
                             }
                         }
                     } else {
-                        if (toNode.preColored == null) {
-                            if (toNode.aboutMove) {
-                                moveList.remove(toNode);
-                            } else {
-                                simplifyList.remove(toNode);
-                            }
+                        if (toNode.aboutMove) {
+                            moveList.remove(toNode);
+                        } else {
+                            simplifyList.remove(toNode);
                         }
                         toNode.toNode.remove(nowNode.varName);
-                        toNode.toNode.put(mvNode.varName, mvNode);
-                        if (toNode.preColored == null) {
-                            if (toNode.aboutMove) {
-                                moveList.add(toNode);
-                            } else {
-                                simplifyList.add(toNode);
-                            }
+                        if (toNode != mvNode) {
+                            toNode.toNode.put(mvNode.varName, mvNode);
+                        }
+                        if (toNode.aboutMove) {
+                            moveList.add(toNode);
+                        } else {
+                            simplifyList.add(toNode);
                         }
                         if (toNode.mvNode.containsKey(mvNode.varName)) {
                             toNode.mvNode.remove(mvNode.varName);
                             mvNode.mvNode.remove(toNode.varName);
-                            if (toNode.aboutMove && toNode.mvNode.size() == 0) {
+                            if (toNode.mvNode.size() == 0) {
                                 toNode.aboutMove = false;//不再传送相关
                                 if (toNode.preColored == null) {
                                     moveList.remove(toNode);
                                     simplifyList.add(toNode);
                                 }
+                            }
+                            if (mvNode.mvNode.size() == 0) {
+                                mvNode.aboutMove = false;//不再传送相关
                             }
                         }
                     }
@@ -174,45 +175,44 @@ public class GraphColor {
                         nowMvNode.mvNode.put(mvNode.varName, mvNode);
                         mvNode.mvNode.put(nowMvNode.varName, nowMvNode);
                     }
-                    if (nowMvNode != mvNode && nowMvNode.aboutMove && nowMvNode.mvNode.size() == 0) {
+                    if (nowMvNode.mvNode.size() == 0) {
                         nowMvNode.aboutMove = false;//不再传送相关
                         if (nowMvNode.preColored == null) {
                             moveList.remove(nowMvNode);
                             simplifyList.add(nowMvNode);
                         }
-                    } else if (nowMvNode != mvNode && !nowMvNode.aboutMove && nowMvNode.mvNode.size() > 0) {
-                        nowMvNode.aboutMove = true;//传送相关
-                        if (nowMvNode.preColored == null) {
-                            simplifyList.remove(nowMvNode);
-                            moveList.add(nowMvNode);
-                        }
                     }
                 }
-                mvNode.aboutMove = mvNode.mvNode.size() > 0;
-                if (mvNode.preColored == null) {
-                    if (mvNode.aboutMove) {
-                        moveList.add(mvNode);
-                    } else {
-                        simplifyList.add(mvNode);
-                    }
-                }
-                flag = true;
-            } else {
-                moveList.remove(mvNode);
                 mvNode.mvNode.remove(nowNode.varName);
-                if (mvNode.mvNode.size() == 0) {
-                    mvNode.aboutMove = false;
-                }
                 if (mvNode.preColored == null) {
                     if (mvNode.aboutMove) {
                         moveList.add(mvNode);
                     } else {
                         simplifyList.add(mvNode);
+                    }
+                }
+                break;
+            }
+        }
+        if (node != null) {
+            for (var mvNode : nowNode.mvNode.values()) {
+                if (mvNode != node) {
+                    moveList.remove(mvNode);
+                    mvNode.mvNode.remove(nowNode.varName);
+                    if (mvNode.mvNode.size() == 0) {
+                        mvNode.aboutMove = false;
+                    }
+                    if (mvNode.preColored == null) {
+                        if (mvNode.aboutMove) {
+                            moveList.add(mvNode);
+                        } else {
+                            simplifyList.add(mvNode);
+                        }
                     }
                 }
             }
         }
-        return flag;
+        return node != null;
     }
 
     public boolean freeze() {
