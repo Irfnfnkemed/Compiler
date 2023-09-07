@@ -34,7 +34,7 @@ public class RegAllocation {
             var list = ASMInstrMap.get(funcName);
             ASMInstrMap.remove(funcName);
             Function function = new Function(list, asmBuilder.globalVar);
-            if (function.graphColor.used.size() < 10 && function.asmInstrList.size() < 100) {
+            if (function.graphColor.used.size() < 10 && function.asmInstrList.size() < 1) {
                 var funcNode = asmBuilder.getNode(funcName);
                 changeParaAndRet((Init) list.get(1));
                 for (CALL call : funcNode.callList) {
