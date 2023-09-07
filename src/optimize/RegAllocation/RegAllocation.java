@@ -34,7 +34,7 @@ public class RegAllocation {
             var list = ASMInstrMap.get(funcName);
             ASMInstrMap.remove(funcName);
             Function function = new Function(list, asmBuilder.globalVar);
-            if (function.graphColor.used.size() < 10 && function.asmInstrList.size() < 100) {
+            if (function.graphColor.used.size() < 10 && function.asmInstrList.size() < 1000) {
                 var funcNode = asmBuilder.getNode(funcName);
                 changeParaAndRet((Init) list.get(1));
                 for (CALL call : funcNode.callList) {
@@ -230,9 +230,7 @@ public class RegAllocation {
                 call.inlineCache.add(new BNEZ(getInlineVarName(((BNEZ) instr).condition), ((BNEZ) instr).toLabel + postFix));
             } else if (instr instanceof CALL) {
                 CALL ASMcall = new CALL(((CALL) instr).func);
-                for (String use : ((CALL) instr).useList) {
-                    ASMcall.useList.add(getInlineVarName(use));
-                }
+                ASMcall.def = getInlineVarName(instr.def);
                 call.inlineCache.add(ASMcall);
             } else if (instr instanceof CallerSave) {
                 callerSave = new CallerSave(((CallerSave) instr).paraSize);
