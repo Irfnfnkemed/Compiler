@@ -628,7 +628,7 @@ public class ASMBuilder {
         Queue<FuncNode> queue = new ArrayDeque<>();
         for (var func : funcNodeMap.values()) {//将未调用除内建函数外其他函数的函数入队
             if (func.toNode.size() == 0) {
-                if (!func.restore) {
+                if (!func.restore && !Objects.equals(func.funcName, "main")) {
                     inlineQueue.add(func.funcName);
                 }
             } else {
