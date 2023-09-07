@@ -1,6 +1,5 @@
 package src.optimize.RegAllocation;
 
-import src.ASM.Section;
 import src.ASM.instruction.*;
 import src.ASM.instruction.binary.*;
 import src.ASM.instruction.binaryImme.*;
@@ -27,6 +26,10 @@ public class CFGReg {
         BlockReg nowBlockReg = null;
         for (int i = 0; i < asmInstrList.size(); ++i) {//建图
             var instr = asmInstrList.get(i);
+            if (instr.ignore) {
+                asmInstrList.remove(i--);
+                continue;
+            }
             if (instr instanceof LABEL) {
                 nowBlockReg = blocks.get(((LABEL) instr).label);
                 if (nowBlockReg == null) {
@@ -88,7 +91,11 @@ public class CFGReg {
                             nowBlockReg.pushASM(inlineInstr);
                         }
                         if (((CALL) instr).retMV != null) {
-                            nowBlockReg.pushASM(asmInstrList.get(i++));
+                            if (asmInstrList.get(i).ignore) {
+                                asmInstrList.remove(i);
+                            } else {
+                                nowBlockReg.pushASM(asmInstrList.get(i++));
+                            }
                         }
                         asmInstrList.remove(i--);
                     }

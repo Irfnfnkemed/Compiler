@@ -8,16 +8,23 @@ import src.ASM.instruction.binaryImme.binImmeBase;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
 public class RegAllocation {
     public HashMap<String, Function> functions;
+    HashMap<String, String> replace;
+    List<String> callPara;
+    String retTo;
     int inline = 0;
+    String postFix;
 
     public RegAllocation(ASMBuilder asmBuilder) throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchMethodException {
         functions = new HashMap<>();
+        callPara = new ArrayList<>();
+        replace = new HashMap<>();
         HashMap<String, List<ASMInstr>> ASMInstrMap = new HashMap<>();
         for (var instrList : asmBuilder.asmProgram.sectionText.asmInstrList) {
             ASMInstrMap.put(((LABEL) instrList.get(0)).label, instrList);
@@ -27,7 +34,7 @@ public class RegAllocation {
             var list = ASMInstrMap.get(funcName);
             ASMInstrMap.remove(funcName);
             Function function = new Function(list, asmBuilder.globalVar);
-            if (function.graphColor.used.size() < 10) {
+            if (function.graphColor.used.size() < 10 && function.asmInstrList.size() < 1000) {
                 var funcNode = asmBuilder.getNode(funcName);
                 changeParaAndRet((Init) list.get(1));
                 for (CALL call : funcNode.callList) {
@@ -132,92 +139,99 @@ public class RegAllocation {
     }
 
     public void changeParaAndRet(Init init) {
+        callPara.clear();
         for (int i = 0; i < init.paraList.size(); ++i) {
             var instr = init.paraList.get(i);
+            instr.ignore = true;
             if (instr instanceof MV) {
-                ((MV) instr).from = "inline$para-" + i;
+                callPara.add(((MV) instr).to);
             } else if (instr instanceof LW) {
-                ((LW) instr).from = "inline$para-" + i;
-                ((LW) instr).offset = -2;
+                callPara.add(((LW) instr).to);
             }
         }
         if (init.retInstr instanceof LI) {
-            ((LI) init.retInstr).to = "inline$ret";
+            ((LI) init.retInstr).to = "ret$";
         } else if (init.retInstr instanceof MV) {
-            ((MV) init.retInstr).to = "inline$ret";
+            ((MV) init.retInstr).to = "ret$";
         }
     }
 
-    public void inline(CALL call, List<ASMInstr> list) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {//将函数作为内联函数嵌入
-        String postFix = "-inline-" + inline++;
+    public void inline(CALL call, List<ASMInstr> list)
+            throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {//将函数作为内联函数嵌入
+        postFix = "-inline-" + inline++;
         CallerSave callerSave = null;
-        for (int i = 1; i < list.size(); ++i) {
-            boolean flagFrom = true, flagTo = true;
+        replace.clear();
+        for (int i = 0; i < call.paraList.size(); ++i) {
+            var instr = call.paraList.get(i);
+            if (instr instanceof LI) {
+                replace.put(callPara.get(i), ((LI) instr).to);
+            } else if (instr instanceof MV) {
+                instr.ignore = true;
+                replace.put(callPara.get(i), ((MV) instr).from);
+            } else if (instr instanceof SW) {
+                instr.ignore = true;
+                replace.put(callPara.get(i), ((SW) instr).from);
+            }
+            instr.preColoredTo = null;//取消预着色
+        }
+        if (call.retMV != null) {
+            replace.put("ret$", call.retMV.to);
+            call.retMV.ignore = true;
+            call.retMV.preColoredFrom = null;//取消预着色
+        }
+        boolean addLabel = false;
+        for (int i = 2; i < list.size(); ++i) {
+            boolean flagTo = true;
             var instr = list.get(i);
+            if (instr.ignore) {
+                continue;
+            }
             if (instr instanceof LABEL) {
                 call.inlineCache.add(new LABEL(((LABEL) instr).label + postFix));
                 continue;
             } else if (instr instanceof LI) {
-                if (((LI) instr).to.contains("$")) {
-                    flagTo = false;
-                }
-                call.inlineCache.add(new LI(((LI) instr).to + postFix, ((LI) instr).imme));
+                call.inlineCache.add(new LI(getInlineVarName(((LI) instr).to), ((LI) instr).imme));
             } else if (instr instanceof LW) {
-                if (((LW) instr).from.contains("$")) {
-                    flagFrom = false;
-                }
-                if (((LW) instr).to.contains("$")) {
-                    flagTo = false;
-                }
                 if (((LW) instr).offset == -2) {
-                    call.inlineCache.add(new MV(((LW) instr).from + postFix, ((LW) instr).to + postFix));
+                    call.inlineCache.add(new MV(getInlineVarName(((LW) instr).from), getInlineVarName(((LW) instr).to)));
                 } else if (((LW) instr).offset == -1) {
-                    call.inlineCache.add(new LW(((LW) instr).from, ((LW) instr).to + postFix, ((LW) instr).offset));
+                    call.inlineCache.add(new LW(((LW) instr).from, getInlineVarName(((LW) instr).to), ((LW) instr).offset));
                 } else {
-                    call.inlineCache.add(new LW(((LW) instr).from + postFix, ((LW) instr).to + postFix, ((LW) instr).offset));
+                    call.inlineCache.add(new LW(getInlineVarName(((LW) instr).from), getInlineVarName(((LW) instr).to), ((LW) instr).offset));
                 }
             } else if (instr instanceof LA) {
-                call.inlineCache.add(new LA(((LA) instr).to + postFix, ((LA) instr).fromLabel));
+                call.inlineCache.add(new LA(getInlineVarName(((LA) instr).to), ((LA) instr).fromLabel));
             } else if (instr instanceof SW) {
-                if (((SW) instr).from.contains("$")) {
-                    flagFrom = false;
-                }
-                if (((SW) instr).to.contains("$")) {
-                    flagTo = false;
-                }
-                call.inlineCache.add(new SW(((SW) instr).from + postFix, ((SW) instr).to + postFix, ((SW) instr).offset));
+                call.inlineCache.add(new SW(getInlineVarName(((SW) instr).from), getInlineVarName(((SW) instr).to), ((SW) instr).offset));
             } else if (instr instanceof MV) {
-                if (((MV) instr).from.contains("$")) {
-                    flagFrom = false;
-                }
                 if (((MV) instr).to.contains("$")) {
                     flagTo = false;
                 }
-                call.inlineCache.add(new MV(((MV) instr).from + postFix, ((MV) instr).to + postFix));
+                call.inlineCache.add(new MV(getInlineVarName(((MV) instr).from), getInlineVarName(((MV) instr).to)));
             } else if (instr instanceof binBase) {
                 Class<?> clazz = instr.getClass();
                 Constructor<?> constructor = clazz.getDeclaredConstructor(String.class, String.class, String.class);
                 constructor.setAccessible(true); // 设置Aa为可访问
-                Object newObj = constructor.newInstance(((binBase) instr).lhs + postFix,
-                        ((binBase) instr).rhs + postFix, ((binBase) instr).to + postFix);
+                Object newObj = constructor.newInstance(getInlineVarName(((binBase) instr).lhs),
+                        getInlineVarName(((binBase) instr).rhs), getInlineVarName(((binBase) instr).to));
                 call.inlineCache.add((ASMInstr) newObj);
             } else if (instr instanceof binImmeBase) {
                 Class<?> clazz = instr.getClass();
                 Constructor<?> constructor = clazz.getDeclaredConstructor(String.class, String.class, int.class);
                 constructor.setAccessible(true); // 设置为可访问
-                Object newObj = constructor.newInstance(((binImmeBase) instr).to + postFix,
-                        ((binImmeBase) instr).from + postFix, ((binImmeBase) instr).imme);
+                Object newObj = constructor.newInstance(getInlineVarName(((binImmeBase) instr).to),
+                        getInlineVarName(((binImmeBase) instr).from), ((binImmeBase) instr).imme);
                 call.inlineCache.add((ASMInstr) newObj);
             } else if (instr instanceof SEQZ) {
-                call.inlineCache.add(new SEQZ(((SEQZ) instr).from + postFix, ((SEQZ) instr).to + postFix));
+                call.inlineCache.add(new SEQZ(getInlineVarName(((SEQZ) instr).from), getInlineVarName(((SEQZ) instr).to)));
             } else if (instr instanceof SNEZ) {
-                call.inlineCache.add(new SNEZ(((SNEZ) instr).from + postFix, ((SNEZ) instr).to + postFix));
+                call.inlineCache.add(new SNEZ(getInlineVarName(((SNEZ) instr).from), getInlineVarName(((SNEZ) instr).to)));
             } else if (instr instanceof BNEZ) {
-                call.inlineCache.add(new BNEZ(((BNEZ) instr).condition + postFix, ((BNEZ) instr).toLabel + postFix));
+                call.inlineCache.add(new BNEZ(getInlineVarName(((BNEZ) instr).condition), ((BNEZ) instr).toLabel + postFix));
             } else if (instr instanceof CALL) {
                 CALL ASMcall = new CALL(((CALL) instr).func);
                 for (String use : ((CALL) instr).useList) {
-                    ASMcall.useList.add(use + postFix);
+                    ASMcall.useList.add(getInlineVarName(use));
                 }
                 call.inlineCache.add(ASMcall);
             } else if (instr instanceof CallerSave) {
@@ -227,32 +241,27 @@ public class RegAllocation {
                 call.inlineCache.add(new CallerRestore(callerSave, ((CallerRestore) instr).funcName));
             } else if (instr instanceof J) {
                 call.inlineCache.add(new J(((J) instr).toLabel + postFix));
+            } else if (instr instanceof RET) {
+                if (i != list.size() - 1) {
+                    addLabel = true;
+                    call.inlineCache.add(new J("ret" + postFix));
+                }
             } else {
                 continue;
             }
             var inlineInstr = call.inlineCache.get(call.inlineCache.size() - 1);
-            if (flagFrom) {
-                inlineInstr.preColoredFrom = instr.preColoredFrom;
-            }
+            inlineInstr.preColoredFrom = instr.preColoredFrom;
             if (flagTo) {
                 inlineInstr.preColoredTo = instr.preColoredTo;
             }
         }
-        for (int i = 0; i < call.paraList.size(); ++i) {
-            var instr = call.paraList.get(i);
-            if (instr instanceof LI) {
-                ((LI) instr).to = "inline$para-" + i + postFix;
-            } else if (instr instanceof MV) {
-                ((MV) instr).to = "inline$para-" + i + postFix;
-            } else if (instr instanceof SW) {
-                ((SW) instr).to = "inline$para-" + i + postFix;
-                ((SW) instr).offset = -2;
-            }
-            instr.preColoredTo = null;//取消预着色
+        if (addLabel) {
+            call.inlineCache.add(new LABEL("ret" + postFix));
         }
-        if (call.retMV != null) {
-            call.retMV.from = "inline$ret" + postFix;
-            call.retMV.preColoredFrom = null;//取消预着色
-        }
+    }
+
+    public String getInlineVarName(String varName) {
+        String newName = replace.get(varName);
+        return Objects.requireNonNullElseGet(newName, () -> varName + postFix);
     }
 }
