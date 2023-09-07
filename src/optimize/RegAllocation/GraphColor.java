@@ -113,10 +113,8 @@ public class GraphColor {
         if (nowNode.preColored != null) {
             return false;
         }
-        RIG.RIGNode node = null;
         for (var mvNode : nowNode.mvNode.values()) {
             if (judgeGeorge(nowNode, mvNode)) {
-                node = mvNode;
                 coalesceMap.put(nowNode.varName, mvNode.varName);
                 moveList.remove(nowNode);
                 moveList.remove(mvNode);
@@ -139,19 +137,21 @@ public class GraphColor {
                             }
                         }
                     } else {
-                        if (toNode.aboutMove) {
-                            moveList.remove(toNode);
-                        } else {
-                            simplifyList.remove(toNode);
+                        if (toNode.preColored == null) {
+                            if (toNode.aboutMove) {
+                                moveList.remove(toNode);
+                            } else {
+                                simplifyList.remove(toNode);
+                            }
                         }
                         toNode.toNode.remove(nowNode.varName);
-                        if (toNode != mvNode) {
-                            toNode.toNode.put(mvNode.varName, mvNode);
-                        }
-                        if (toNode.aboutMove) {
-                            moveList.add(toNode);
-                        } else {
-                            simplifyList.add(toNode);
+                        toNode.toNode.put(mvNode.varName, mvNode);
+                        if (toNode.preColored == null) {
+                            if (toNode.aboutMove) {
+                                moveList.add(toNode);
+                            } else {
+                                simplifyList.add(toNode);
+                            }
                         }
                         if (toNode.mvNode.containsKey(mvNode.varName)) {
                             toNode.mvNode.remove(mvNode.varName);
@@ -163,9 +163,6 @@ public class GraphColor {
                                     simplifyList.add(toNode);
                                 }
                             }
-                            if (mvNode.mvNode.size() == 0) {
-                                mvNode.aboutMove = false;//不再传送相关
-                            }
                         }
                     }
                 }
@@ -175,7 +172,7 @@ public class GraphColor {
                         nowMvNode.mvNode.put(mvNode.varName, mvNode);
                         mvNode.mvNode.put(nowMvNode.varName, nowMvNode);
                     }
-                    if (nowMvNode.mvNode.size() == 0) {
+                    if (nowMvNode != mvNode && nowMvNode.mvNode.size() == 0) {
                         nowMvNode.aboutMove = false;//不再传送相关
                         if (nowMvNode.preColored == null) {
                             moveList.remove(nowMvNode);
@@ -183,7 +180,7 @@ public class GraphColor {
                         }
                     }
                 }
-                mvNode.mvNode.remove(nowNode.varName);
+                mvNode.aboutMove = mvNode.mvNode.size() > 0;
                 if (mvNode.preColored == null) {
                     if (mvNode.aboutMove) {
                         moveList.add(mvNode);
@@ -191,28 +188,10 @@ public class GraphColor {
                         simplifyList.add(mvNode);
                     }
                 }
-                break;
+                return true;
             }
         }
-        if (node != null) {
-            for (var mvNode : nowNode.mvNode.values()) {
-                if (mvNode != node) {
-                    moveList.remove(mvNode);
-                    mvNode.mvNode.remove(nowNode.varName);
-                    if (mvNode.mvNode.size() == 0) {
-                        mvNode.aboutMove = false;
-                    }
-                    if (mvNode.preColored == null) {
-                        if (mvNode.aboutMove) {
-                            moveList.add(mvNode);
-                        } else {
-                            simplifyList.add(mvNode);
-                        }
-                    }
-                }
-            }
-        }
-        return node != null;
+        return false;
     }
 
     public boolean freeze() {
