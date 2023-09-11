@@ -20,9 +20,6 @@ public class Mem2Reg {
                         merge((FuncDef) stmt);//合并可以合并的块
                         break;
                     }
-                    if (cfg.funcBlocks.size() > 4000) {//块数过多
-                        break;
-                    }
                 }
             }
         }

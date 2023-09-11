@@ -12,6 +12,7 @@ public class Dom {
         public HashSet<String> domFrontier;//支配边界
         public Stack<DomInfo> semiBucket;//被当前节点半支配的节点
         public int dfn = -1;
+        public int minDfn = -1;//当前到半支配节点上，sdom的dfn最小的点的dfn
         public DomInfo dfsFather;
 
         public DomInfo(String blockName_, DomInfo dfsFather_) {
@@ -73,6 +74,9 @@ public class Dom {
         if (minSdomDfn[tmp] < minSdomDfn[now]) {
             minSdomDfn[now] = minSdomDfn[tmp];
         }
+        if (dfnList.get(tmp).semiDom.dfn < minSdomDfn[now]) {
+            minSdomDfn[now] = tmp;
+        }
         return fatherDSU[now];
     }
 
@@ -96,22 +100,19 @@ public class Dom {
                 }
             }
             (nowDom.semiDom).semiBucket.push(nowDom);
-            fatherDSU[nowDom.dfn] = nowDom.dfsFather.dfn;
             while (!nowDom.dfsFather.semiBucket.isEmpty()) {
                 tmpDom = nowDom.dfsFather.semiBucket.pop();
                 find(tmpDom.dfn);
-                if (dfnList.get(minSdomDfn[tmpDom.dfn]).semiDom.dfn == tmpDom.semiDom.dfn) {
-                    tmpDom.immeDom = tmpDom.semiDom;
-                } else {
-                    //实际上，应该是dfnList.get(minSdomDfn[tmpDom.dfn]).immeDom，但由于逆序操作，immeDom还未算出，故用其本身暂代
-                    tmpDom.immeDom = dfnList.get(minSdomDfn[tmpDom.dfn]);
-                }
+                tmpDom.minDfn = minSdomDfn[tmpDom.dfn];
             }
+            fatherDSU[nowDom.dfn] = nowDom.dfsFather.dfn;
         }
         for (int i = 1; i < dfnList.size(); ++i) {
             nowDom = dfnList.get(i);
-            if (nowDom.immeDom != nowDom.semiDom) {
-                nowDom.immeDom = nowDom.immeDom.immeDom;
+            if (dfnList.get(nowDom.minDfn).semiDom.dfn == nowDom.semiDom.dfn) {
+                nowDom.immeDom = nowDom.semiDom;
+            } else {
+                nowDom.immeDom = dfnList.get(nowDom.minDfn).immeDom;
             }
         }
     }
