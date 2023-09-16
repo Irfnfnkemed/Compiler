@@ -113,7 +113,7 @@ public class TestIR {
             ASTBuilder AST = new ASTBuilder(ctx);
             Semantic semantic = new Semantic(AST.ASTProgram);
             semantic.check();
-            IRBuilder irBuilder = new IRBuilder(AST.ASTProgram, semantic.globalScope);
+            IRBuilder irBuilder = new IRBuilder(AST.ASTProgram, semantic.globalScope, semantic.inlineGlobalVar);
             IRPrinter irPrinter = new IRPrinter(irBuilder.irProgram);
             Mem2Reg mem2Reg = new Mem2Reg(irBuilder.irProgram);
             irPrinter.print();

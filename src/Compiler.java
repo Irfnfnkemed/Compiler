@@ -50,7 +50,7 @@ public class Compiler {
             ASTBuilder AST = new ASTBuilder(ctx);
             Semantic semantic = new Semantic(AST.ASTProgram);
             semantic.check();
-            IRBuilder irBuilder = new IRBuilder(AST.ASTProgram, semantic.globalScope);
+            IRBuilder irBuilder = new IRBuilder(AST.ASTProgram, semantic.globalScope, semantic.inlineGlobalVar);
             Mem2Reg mem2Reg = new Mem2Reg(irBuilder.irProgram);
             ASMBuilder asmBuilder = new ASMBuilder(irBuilder.irProgram);
             ASMPrinter asmPrinter = new ASMPrinter(asmBuilder.asmProgram);

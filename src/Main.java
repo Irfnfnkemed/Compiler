@@ -43,7 +43,7 @@ public class Main {
             ASTBuilder AST = new ASTBuilder(ctx);
             Semantic semantic = new Semantic(AST.ASTProgram);
             semantic.check();
-            var a = new IRBuilder(AST.ASTProgram, semantic.globalScope);
+            var a = new IRBuilder(AST.ASTProgram, semantic.globalScope, semantic.inlineGlobalVar);
             var b = new IRPrinter(a.irProgram);
             FileOutputStream fileOutputStream = new FileOutputStream("./src/builtin/test_standard.ll");
             PrintStream printStream = new PrintStream(fileOutputStream);

@@ -20,17 +20,19 @@ import src.Util.scope.Scope;
 import src.Util.type.Type;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Objects;
 
 public class Semantic implements ASTVisitor {
     public GlobalScope globalScope;
     public Program ASTProgram;
+    public HashSet<String> inlineGlobalVar;//仅在main函数出现的全局变量
+    private boolean isMain = false;//当前是否在处理main函数
 
     public Semantic(Program ASTProgram_) {
         globalScope = new GlobalScope();
         ASTProgram = ASTProgram_;
+        inlineGlobalVar = new HashSet<>();
         for (var def : ASTProgram.defList) {
             if (def.functionDef != null) {
                 globalScope.setFunction(def.functionDef.functionName, def.functionDef.type,
@@ -78,11 +80,13 @@ public class Semantic implements ASTVisitor {
             return;
         }
         if (node.mainDef != null) {
+            isMain = true;
             node.mainDef.scope = new Scope();
             node.mainDef.scope.isFunction = true;
             node.mainDef.scope.returnType = new Type();
             node.mainDef.scope.returnType.setInt();
             node.mainDef.accept(this);
+            isMain = false;
         } else if (node.classDef != null) {
             node.classDef.scope = new Scope();
             node.classDef.scope.isClass = true;
@@ -183,6 +187,7 @@ public class Semantic implements ASTVisitor {
             varDef.accept(this);
             if (node.scope.isGlobal) {
                 globalScope.setVariable(varDef.variableName, varDef.type, varDef.position);
+                inlineGlobalVar.add(varDef.variableName);
             } else if (!(node.scope.isClass && !node.scope.isFunction)) {
                 node.scope.setVariable(varDef.variableName, varDef.type, varDef.position);
             }
@@ -658,6 +663,12 @@ public class Semantic implements ASTVisitor {
                 varTmp = globalScope.getVariable(node.variableName);
                 if (varTmp != null) {
                     typeTmp = varTmp.type;
+                    if (!isMain) {
+                        inlineGlobalVar.remove(node.variableName);
+                    } else {
+                        node.line = varTmp.line;
+                        node.column = varTmp.column;
+                    }
                 }
             }
             if (typeTmp == null) {
