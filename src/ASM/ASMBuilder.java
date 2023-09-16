@@ -186,8 +186,7 @@ public class ASMBuilder {
 //            if (varReg != null) {
 //                section.pushInstr(new MV(varReg, load.toVarName));
 //            } else {
-            String varReg;
-            varReg = "tmp" + cnt++;
+            String varReg = load.fromPointer.substring(1);
             //globalVarReg.put(load.fromPointer.substring(1), varReg);
             if (load.fromPointer.contains("-")) {
                 section.pushInstr(new LA(load.toVarName, varReg));
