@@ -64,7 +64,7 @@ public class FuncDef extends IRStatement {
     public Stack<Boolean> ifAndLoopOrder;//true为if，反之为loop
 
     public boolean notReturn = true;
-    public int initInsertIndex = 0;
+    public int initInsertIndex = 1;
     public int allocaIndex = 1;
     public String label = "%entry";
     public boolean isClassMethod = false;
