@@ -20,6 +20,8 @@ import src.Util.scope.Scope;
 import src.Util.type.Type;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Objects;
 
 public class Semantic implements ASTVisitor {

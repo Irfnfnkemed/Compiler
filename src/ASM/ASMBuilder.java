@@ -37,6 +37,7 @@ public class ASMBuilder {
     public HashMap<String, FuncNode> funcNodeMap;
     private HashMap<String, FuncDef.PhiInfo> phiMap;
     public Queue<String> inlineQueue;
+    public HashMap<String, String> globalVarReg;//存储全局变量的虚拟寄存器
     public int cnt = 0, label = 0;
 
     public ASMBuilder(IRProgram irProgram) {
@@ -44,6 +45,7 @@ public class ASMBuilder {
         globalVar = new HashSet<>();
         funcNodeMap = new HashMap<>();
         inlineQueue = new ArrayDeque<>();
+        globalVarReg = new HashMap<>();
         for (var stmt : irProgram.stmtList) {
             if (stmt instanceof FuncDef) {
                 FuncNode funcNode = getNode(((FuncDef) stmt).functionName.substring(1));
@@ -141,42 +143,61 @@ public class ASMBuilder {
 
     void visit(Section section, Store store) {
         String from, to;
+        boolean isStore = true;
         if (store.valueVar == null) {
             from = "tmp" + cnt++;
             section.pushInstr(new LI(from, (int) store.value));
         } else {
             if (store.valueVar.charAt(0) == '@') {
+//                from = globalVarReg.get(store.valueVar.substring(1));
+//                if (from == null) {
                 from = "tmp" + cnt++;
                 if (store.valueVar.contains("-")) {
                     section.pushInstr(new LA(from, store.valueVar.substring(1)));
                 } else {
                     section.pushInstr(new LW(store.valueVar.substring(1), from));
                 }
+//                }
             } else {
                 from = store.valueVar;
             }
         }
         if (store.toPointer.charAt(0) == '@') {
+//            to = globalVarReg.get(store.toPointer.substring(1));
+//            if (to == null) {
             to = "tmp" + cnt++;
             section.pushInstr(new LA(to, store.toPointer.substring(1)));
+//            } else {
+//                isStore = false;
+//            }
         } else {
             to = store.toPointer;
         }
+//        if (isStore) {
         section.pushInstr(new SW(from, to, 0));
-
+//        } else {
+//            section.pushInstr(new MV(from, to));
+//        }
     }
 
     void visit(Section section, Load load) {
         if (load.fromPointer.charAt(0) == '@') {
+//            String varReg = globalVarReg.get(load.fromPointer.substring(1));
+//            if (varReg != null) {
+//                section.pushInstr(new MV(varReg, load.toVarName));
+//            } else {
+            String varReg;
+            varReg = "tmp" + cnt++;
+            //globalVarReg.put(load.fromPointer.substring(1), varReg);
             if (load.fromPointer.contains("-")) {
-                section.pushInstr(new LA(load.toVarName, load.fromPointer.substring(1)));
+                section.pushInstr(new LA(load.toVarName, varReg));
             } else {
-                section.pushInstr(new LW(load.fromPointer.substring(1), load.toVarName));
+                section.pushInstr(new LW(varReg, load.toVarName));
             }
+            //}
         } else {
             section.pushInstr(new LW(load.fromPointer, load.toVarName, 0));
         }
-
     }
 
     void visit(Section section, Binary binary) {
@@ -473,8 +494,15 @@ public class ASMBuilder {
             if (variable.varName != null) {
                 String from;
                 if (variable.varName.charAt(0) == '@') {
-                    section.pushInstr(new LA("tmp" + cnt, variable.varName.substring(1)));
+//                    from = globalVarReg.get(variable.varName.substring(1));
+//                    if (from == null) {
                     from = "tmp" + cnt++;
+                    if (variable.varName.contains("-")) {
+                        section.pushInstr(new LA(from, variable.varName.substring(1)));
+                    } else {
+                        section.pushInstr(new LW(variable.varName.substring(1), from));
+                    }
+                    //}
                 } else {
                     from = variable.varName;
                 }

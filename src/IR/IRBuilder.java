@@ -24,6 +24,8 @@ import src.Util.scope.Scope;
 import src.Util.type.IRType;
 import src.Util.type.Type;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Objects;
 
 public class IRBuilder implements ASTVisitor {
@@ -37,6 +39,7 @@ public class IRBuilder implements ASTVisitor {
     public IRType typeI32;
     public IRType typeI1;
     public IRType typePtr;
+    public HashMap<String, HashSet<String>> useGlobalVar;//函数名->用到的全局变量
 
     public IRBuilder(Program node, GlobalScope globalScope_) {
         globalScope = globalScope_;
@@ -45,6 +48,7 @@ public class IRBuilder implements ASTVisitor {
         typePtr = new IRType().setPtr();
         irProgram = new IRProgram();
         funcMain = new FuncDef();
+        useGlobalVar = new HashMap<>();
         funcMain.irType = typeI32;
         funcMain.functionName = "@main";
         visit(node);
@@ -81,10 +85,12 @@ public class IRBuilder implements ASTVisitor {
             return;
         }
         if (node.mainDef != null) {
+            useGlobalVar.put("main", new HashSet<>());
             node.mainDef.accept(this);
         } else if (node.classDef != null) {
             node.classDef.accept(this);
         } else if (node.functionDef != null) {
+            useGlobalVar.put(node.functionDef.functionName.substring(1), new HashSet<>());
             node.functionDef.accept(this);
         } else if (node.variableDef != null) {
             node.variableDef.accept(this);
@@ -127,7 +133,6 @@ public class IRBuilder implements ASTVisitor {
         node.functionDefList.forEach(functionDef -> {
             functionDef.accept(this);
             var funcDef = (FuncDef) irProgram.stmtList.get(irProgram.stmtList.size() - 1);
-            funcDef.functionName = "@" + node.className + "." + functionDef.functionName;
             funcDef.parameterTypeList.add(0, typePtr);
             funcDef.isClassMethod = true;
         });
@@ -144,6 +149,7 @@ public class IRBuilder implements ASTVisitor {
         funcDef.isClassMethod = true;
         funcDef.irType = typePtr;
         funcDef.functionName = "@.init-class-" + node.className;
+        useGlobalVar.put(funcDef.functionName.substring(1), new HashSet<>());
         Call call = new Call("@.malloc");
         call.irType = typePtr;
         call.set(typeI32, globalScope.getClassSize(node.className));
@@ -190,6 +196,13 @@ public class IRBuilder implements ASTVisitor {
         anonymousVar = 0;
         anonymousLabel = 0;
         FuncDef funcDef = new FuncDef();
+        if (node.scope.isClass) {
+            funcDef.functionName = "@" + node.scope.classType.typeName + "." + node.functionName;
+            useGlobalVar.put(funcDef.functionName.substring(1), new HashSet<>());
+        } else {
+            useGlobalVar.put(node.functionName, new HashSet<>());
+            funcDef.functionName = "@" + node.functionName;
+        }
         funcDef.push(new Label("entry"));
         if (!node.type.isVoid()) {
             funcDef.push(new Alloca(node.type, "%.returnValue"));
@@ -197,7 +210,6 @@ public class IRBuilder implements ASTVisitor {
         }
         now = funcDef;
         funcDef.irType = new IRType(node.type);
-        funcDef.functionName = "@" + node.functionName;
         for (int i = 0; i < node.parameterNameList.size(); ++i) {
             funcDef.pushPara(node.parameterTypeList.get(i));
             var varName = var(node.parameterNameList.get(i), node.parameterTypeList.get(i).position.line,
@@ -1048,6 +1060,9 @@ public class IRBuilder implements ASTVisitor {
             ((Exp) now).push(new Load(node.type, "%_" + anonymousVar++,
                     var(node.variableName, node.line, node.column)));
             ((Exp) now).lhsVar = var(node.variableName, node.line, node.column);
+        }
+        if (node.scope.isFunction && node.id == -1) {
+            useGlobalVar.get(((Exp) now).funcDef.functionName.substring(1)).add(node.variableName);
         }
     }
 

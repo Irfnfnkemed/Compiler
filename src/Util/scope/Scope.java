@@ -64,14 +64,6 @@ public class Scope {
         };
     }
 
-    public Type getClass(String className) {
-        return new Type().setClass(className);
-    }
-
-    public Type getArray(Type typeBase, int dim) {
-        return new Type().setArray(typeBase, dim);
-    }
-
     public void setVariable(String variableName, Type variableType, Position position) {
         if (variable.containsKey(variableName) && variable.get(variableName).cover) {
             throw new SemanticErrors("Duplicate definition of variable.", position);
