@@ -36,6 +36,7 @@ public class IRBuilder implements ASTVisitor {
     public IRNode now;
     public int anonymousVar = 0;
     public int anonymousLabel = 0;
+    public int anonymousMain = 0;
 
     public IRType typeI32;
     public IRType typeI1;
@@ -102,7 +103,7 @@ public class IRBuilder implements ASTVisitor {
         ++funcMain.initInsertIndex;
         funcMain.push(new Alloca(typeI32, "%.returnValue"));
         funcMain.push(new Store(typeI32, 0, "%.returnValue"));
-        anonymousVar = 0;
+        anonymousVar = anonymousMain;
         anonymousLabel = 0;
         irProgram.push(funcMain);
         var nowTmp = now;
@@ -260,7 +261,13 @@ public class IRBuilder implements ASTVisitor {
                 globalVarDef.value = 0;
             }
         } else {
-            FuncDef funcNow = node.scope.isGlobal ? funcMain : (FuncDef) now;
+            FuncDef funcNow;
+            if (node.scope.isGlobal) {
+                funcNow = funcMain;
+                anonymousVar = anonymousMain;
+            } else {
+                funcNow = (FuncDef) now;
+            }
             funcNow.push(new Alloca(node.type, var(node.variableName, node.position.line, node.position.column)));
             if (node.exp != null) {
                 Exp exp = new Exp(funcNow);
@@ -273,6 +280,9 @@ public class IRBuilder implements ASTVisitor {
                 }
             } else {
                 funcNow.push(new Store(node.type, 0L, var(node.variableName, node.position.line, node.position.column)));
+            }
+            if (node.scope.isGlobal) {
+                anonymousMain = anonymousVar;
             }
         }
         now = tmpNow;
