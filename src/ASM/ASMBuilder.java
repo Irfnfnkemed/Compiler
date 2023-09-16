@@ -523,8 +523,12 @@ public class ASMBuilder {
                 if (variable.varName != null) {
                     String from;
                     if (variable.varName.charAt(0) == '@') {
-                        section.pushInstr(new LW(variable.varName.substring(1), "tmp" + cnt));
                         from = "tmp" + cnt++;
+                        if (variable.varName.contains("-")) {
+                            section.pushInstr(new LA(from, variable.varName.substring(1)));
+                        } else {
+                            section.pushInstr(new LW(variable.varName.substring(1), from));
+                        }
                     } else {
                         from = variable.varName;
                     }
