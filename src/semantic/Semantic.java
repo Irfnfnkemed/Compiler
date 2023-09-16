@@ -665,7 +665,7 @@ public class Semantic implements ASTVisitor {
                     typeTmp = varTmp.type;
                     if (!isMain) {
                         inlineGlobalVar.remove(node.variableName);
-                    } else {
+                    } else if (inlineGlobalVar.contains(node.variableName)) {
                         node.line = varTmp.line;
                         node.column = varTmp.column;
                     }
