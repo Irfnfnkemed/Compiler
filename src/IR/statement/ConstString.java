@@ -1,17 +1,18 @@
 package src.IR.statement;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
 
 public class ConstString extends IRStatement {
-    public List<String> constStringList;//调用下标为i: @constString-i
+    public HashMap<String, Integer> constStringMap;//调用下标为i: @constString-i
 
     public ConstString() {
-        constStringList = new LinkedList<>();
+        constStringMap = new HashMap<>();
     }
 
     public String push(String content) {
-        constStringList.add(content);
-        return "@constString-" + (constStringList.size() - 1);
+        var id = constStringMap.computeIfAbsent(content, k -> constStringMap.size());
+        return "@constString-" + id;
     }
 }

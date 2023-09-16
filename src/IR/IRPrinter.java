@@ -44,7 +44,7 @@ public class IRPrinter {
         } else if (irStatement instanceof FuncDef) {
             print((FuncDef) irStatement);
         } else if (irStatement instanceof ConstString) {
-            if (((ConstString) irStatement).constStringList.size() > 0) {
+            if (((ConstString) irStatement).constStringMap.size() > 0) {
                 print((ConstString) irStatement);
                 System.out.print('\n');
             }
@@ -87,13 +87,11 @@ public class IRPrinter {
     }
 
     public void print(ConstString constString) {
-        String tmp;
-        for (int i = 0; i < constString.constStringList.size(); ++i) {
-            tmp = constString.constStringList.get(i);
+        for (var entry: constString.constStringMap.entrySet()) {
             System.out.print("@constString-");
-            System.out.print(i);
+            System.out.print(entry.getValue());
             System.out.print(" = private unnamed_addr constant [");
-            char[] chatTmp = tmp.toCharArray();
+            char[] chatTmp = entry.getKey().toCharArray();
             int len = chatTmp.length - 1;
             for (int j = 1; j < chatTmp.length - 1; ++j) {
                 char ch = chatTmp[j];

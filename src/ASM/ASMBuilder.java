@@ -102,10 +102,9 @@ public class ASMBuilder {
                 asmProgram.sectionData.pushWord(((GlobalVarDef) stmt).varName.substring(1), (int) ((GlobalVarDef) stmt).value);
                 globalVar.add(((GlobalVarDef) stmt).varName.substring(1));
             } else if (stmt instanceof ConstString) {
-                for (int i = 0; i < ((ConstString) stmt).constStringList.size(); ++i) {
-                    asmProgram.sectionRodata.pushConstString(
-                            "constString-" + i, ((ConstString) stmt).constStringList.get(i));
-                    globalVar.add("constString-" + i);
+                for (var entry : ((ConstString) stmt).constStringMap.entrySet()) {
+                    asmProgram.sectionRodata.pushConstString("constString-" + entry.getValue(), entry.getKey());
+                    globalVar.add("constString-" + entry.getValue());
                 }
             }
         }
