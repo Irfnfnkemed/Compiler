@@ -17,7 +17,7 @@ public class RegAllocation {
     public HashMap<String, Function> functions;
     HashMap<String, String> replace;
     List<String> callPara;
-    String retTo;
+
     int inline = 0;
     String postFix;
 
@@ -34,7 +34,7 @@ public class RegAllocation {
             var list = ASMInstrMap.get(funcName);
             ASMInstrMap.remove(funcName);
             Function function = new Function(list, asmBuilder.globalVar);
-            if (function.graphColor.used.size() < 10 && function.asmInstrList.size() < 10000) {
+            if (function.graphColor.used.size() < 15 && function.asmInstrList.size() < 10000) {
                 var funcNode = asmBuilder.getNode(funcName);
                 changeParaAndRet((Init) list.get(1));
                 for (CALL call : funcNode.callList) {
