@@ -144,6 +144,7 @@ public class ASMBuilder {
                 return;
             } else {
                 visit(section, (Getelementptr) cache);
+                cache = null;
             }
         }
         if (instruction instanceof Label) {
