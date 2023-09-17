@@ -113,40 +113,40 @@ public class ASMBuilder {
     }
 
     void visitInstr(Section section, Instruction instruction, FuncNode funcNode, Init init) {
-        if (cache instanceof Getelementptr) {
-            if (instruction instanceof Store) {
-                if (((Getelementptr) cache).indexVar == null && ((Getelementptr) cache).indexValue < 512
-                        && Objects.equals(((Store) instruction).toPointer, ((Getelementptr) cache).result)) {//直接通过下标偏移sw
-                    ((Store) instruction).toPointer = ((Getelementptr) cache).from;
-                    visit(section, (Store) instruction);
-                    var tmpList = section.asmInstrList.get(section.asmInstrList.size() - 1);
-                    var tmpInstr = tmpList.get(tmpList.size() - 1);
-                    ((SW) tmpInstr).offset = ((Getelementptr) cache).indexValue << 2;
-                } else {
-                    visit(section, (Getelementptr) cache);
-                    visit(section, (Store) instruction);
-                }
-                cache = null;
-                return;
-            } else if (instruction instanceof Load) {
-                if (((Getelementptr) cache).indexVar == null && ((Getelementptr) cache).indexValue < 512
-                        && Objects.equals(((Load) instruction).fromPointer, ((Getelementptr) cache).result)) {//直接通过下标偏移lw
-                    ((Load) instruction).fromPointer = ((Getelementptr) cache).from;
-                    visit(section, (Load) instruction);
-                    var tmpList = section.asmInstrList.get(section.asmInstrList.size() - 1);
-                    var tmpInstr = tmpList.get(tmpList.size() - 1);
-                    ((LW) tmpInstr).offset = ((Getelementptr) cache).indexValue << 2;
-                } else {
-                    visit(section, (Getelementptr) cache);
-                    visit(section, (Load) instruction);
-                }
-                cache = null;
-                return;
-            } else {
-                visit(section, (Getelementptr) cache);
-                cache = null;
-            }
-        }
+//        if (cache instanceof Getelementptr) {
+//            if (instruction instanceof Store) {
+//                if (((Getelementptr) cache).indexVar == null && ((Getelementptr) cache).indexValue < 512
+//                        && Objects.equals(((Store) instruction).toPointer, ((Getelementptr) cache).result)) {//直接通过下标偏移sw
+//                    ((Store) instruction).toPointer = ((Getelementptr) cache).from;
+//                    visit(section, (Store) instruction);
+//                    var tmpList = section.asmInstrList.get(section.asmInstrList.size() - 1);
+//                    var tmpInstr = tmpList.get(tmpList.size() - 1);
+//                    ((SW) tmpInstr).offset = ((Getelementptr) cache).indexValue << 2;
+//                } else {
+//                    visit(section, (Getelementptr) cache);
+//                    visit(section, (Store) instruction);
+//                }
+//                cache = null;
+//                return;
+//            } else if (instruction instanceof Load) {
+//                if (((Getelementptr) cache).indexVar == null && ((Getelementptr) cache).indexValue < 512
+//                        && Objects.equals(((Load) instruction).fromPointer, ((Getelementptr) cache).result)) {//直接通过下标偏移lw
+//                    ((Load) instruction).fromPointer = ((Getelementptr) cache).from;
+//                    visit(section, (Load) instruction);
+//                    var tmpList = section.asmInstrList.get(section.asmInstrList.size() - 1);
+//                    var tmpInstr = tmpList.get(tmpList.size() - 1);
+//                    ((LW) tmpInstr).offset = ((Getelementptr) cache).indexValue << 2;
+//                } else {
+//                    visit(section, (Getelementptr) cache);
+//                    visit(section, (Load) instruction);
+//                }
+//                cache = null;
+//                return;
+//            } else {
+//                visit(section, (Getelementptr) cache);
+//                cache = null;
+//            }
+//        }
         if (instruction instanceof Label) {
             visit(section, (Label) instruction);
         } else if (instruction instanceof Store) {
@@ -162,8 +162,8 @@ public class ASMBuilder {
         } else if (instruction instanceof Br) {
             visit(section, (Br) instruction);
         } else if (instruction instanceof Getelementptr) {
-            cache = instruction;
-            // visit(section, (Getelementptr) instruction);
+            //cache = instruction;
+             visit(section, (Getelementptr) instruction);
         } else if (instruction instanceof Ret) {
             visit(section, (Ret) instruction, init);
         }
