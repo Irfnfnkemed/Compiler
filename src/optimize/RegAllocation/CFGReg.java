@@ -21,7 +21,6 @@ public class CFGReg {
         getBlockInOut();
     }
 
-
     public void buildCFG() {
         BlockReg nowBlockReg = null;
         for (int i = 0; i < asmInstrList.size(); ++i) {//建图

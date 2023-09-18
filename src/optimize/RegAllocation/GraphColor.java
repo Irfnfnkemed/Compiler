@@ -9,19 +9,19 @@ import java.util.*;
 public class GraphColor {
     final int k = 27;
     final String[] reg = {
-            "t0", "t1", "t2", "t3", "t4", "t5", "t6",
+            "t0", "t2", "t3", "t4", "t5", "t6", "t1",
             "a7", "a6", "a5", "a4", "a3", "a2", "a1", "a0",
             "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11"
     };
 
     final HashMap<String, Integer> regId = new HashMap<String, Integer>() {{
         put("t0", 1);
-        put("t1", 1 << 1);
-        put("t2", 1 << 2);
-        put("t3", 1 << 3);
-        put("t4", 1 << 4);
-        put("t5", 1 << 5);
-        put("t6", 1 << 6);
+        put("t2", 1 << 1);
+        put("t3", 1 << 2);
+        put("t4", 1 << 3);
+        put("t5", 1 << 4);
+        put("t6", 1 << 5);
+        put("t1", 1 << 6);
         put("a7", 1 << 7);
         put("a6", 1 << 8);
         put("a5", 1 << 9);
@@ -90,6 +90,40 @@ public class GraphColor {
                     simplifyList.add(node);
                 }
             }
+        }
+    }
+
+    public void modifyGraph() {
+        while (!(simplifyList.isEmpty() && moveList.isEmpty())) {
+            if (!coalesce()) {
+                if (!simplify()) {
+                    if (!freeze()) {
+                        spilt();
+                    }
+                }
+            }
+        }
+    }
+
+    public void assignColor() {
+        RIG.RIGNode nowNode;
+        while (!selectStack.isEmpty()) {
+            nowNode = selectStack.pop();
+            if (!setColor(nowNode)) {
+                spillSet.add(nowNode.varName);
+            }
+        }
+    }
+
+    public boolean allocateReg() {
+        if (spillSet.isEmpty()) {
+            replace();
+            used.remove("stackTop#");
+            return true;
+        } else {
+            rewrite();
+            used.remove("stackTop#");
+            return false;
         }
     }
 
@@ -323,16 +357,6 @@ public class GraphColor {
         return findName;
     }
 
-    public void assignColor() {
-        RIG.RIGNode nowNode;
-        while (!selectStack.isEmpty()) {
-            nowNode = selectStack.pop();
-            if (!setColor(nowNode)) {
-                spillSet.add(nowNode.varName);
-            }
-        }
-    }
-
     public String getReg(String varName) {
         if (Objects.equals(varName, "zero")) {
             return varName;
@@ -358,30 +382,6 @@ public class GraphColor {
         }
         used.add(reg[node.colour]);
         return reg[node.colour];
-    }
-
-    public boolean allocateReg() {
-        if (spillSet.isEmpty()) {
-            replace();
-            used.remove("stackTop#");
-            return true;
-        } else {
-            rewrite();
-            used.remove("stackTop#");
-            return false;
-        }
-    }
-
-    public void modifyGraph() {
-        while (!(simplifyList.isEmpty() && moveList.isEmpty())) {
-            if (!coalesce()) {
-                if (!simplify()) {
-                    if (!freeze()) {
-                        spilt();
-                    }
-                }
-            }
-        }
     }
 
     public void replace() {

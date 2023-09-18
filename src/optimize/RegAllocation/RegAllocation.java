@@ -8,10 +8,7 @@ import src.ASM.instruction.binaryImme.binImmeBase;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class RegAllocation {
     public HashMap<String, Function> functions;
@@ -34,7 +31,7 @@ public class RegAllocation {
             var list = ASMInstrMap.get(funcName);
             ASMInstrMap.remove(funcName);
             Function function = new Function(list, asmBuilder.globalVar);
-            if (function.graphColor.used.size() < 15 && function.asmInstrList.size() < 10000) {
+            if (function.graphColor.used.size() < 15 && function.asmInstrList.size() < 20000) {
                 var funcNode = asmBuilder.getNode(funcName);
                 changeParaAndRet((Init) list.get(1));
                 for (CALL call : funcNode.callList) {
@@ -135,6 +132,7 @@ public class RegAllocation {
             if (!functions.containsKey(((LABEL) instrList.get(0)).label)) {
                 asmBuilder.asmProgram.sectionText.asmInstrList.remove(i--);
             }
+            mergeADDI(instrList);
         }
     }
 
@@ -261,5 +259,20 @@ public class RegAllocation {
     public String getInlineVarName(String varName) {
         String newName = replace.get(varName);
         return Objects.requireNonNullElseGet(newName, () -> varName + postFix);
+    }
+
+    public void mergeADDI(List<ASMInstr> asmInstrList) {
+        var iterator = asmInstrList.listIterator();
+        ASMInstr pre = null, now = null;
+        while (iterator.hasNext()) {
+            now = iterator.next();
+            if (pre instanceof ADDI && now instanceof ADDI && Objects.equals(((ADDI) now).from, ((ADDI) now).to) &&
+                    Objects.equals(((ADDI) pre).to, ((ADDI) now).to)) {
+                iterator.remove();
+                ((ADDI) pre).imme += ((ADDI) now).imme;
+                iterator.previous();
+            }
+            pre = now;
+        }
     }
 }
