@@ -477,18 +477,23 @@ public class GraphColor {
                     ((LI) instr).to = "cnt" + cnt++;
                 }
             } else if (instr instanceof LW) {
-                Integer from = stack.get(((LW) instr).to);
+                Integer from = stack.get(((LW) instr).to), to = stack.get(((LW) instr).to);
                 if (from != null) {
                     instr.visited = false;
                     rig.cfgReg.asmInstrList.add(++i, new SW("cnt" + cnt, "stack#", from));
                     ((LW) instr).to = "cnt" + cnt++;
                 }
             } else if (instr instanceof SW) {
-                Integer from = stack.get(((SW) instr).from);
+                Integer from = stack.get(((SW) instr).from), to = stack.get(((SW) instr).to);
                 if (from != null) {
                     instr.visited = false;
                     rig.cfgReg.asmInstrList.add(i++, new LW("stack#", "cnt" + cnt, from));
                     ((SW) instr).from = "cnt" + cnt++;
+                }
+                if (to != null) {
+                    instr.visited = false;
+                    rig.cfgReg.asmInstrList.add(i++, new LW("stack#", "cnt" + cnt, to));
+                    ((SW) instr).to = "cnt" + cnt++;
                 }
             } else if (instr instanceof MV) {
                 Integer from = stack.get(((MV) instr).from), to = stack.get(((MV) instr).to);

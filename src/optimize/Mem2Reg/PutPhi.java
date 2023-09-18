@@ -28,8 +28,6 @@ public class PutPhi {
             varName = variable_.varName;
             varValue = variable_.varValue;
         }
-
-
     }
 
     public CFGDom cfgDom;
@@ -37,6 +35,21 @@ public class PutPhi {
     public HashMap<String, Stack<variable>> varRename;//重命名栈
     public HashMap<String, variable> replace;//替换变量
     public FuncDef funcDef;
+    Stack<renameBlockPara> renameBlockStack;//防止爆栈，手动实现
+
+    static class renameBlockPara {
+        BlockDom blockDom;
+        String fromLabel;
+        HashMap<String, variable> restoreStack;
+        int i;//i=0，表示第一次入栈；反之，表示递归处理第i个后继
+
+        public renameBlockPara(BlockDom blockDom_, String fromLabel_, HashMap<String, variable> restoreStack_, int i_) {
+            blockDom = blockDom_;
+            fromLabel = fromLabel_;
+            restoreStack = restoreStack_;
+            i = i_;
+        }
+    }
 
     public PutPhi(Dom dom_, FuncDef funcDef_) {
         cfgDom = dom_.cfgDom;
@@ -45,6 +58,7 @@ public class PutPhi {
         varRename = new HashMap<>();
         cfgDom.allocaVar.keySet().forEach(varName -> varRename.put(varName, new Stack<>()));
         replace = new HashMap<>();
+        renameBlockStack = new Stack<>();
         setPhiPos();
         rename();
         recollect();
@@ -80,10 +94,40 @@ public class PutPhi {
 
     public void rename() {
         BlockDom root = cfgDom.funcBlocks.get("entry");
-        renameBlock(root, null);
+        renameBlockStack.push(new renameBlockPara(root, null, null, 0));
+        while (!renameBlockStack.isEmpty()) {
+            var para = renameBlockStack.peek();
+            if (para.i == 0) {
+                var restoreStack = renameBlock(para.blockDom, para.fromLabel);
+                if (para.blockDom.suc > 0 && restoreStack != null) {
+                    para.restoreStack = restoreStack;
+                    renameBlockStack.push(new renameBlockPara(para.blockDom.next[para.i++], para.blockDom.label, restoreStack, 0));
+                } else {
+                    renameBlockStack.pop();
+                }
+            } else {
+                for (var entry : varRename.entrySet()) {//恢复栈
+                    var restore = para.restoreStack.get(entry.getKey());
+                    var stack = entry.getValue();
+                    if (restore != null) {
+                        while (restore != stack.peek()) {
+                            stack.pop();
+                        }
+                    } else {
+                        stack.clear();
+                    }
+                }
+                if (para.i < para.blockDom.suc) {
+                    renameBlockStack.push(new renameBlockPara(para.blockDom.next[para.i++], para.blockDom.label, null, 0));
+                } else {
+                    renameBlockStack.pop();
+                }
+            }
+        }
+
     }
 
-    private void renameBlock(BlockDom blockDom, String fromLabel) {
+    private HashMap<String, variable> renameBlock(BlockDom blockDom, String fromLabel) {
         for (var entry : blockDom.insertPhi.entrySet()) {//phi变量放置
             if (!varRename.get(entry.getKey()).isEmpty()) {
                 boolean newLabel = true;
@@ -142,7 +186,7 @@ public class PutPhi {
                 }
             } else {
                 if (blockDom.renamed) {
-                    return;
+                    return null;
                 }
                 if (inst instanceof Binary) {
                     if (((Binary) inst).operandLeft != null) {
@@ -285,20 +329,21 @@ public class PutPhi {
                 restoreStack.put(entry.getKey(), entry.getValue().peek());
             }
         }
-        for (int i = 0; i < blockDom.suc; ++i) {
-            renameBlock(blockDom.next[i], blockDom.label);
-            for (var entry : varRename.entrySet()) {//恢复栈
-                var restore = restoreStack.get(entry.getKey());
-                var stack = entry.getValue();
-                if (restore != null) {
-                    while (restore != stack.peek()) {
-                        stack.pop();
-                    }
-                } else {
-                    stack.clear();
-                }
-            }
-        }
+        return restoreStack;
+//        for (int i = 0; i < blockDom.suc; ++i) {
+//            renameBlock(blockDom.next[i], blockDom.label);
+//            for (var entry : varRename.entrySet()) {//恢复栈
+//                var restore = restoreStack.get(entry.getKey());
+//                var stack = entry.getValue();
+//                if (restore != null) {
+//                    while (restore != stack.peek()) {
+//                        stack.pop();
+//                    }
+//                } else {
+//                    stack.clear();
+//                }
+//            }
+//        }
     }
 
     private void recollect() {
