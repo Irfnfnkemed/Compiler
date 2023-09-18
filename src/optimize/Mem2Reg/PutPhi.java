@@ -330,20 +330,6 @@ public class PutPhi {
             }
         }
         return restoreStack;
-//        for (int i = 0; i < blockDom.suc; ++i) {
-//            renameBlock(blockDom.next[i], blockDom.label);
-//            for (var entry : varRename.entrySet()) {//恢复栈
-//                var restore = restoreStack.get(entry.getKey());
-//                var stack = entry.getValue();
-//                if (restore != null) {
-//                    while (restore != stack.peek()) {
-//                        stack.pop();
-//                    }
-//                } else {
-//                    stack.clear();
-//                }
-//            }
-//        }
     }
 
     private void recollect() {
