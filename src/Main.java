@@ -54,7 +54,7 @@ public class Main {
             printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);
             b.print();
-            var c = new ASMBuilder(a.irProgram);
+            var c = new ASMBuilder(a.irProgram, a.useGlobalVar);
             var d = new ASMPrinter(c.asmProgram);
             fileOutputStream = new FileOutputStream("./src/builtin/test_standard.s");
             printStream = new PrintStream(fileOutputStream);

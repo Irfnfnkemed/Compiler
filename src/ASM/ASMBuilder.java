@@ -38,18 +38,20 @@ public class ASMBuilder {
     public HashMap<String, FuncNode> funcNodeMap;
     private HashMap<String, FuncDef.PhiInfo> phiMap;
     public Queue<String> inlineQueue;
-    public HashMap<String, String> globalVarReg;//存储全局变量的虚拟寄存器
+    public HashMap<String, String> globalVarReg;//存储全局变量的虚拟寄存器，仅每个块内各自有效
     public int cnt = 0, label = 0;
     public Instruction cache;
     public HashMap<String, Getelementptr> getelememtptrMap;
+    public HashMap<String, HashSet<String>> useGlobalVar;
 
-    public ASMBuilder(IRProgram irProgram) {
+    public ASMBuilder(IRProgram irProgram, HashMap<String, HashSet<String>> useGlobalVar_) {
         asmProgram = new ASMProgram();
         globalVar = new HashSet<>();
         funcNodeMap = new HashMap<>();
         inlineQueue = new ArrayDeque<>();
         globalVarReg = new HashMap<>();
         getelememtptrMap = new HashMap<>();
+        useGlobalVar = useGlobalVar_;
         for (var stmt : irProgram.stmtList) {
             getelememtptrMap.clear();
             if (stmt instanceof FuncDef) {
@@ -198,69 +200,66 @@ public class ASMBuilder {
             return;
         }
         section.pushInstr(new LABEL(label.labelName));
-    }
-
-    void visitStore(Section section, String fromVar, String toVar, int offset) {
-        section.pushInstr(new SW(fromVar.substring(1), toVar.substring(1), offset));
-    }
-
-    void visitLoad(Section section, String fromVar, String toVar, int offset) {
-        section.pushInstr(new LW(fromVar.substring(1), toVar.substring(1), offset));
+        globalVarReg.clear();
     }
 
     void visit(Section section, Store store) {
         String from, to;
-        //boolean isStore = true;
+        boolean isStore = true;
         if (store.valueVar == null) {
-            from = "tmp" + cnt++;
-            section.pushInstr(new LI(from, (int) store.value));
+            if (store.value == 0) {
+                from = "zero";
+            } else {
+                from = "tmp" + cnt++;
+                section.pushInstr(new LI(from, (int) store.value));
+            }
         } else {
             if (store.valueVar.charAt(0) == '@') {
-//                from = globalVarReg.get(store.valueVar.substring(1));
-//                if (from == null) {
-                from = "tmp" + cnt++;
-                if (store.valueVar.contains("-")) {
-                    section.pushInstr(new LA(from, store.valueVar.substring(1)));
-                } else {
-                    section.pushInstr(new LW(store.valueVar.substring(1), from));
+                from = globalVarReg.get(store.valueVar.substring(1));
+                if (from == null) {
+                    from = "tmp" + cnt++;
+                    if (store.valueVar.contains("-")) {
+                        section.pushInstr(new LA(from, store.valueVar.substring(1)));
+                    } else {
+                        section.pushInstr(new LW(store.valueVar.substring(1), from));
+                    }
                 }
-//                }
             } else {
                 from = store.valueVar;
             }
         }
         if (store.toPointer.charAt(0) == '@') {
-//            to = globalVarReg.get(store.toPointer.substring(1));
-//            if (to == null) {
-            to = "tmp" + cnt++;
-            section.pushInstr(new LA(to, store.toPointer.substring(1)));
-//            } else {
-//                isStore = false;
-//            }
+            to = globalVarReg.get(store.toPointer.substring(1));
+            if (to == null) {
+                to = "tmp" + cnt++;
+                section.pushInstr(new LA(to, store.toPointer.substring(1)));
+            } else {
+                isStore = false;
+            }
         } else {
             to = store.toPointer;
         }
-//        if (isStore) {
-        section.pushInstr(new SW(from, to, 0));
-//        } else {
-//            section.pushInstr(new MV(from, to));
-//        }
+        if (isStore) {
+            section.pushInstr(new SW(from, to, 0));
+        } else {
+            section.pushInstr(new MV(from, to));
+        }
     }
 
     void visit(Section section, Load load) {
         if (load.fromPointer.charAt(0) == '@') {
-//            String varReg = globalVarReg.get(load.fromPointer.substring(1));
-//            if (varReg != null) {
-//                section.pushInstr(new MV(varReg, load.toVarName));
-//            } else {
-            String varReg = load.fromPointer.substring(1);
-            //globalVarReg.put(load.fromPointer.substring(1), varReg);
-            if (load.fromPointer.contains("-")) {
-                section.pushInstr(new LA(load.toVarName, varReg));
+            String varReg = globalVarReg.get(load.fromPointer.substring(1));
+            if (varReg != null) {
+                section.pushInstr(new MV(varReg, load.toVarName));
             } else {
-                section.pushInstr(new LW(varReg, load.toVarName));
+                varReg = load.fromPointer.substring(1);
+                if (load.fromPointer.contains("-")) {
+                    section.pushInstr(new LA(load.toVarName, varReg));
+                } else {
+                    globalVarReg.put(varReg, load.toVarName);
+                    section.pushInstr(new LW(varReg, load.toVarName));
+                }
             }
-            //}
         } else {
             section.pushInstr(new LW(load.fromPointer, load.toVarName, 0));
         }
@@ -548,6 +547,13 @@ public class ASMBuilder {
     }
 
     void visit(Section section, Call call, FuncNode funcNode) {
+        for (var key : useGlobalVar.keySet()) {
+            String valueVar = globalVarReg.remove(key);
+            if (valueVar != null) {
+                section.pushInstr(new LA("tmp" + cnt, key));
+                section.pushInstr(new SW(valueVar, "tmp" + cnt++, 0));
+            }
+        }
         FuncNode callNode = getNode(call.functionName.substring(1));
         callNode.fromNode.add(funcNode);
         funcNode.toNode.add(callNode);
@@ -560,15 +566,16 @@ public class ASMBuilder {
             if (variable.varName != null) {
                 String from;
                 if (variable.varName.charAt(0) == '@') {
-//                    from = globalVarReg.get(variable.varName.substring(1));
-//                    if (from == null) {
-                    from = "tmp" + cnt++;
-                    if (variable.varName.contains("-")) {
-                        section.pushInstr(new LA(from, variable.varName.substring(1)));
-                    } else {
-                        section.pushInstr(new LW(variable.varName.substring(1), from));
+                    from = globalVarReg.get(variable.varName.substring(1));
+                    if (from == null) {
+                        from = "tmp" + cnt++;
+                        if (variable.varName.contains("-")) {
+                            section.pushInstr(new LA(from, variable.varName.substring(1)));
+                        } else {
+                            globalVarReg.put(variable.varName.substring(1), from);
+                            section.pushInstr(new LW(variable.varName.substring(1), from));
+                        }
                     }
-                    //}
                 } else {
                     from = variable.varName;
                 }
@@ -590,11 +597,15 @@ public class ASMBuilder {
                 if (variable.varName != null) {
                     String from;
                     if (variable.varName.charAt(0) == '@') {
-                        from = "tmp" + cnt++;
-                        if (variable.varName.contains("-")) {
-                            section.pushInstr(new LA(from, variable.varName.substring(1)));
-                        } else {
-                            section.pushInstr(new LW(variable.varName.substring(1), from));
+                        from = globalVarReg.get(variable.varName.substring(1));
+                        if (from == null) {
+                            from = "tmp" + cnt++;
+                            if (variable.varName.contains("-")) {
+                                section.pushInstr(new LA(from, variable.varName.substring(1)));
+                            } else {
+                                globalVarReg.put(variable.varName.substring(1), from);
+                                section.pushInstr(new LW(variable.varName.substring(1), from));
+                            }
                         }
                     } else {
                         from = variable.varName;
@@ -626,6 +637,11 @@ public class ASMBuilder {
     }
 
     void visit(Section section, Br br) {
+        for (var entry : globalVarReg.entrySet()) {
+            section.pushInstr(new LA("tmp" + cnt, entry.getKey()));
+            section.pushInstr(new SW(entry.getValue(), "tmp" + cnt++, 0));
+        }
+        globalVarReg.clear();
         var phiInfo = phiMap.get(br.nowLabel.substring(1));
         if (br.condition == null) {
             if (phiInfo != null) {
@@ -664,8 +680,15 @@ public class ASMBuilder {
             } else {
                 String from;
                 if (phi.fromVar.contains("@")) {
-                    section.pushInstr(new LA("tmp" + cnt, phi.fromVar.substring(1)));
-                    from = "tmp" + cnt++;
+                    from = globalVarReg.get(phi.fromVar.substring(1));
+                    if (from == null) {
+                        from = "tmp" + cnt++;
+                        if (phi.fromVar.contains("-")) {
+                            section.pushInstr(new LW(from, phi.fromVar.substring(1)));
+                        } else {
+                            section.pushInstr(new LA(from, phi.fromVar.substring(1)));
+                        }
+                    }
                 } else {
                     from = phi.fromVar;
                 }
@@ -693,6 +716,11 @@ public class ASMBuilder {
     }
 
     void visit(Section section, Ret ret, Init init) {
+        for (var entry : globalVarReg.entrySet()) {
+            section.pushInstr(new LA("tmp" + cnt, entry.getKey()));
+            section.pushInstr(new SW(entry.getValue(), "tmp" + cnt++, 0));
+        }
+        globalVarReg.clear();
         if (ret.irType != null && ret.irType.unitSize != -1) {
             if (ret.var != null) {
                 MV mv = new MV(ret.var, "tmp" + cnt++);

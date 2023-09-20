@@ -52,7 +52,7 @@ public class Section {
             if (!Objects.equals(((LABEL) asmInstr).label, nowFuncName)) {
                 ((LABEL) asmInstr).label = "." + nowFuncName + "-" + ((LABEL) asmInstr).label;
             } else {
-                asmInstrList.add(new LinkedList<>());
+                asmInstrList.add(new ArrayList<>());
             }
         }
         if (asmInstr instanceof J) {

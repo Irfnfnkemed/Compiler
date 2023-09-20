@@ -74,13 +74,13 @@ public class FuncDef extends IRStatement {
 
 
     public FuncDef() {
-        irList = new LinkedList<>();
-        parameterTypeList = new LinkedList<>();
+        irList = new ArrayList<>();
+        parameterTypeList = new ArrayList<>();
         ifStatusStack = new Stack<>();
         loopStatusStack = new Stack<>();
         ifAndLoopOrder = new Stack<>();
         phiMap = new HashMap<>();
-        labelList = new LinkedList<>();
+        labelList = new ArrayList<>();
     }
 
     public void pushPara(Type parameterType) {

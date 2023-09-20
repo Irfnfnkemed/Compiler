@@ -52,7 +52,7 @@ public class Compiler {
             semantic.check();
             IRBuilder irBuilder = new IRBuilder(AST.ASTProgram, semantic.globalScope, semantic.inlineGlobalVar);
             Mem2Reg mem2Reg = new Mem2Reg(irBuilder.irProgram);
-            ASMBuilder asmBuilder = new ASMBuilder(irBuilder.irProgram);
+            ASMBuilder asmBuilder = new ASMBuilder(irBuilder.irProgram, irBuilder.useGlobalVar);
             ASMPrinter asmPrinter = new ASMPrinter(asmBuilder.asmProgram);
             RegAllocation regAllocation = new RegAllocation(asmBuilder);
             asmPrinter.print();

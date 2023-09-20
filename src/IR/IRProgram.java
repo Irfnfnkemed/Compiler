@@ -2,9 +2,8 @@ package src.IR;
 
 import src.IR.statement.*;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 public class IRProgram extends IRNode {
     public List<IRStatement> stmtList;
@@ -12,7 +11,7 @@ public class IRProgram extends IRNode {
     public int varDefIndex = 1;
 
     public IRProgram() {
-        stmtList = new LinkedList<>();
+        stmtList = new ArrayList<>();
         stmtList.add(new ConstString());
     }
 

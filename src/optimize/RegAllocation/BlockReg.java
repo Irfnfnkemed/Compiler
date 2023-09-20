@@ -42,9 +42,9 @@ public class BlockReg {
 
     public BlockReg(String label_) {
         label = label_;
-        instructionList = new LinkedList<>();
+        instructionList = new ArrayList<>();
         next = new BlockReg[2];
-        prev = new LinkedList<>();
+        prev = new ArrayList<>();
         blockLive = new BlockLive();
     }
 

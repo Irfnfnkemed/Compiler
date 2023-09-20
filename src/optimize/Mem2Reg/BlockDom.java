@@ -17,9 +17,9 @@ public class BlockDom {
 
     public BlockDom(String label_) {
         label = label_;
-        instructionList = new LinkedList<>();
+        instructionList = new ArrayList<>();
         next = new BlockDom[2];
-        prev = new LinkedList<>();
+        prev = new ArrayList<>();
         insertPhi = new HashMap<>();
     }
 

@@ -131,8 +131,9 @@ public class RegAllocation {
             var instrList = asmBuilder.asmProgram.sectionText.asmInstrList.get(i);
             if (!functions.containsKey(((LABEL) instrList.get(0)).label)) {
                 asmBuilder.asmProgram.sectionText.asmInstrList.remove(i--);
+            } else {
+                asmBuilder.asmProgram.sectionText.asmInstrList.set(i, mergeADDI(instrList));
             }
-            mergeADDI(instrList);
         }
     }
 
@@ -261,18 +262,20 @@ public class RegAllocation {
         return Objects.requireNonNullElseGet(newName, () -> varName + postFix);
     }
 
-    public void mergeADDI(List<ASMInstr> asmInstrList) {
+    public List<ASMInstr> mergeADDI(List<ASMInstr> asmInstrList) {
         var iterator = asmInstrList.listIterator();
-        ASMInstr pre = null, now = null;
-        while (iterator.hasNext()) {
-            now = iterator.next();
+        List<ASMInstr> newASMInstrList = new ArrayList<>();
+        ASMInstr now = null, pre = null;
+        for (int i = 0; i < asmInstrList.size(); ++i) {
+            now = asmInstrList.get(i);
             if (pre instanceof ADDI && now instanceof ADDI && Objects.equals(((ADDI) now).from, ((ADDI) now).to) &&
                     Objects.equals(((ADDI) pre).to, ((ADDI) now).to)) {
-                iterator.remove();
                 ((ADDI) pre).imme += ((ADDI) now).imme;
-                iterator.previous();
+            } else {
+                newASMInstrList.add(now);
+                pre = now;
             }
-            pre = now;
         }
+        return newASMInstrList;
     }
 }
