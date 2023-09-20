@@ -39,6 +39,7 @@ public class ASMBuilder {
     private HashMap<String, FuncDef.PhiInfo> phiMap;
     public Queue<String> inlineQueue;
     public HashMap<String, String> globalVarReg;//存储全局变量的虚拟寄存器，仅每个块内各自有效
+    public HashSet<String> globalVarStore;//需要store的全局变量，仅每个块内各自有效
     public int cnt = 0, label = 0;
     public Instruction cache;
     public HashMap<String, Getelementptr> getelememtptrMap;
@@ -51,6 +52,7 @@ public class ASMBuilder {
         inlineQueue = new ArrayDeque<>();
         globalVarReg = new HashMap<>();
         getelememtptrMap = new HashMap<>();
+        globalVarStore = new HashSet<>();
         useGlobalVar = useGlobalVar_;
         for (var stmt : irProgram.stmtList) {
             getelememtptrMap.clear();
@@ -201,6 +203,7 @@ public class ASMBuilder {
         }
         section.pushInstr(new LABEL(label.labelName));
         globalVarReg.clear();
+        globalVarStore.clear();
     }
 
     void visit(Section section, Store store) {
@@ -229,6 +232,7 @@ public class ASMBuilder {
             }
         }
         if (store.toPointer.charAt(0) == '@') {
+            globalVarStore.add(store.toPointer.substring(1));
             to = globalVarReg.get(store.toPointer.substring(1));
             if (to == null) {
                 to = "tmp" + cnt++;
@@ -549,7 +553,8 @@ public class ASMBuilder {
     void visit(Section section, Call call, FuncNode funcNode) {
         for (var key : useGlobalVar.keySet()) {
             String valueVar = globalVarReg.remove(key);
-            if (valueVar != null) {
+            if (valueVar != null && globalVarStore.contains(key)) {
+                globalVarStore.remove(key);
                 section.pushInstr(new LA("tmp" + cnt, key));
                 section.pushInstr(new SW(valueVar, "tmp" + cnt++, 0));
             }
@@ -638,10 +643,13 @@ public class ASMBuilder {
 
     void visit(Section section, Br br) {
         for (var entry : globalVarReg.entrySet()) {
-            section.pushInstr(new LA("tmp" + cnt, entry.getKey()));
-            section.pushInstr(new SW(entry.getValue(), "tmp" + cnt++, 0));
+            if (globalVarStore.contains(entry.getKey())) {
+                section.pushInstr(new LA("tmp" + cnt, entry.getKey()));
+                section.pushInstr(new SW(entry.getValue(), "tmp" + cnt++, 0));
+            }
         }
         globalVarReg.clear();
+        globalVarStore.clear();
         var phiInfo = phiMap.get(br.nowLabel.substring(1));
         if (br.condition == null) {
             if (phiInfo != null) {
@@ -684,9 +692,9 @@ public class ASMBuilder {
                     if (from == null) {
                         from = "tmp" + cnt++;
                         if (phi.fromVar.contains("-")) {
-                            section.pushInstr(new LW(from, phi.fromVar.substring(1)));
-                        } else {
                             section.pushInstr(new LA(from, phi.fromVar.substring(1)));
+                        } else {
+                            section.pushInstr(new LW(phi.fromVar.substring(1), from));
                         }
                     }
                 } else {
@@ -717,10 +725,13 @@ public class ASMBuilder {
 
     void visit(Section section, Ret ret, Init init) {
         for (var entry : globalVarReg.entrySet()) {
-            section.pushInstr(new LA("tmp" + cnt, entry.getKey()));
-            section.pushInstr(new SW(entry.getValue(), "tmp" + cnt++, 0));
+            if (globalVarStore.contains(entry.getKey())) {
+                section.pushInstr(new LA("tmp" + cnt, entry.getKey()));
+                section.pushInstr(new SW(entry.getValue(), "tmp" + cnt++, 0));
+            }
         }
         globalVarReg.clear();
+        globalVarStore.clear();
         if (ret.irType != null && ret.irType.unitSize != -1) {
             if (ret.var != null) {
                 MV mv = new MV(ret.var, "tmp" + cnt++);
