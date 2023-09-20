@@ -259,6 +259,9 @@ public class RegAllocation {
 
     public String getInlineVarName(String varName) {
         String newName = replace.get(varName);
+        if (Objects.equals(varName, "zero")) {
+            return varName;
+        }
         return Objects.requireNonNullElseGet(newName, () -> varName + postFix);
     }
 
