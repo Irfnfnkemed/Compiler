@@ -28,11 +28,13 @@ public class Function {
 
     public void allocateReg() {
         while (!graphColor.allocateReg()) {
+            asmInstrList = cfgReg.asmInstrList;
             cnt = graphColor.cnt++;
             cfgReg.reset(graphColor.spillSet);//重置
             rig = new RIG(cfgReg);
             graphColor = new GraphColor(rig, cfgReg.globalVar, stack, cnt);
         }
+        asmInstrList = cfgReg.asmInstrList;
         savedReg = new HashSet<>();
         unsavedReg = new HashSet<>();
         for (String reg : graphColor.used) {

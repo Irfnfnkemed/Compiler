@@ -50,9 +50,17 @@ public class RegAllocation {
         }
         for (int i = 0; i < asmBuilder.asmProgram.sectionText.asmInstrList.size(); ++i) {
             var list = asmBuilder.asmProgram.sectionText.asmInstrList.get(i);
+            var func = functions.get(((LABEL) list.get(0)).label);
+            if (func != null) {
+                asmBuilder.asmProgram.sectionText.asmInstrList.set(i, func.asmInstrList);
+            }
+        }
+        for (int i = 0; i < asmBuilder.asmProgram.sectionText.asmInstrList.size(); ++i) {
+            var list = asmBuilder.asmProgram.sectionText.asmInstrList.get(i);
             if (ASMInstrMap.containsKey(((LABEL) list.get(0)).label)) {
                 Function function = new Function(asmBuilder.asmProgram.sectionText.asmInstrList.get(i), asmBuilder.globalVar);
                 function.allocateReg();
+                asmBuilder.asmProgram.sectionText.asmInstrList.set(i, function.asmInstrList);
                 functions.put(((LABEL) list.get(0)).label, function);
             }
         }
