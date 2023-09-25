@@ -95,18 +95,7 @@ public class LoopInvariant {
                 notLoopInvariant.add(((Icmp) instr).output);
             }
         } else if (instr instanceof Call) {
-            boolean flag = true;
-            for (var para : ((Call) instr).callList) {
-                if (!judgeInvariant(para.varName)) {
-                    flag = false;
-                    break;
-                }
-            }
-            if (flag) {
-                br.pushCache(instr);
-            } else {
-                notLoopInvariant.add(((Call) instr).resultVar);
-            }
+            notLoopInvariant.add(((Call) instr).resultVar);
         } else if (instr instanceof Getelementptr) {
             if (judgeInvariant(((Getelementptr) instr).from) && judgeInvariant(((Getelementptr) instr).indexVar)) {
                 br.pushCache(instr);
