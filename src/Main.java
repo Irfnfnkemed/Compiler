@@ -22,8 +22,6 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Scanner;
 
-import static test.TestIR.testIR;
-
 public class Main {
     public static void main(String[] args) throws Exception {
         Scanner scanner = new Scanner(System.in);
@@ -66,7 +64,7 @@ public class Main {
             System.err.println(errors.toString());
         }
         //testSemantic();
-        testIR();
+        //testIR();
     }
 }
 
