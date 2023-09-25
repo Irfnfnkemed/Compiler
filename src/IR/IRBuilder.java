@@ -685,6 +685,9 @@ public class IRBuilder implements ASTVisitor {
         } else {
             ((Exp) now).push(new Store(node.rhs.type, ((Exp) now).popVar(), ((Exp) now).lhsVar));
         }
+        if (node.lhs instanceof ArrayElementLhsExp && loopInvariant.isLoop()) {
+            loopInvariant.getNowLoop().modifyHeap = true;
+        }
     }
 
     @Override

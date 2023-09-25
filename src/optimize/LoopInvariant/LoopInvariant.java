@@ -12,6 +12,7 @@ public class LoopInvariant {
         public Br br;//结束时的指令(br)，用于后续插入
         public Queue<Integer> subBlock;//循环体中的块的起始位置
         public boolean hasFatherLoop = false;//本身是否在循环中
+        public boolean modifyHeap = false;
 
         public Loop(Br br_, FuncDef funcDef_) {
             br = br_;
@@ -25,6 +26,8 @@ public class LoopInvariant {
     HashSet<String> notLoopInvariant;//不是循环不变量的变量
     HashSet<String> defInLoop;//在loop中store的变量
     HashMap<String, HashSet<String>> useGlobalVar;//函数名->用到的全局变量
+    boolean callInLoop = false;
+    boolean modifyHeap = false;
 
     public LoopInvariant(HashMap<String, HashSet<String>> useGlobalVar_) {
         allLoop = new ArrayList<>();
@@ -49,12 +52,18 @@ public class LoopInvariant {
         allLoop.get(loopPos.peek()).subBlock.add(pos);
     }
 
+    public Loop getNowLoop() {
+        return allLoop.get(loopPos.peek());
+    }
+
 
     public void moveLoopInvariant() {
         Instruction instr;
         Loop loop;
         for (int i = allLoop.size() - 1; i >= 0; --i) {
             loop = allLoop.get(i);
+            callInLoop = false;
+            modifyHeap = loop.modifyHeap;
             for (int pos : loop.subBlock) {
                 while (true) {
                     instr = loop.funcDef.irList.get(pos++);
@@ -63,6 +72,9 @@ public class LoopInvariant {
                     }
                     if (instr instanceof Store) {
                         defInLoop.add(((Store) instr).toPointer);
+                    }
+                    if (instr instanceof Call) {
+                        callInLoop = true;
                     }
                 }
             }
@@ -105,7 +117,12 @@ public class LoopInvariant {
                 }
             }
         } else if (instr instanceof Getelementptr) {
-            notLoopInvariant.add(((Getelementptr) instr).result);
+            if (!callInLoop && !modifyHeap && judgeInvariant(((Getelementptr) instr).from) &&
+                    !defInLoop.contains(((Getelementptr) instr).from) && judgeInvariant(((Getelementptr) instr).indexVar)) {
+                br.pushCache(instr);
+            } else {
+                notLoopInvariant.add(((Getelementptr) instr).result);
+            }
         } else if (instr instanceof Phi) {
             notLoopInvariant.add(((Phi) instr).result);
         } else if (instr instanceof Load) {
