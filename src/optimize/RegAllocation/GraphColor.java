@@ -250,7 +250,14 @@ public class GraphColor {
     }
 
     public void spilt() {
-        var node = simplifyList.last();
+        RIG.RIGNode node = null;
+        var descendingSet = simplifyList.descendingSet();
+        for (var ele : descendingSet) {
+            if (!Objects.equals(ele.varName, "this")) {
+                node = ele;
+                break;
+            }
+        }
         if (node == null) {
             return;
         }
