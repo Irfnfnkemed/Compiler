@@ -1,7 +1,7 @@
 package src.IR.statement;
 
 import src.Util.type.IRType;
-import src.Util.type.Type;
+import src.optimize.LoopInvariant.LoopInvariant;
 
 public class GlobalVarDef extends IRStatement {
     public IRType irType;
@@ -10,8 +10,8 @@ public class GlobalVarDef extends IRStatement {
 
     public long value = 0;
 
-    public void setFuncDef() {
-        funcDef = new FuncDef();
+    public void setFuncDef(LoopInvariant loopInvariant) {
+        funcDef = new FuncDef(loopInvariant);
         funcDef.irType = new IRType().setVoid();
         funcDef.functionName = "@.init-" + varName.substring(1);
     }

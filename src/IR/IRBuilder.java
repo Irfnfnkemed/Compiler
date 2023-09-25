@@ -22,16 +22,16 @@ import src.IR.statement.GlobalVarDef;
 import src.Util.scope.GlobalScope;
 import src.Util.type.IRType;
 import src.Util.type.Type;
+import src.optimize.LoopInvariant.LoopInvariant;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Objects;
+import java.util.*;
 
 public class IRBuilder implements ASTVisitor {
     public IRProgram irProgram;
     public GlobalScope globalScope;
     public HashSet<String> inlineGlobalVar;//内联到main函数的全局变量
     public HashMap<String, HashSet<String>> useGlobalVar;//函数名->用到的全局变量
+    public LoopInvariant loopInvariant;
     public FuncDef funcMain;
     public IRNode now;
     public int anonymousVar = 0;
@@ -50,16 +50,19 @@ public class IRBuilder implements ASTVisitor {
         typeI1 = new IRType().setI1();
         typePtr = new IRType().setPtr();
         irProgram = new IRProgram();
-        funcMain = new FuncDef();
+        loopInvariant = new LoopInvariant();
+        funcMain = new FuncDef(loopInvariant);
         funcMain.irList.add(0, new Label("entry"));
         funcMain.irType = typeI32;
         funcMain.functionName = "@main";
         visit(node);
+        loopInvariant.moveLoopInvariant();
+        recollect();
     }
 
     @Override
     public void visit(Program node) {
-        FuncDef funcDef = new FuncDef();
+        FuncDef funcDef = new FuncDef(loopInvariant);
         funcDef.push(new Label("entry"));
         funcDef.irType = typePtr;
         funcDef.functionName = "@.newArray";
@@ -145,7 +148,7 @@ public class IRBuilder implements ASTVisitor {
         anonymousVar = 0;
         anonymousLabel = 0;
         var nowTmp = now;
-        FuncDef funcDef = new FuncDef();
+        FuncDef funcDef = new FuncDef(loopInvariant);
         funcDef.push(new Label("entry"));
         funcDef.isClassMethod = true;
         funcDef.irType = typePtr;
@@ -196,7 +199,7 @@ public class IRBuilder implements ASTVisitor {
     public void visit(FunctionDef node) {
         anonymousVar = 0;
         anonymousLabel = 0;
-        FuncDef funcDef = new FuncDef();
+        FuncDef funcDef = new FuncDef(loopInvariant);
         if (node.scope.isClass) {
             funcDef.functionName = "@" + node.scope.classType.typeName + "." + node.functionName;
             useGlobalVar.put(funcDef.functionName.substring(1), new HashSet<>());
@@ -247,7 +250,7 @@ public class IRBuilder implements ASTVisitor {
             globalVarDef.varName = "@" + node.variableName;
             globalVarDef.irType = new IRType(node.type);
             if (node.exp != null) {
-                globalVarDef.setFuncDef();
+                globalVarDef.setFuncDef(loopInvariant);
                 globalVarDef.funcDef.push(new Label("entry"));
                 anonymousVar = 0;
                 now = new Exp(globalVarDef.funcDef);
@@ -365,6 +368,7 @@ public class IRBuilder implements ASTVisitor {
                     (node.falseStmt.suite != null && node.falseStmt.suite.statementList.size() == 0)) {
                 ((FuncDef) now).push(new Br(exp.popVar(), "%trueLabel-" + tmp, "%toLabel-" + tmp, (FuncDef) now));
                 ((FuncDef) now).push(new Label("trueLabel-" + tmp));
+
                 node.trueStmt.accept(this);
                 if (!tmpIf.trueJump) {
                     ((FuncDef) now).push(new Br("%toLabel-" + tmp, (FuncDef) now));
@@ -432,7 +436,9 @@ public class IRBuilder implements ASTVisitor {
         if (node.parallelExp != null) {
             node.parallelExp.accept(this);
         }
-        ((FuncDef) now).push(new Br(condition, (FuncDef) now));
+        Br br = new Br(condition, (FuncDef) now);
+        loopInvariant.setLoopEntry(br, (FuncDef) now);
+        ((FuncDef) now).push(br);
         ((FuncDef) now).push(new Label(condition.substring(1)));
         if (node.conditionExp != null) {
             Exp exp = new Exp((FuncDef) now);
@@ -468,6 +474,7 @@ public class IRBuilder implements ASTVisitor {
             now = nowTmp;
         }
         ((FuncDef) now).push(new Br(condition, (FuncDef) now));
+        loopInvariant.setLoopEnd();
         ((FuncDef) now).push(new Label(to.substring(1)));
         ((FuncDef) now).popLoop();
     }
@@ -1103,6 +1110,44 @@ public class IRBuilder implements ASTVisitor {
             return "@" + varName;
         } else {
             return "%" + varName + "-" + line + "-" + column;
+        }
+    }
+
+    public void insertAlloca() {
+        for (var stmt : irProgram.stmtList) {
+            if (stmt instanceof FuncDef) {
+                ((FuncDef) stmt).insertAlloca();
+            }
+        }
+    }
+
+    public void recollect() {
+        Instruction instr;
+        for (var stmt : irProgram.stmtList) {
+            if (stmt instanceof FuncDef) {
+                List<Instruction> newIrList = new ArrayList<>();
+                int i = 0;
+                while (i < ((FuncDef) stmt).allocaIndex) {
+                    newIrList.add(((FuncDef) stmt).irList.get(i++));
+                }
+                newIrList.addAll(((FuncDef) stmt).allocaList);
+                for (; i < ((FuncDef) stmt).irList.size(); ++i) {
+                    instr = ((FuncDef) stmt).irList.get(i);
+                    if (!instr.visited) {
+                        if (instr.cache != null) {
+                            for (var cacheInstr : instr.cache) {
+                                if (!cacheInstr.visited) {
+                                    newIrList.add(cacheInstr);
+                                    cacheInstr.visited = true;
+                                }
+                            }
+                        }
+                        newIrList.add(instr);
+                        instr.visited = true;
+                    }
+                }
+                ((FuncDef) stmt).irList = newIrList;
+            }
         }
     }
 

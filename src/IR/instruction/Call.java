@@ -22,9 +22,7 @@ public class Call extends Instruction {
 
     public IRType irType;
     public String functionName;
-
     public List<IRType> callTypeList;
-
     public List<variable> callList;
     public String resultVar;
 

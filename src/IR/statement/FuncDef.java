@@ -3,7 +3,7 @@ package src.IR.statement;
 import src.IR.instruction.*;
 import src.Util.type.IRType;
 import src.Util.type.Type;
-import src.optimize.Mem2Reg.BlockDom;
+import src.optimize.LoopInvariant.LoopInvariant;
 
 import java.util.*;
 
@@ -68,12 +68,13 @@ public class FuncDef extends IRStatement {
     public int allocaIndex = 1;
     public String label = "%entry";
     public boolean isClassMethod = false;
-    public int allocaSize = 0;
     public int maxCallPara = -1;
     public HashMap<String, PhiInfo> phiMap;//phi指令，跳转来源标签->目标标签及赋值语段，便于汇编处理
+    public LoopInvariant loopInvariant;
+    public List<Alloca> allocaList;
 
 
-    public FuncDef() {
+    public FuncDef(LoopInvariant loopInvariant_) {
         irList = new ArrayList<>();
         parameterTypeList = new ArrayList<>();
         ifStatusStack = new Stack<>();
@@ -81,6 +82,8 @@ public class FuncDef extends IRStatement {
         ifAndLoopOrder = new Stack<>();
         phiMap = new HashMap<>();
         labelList = new ArrayList<>();
+        allocaList = new ArrayList<>();
+        loopInvariant = loopInvariant_;
     }
 
     public void pushPara(Type parameterType) {
@@ -89,19 +92,27 @@ public class FuncDef extends IRStatement {
 
     public void push(Instruction instruction) {
         if (instruction instanceof Alloca) {
-            irList.add(allocaIndex++, instruction);
-            ++allocaSize;
+            allocaList.add((Alloca) instruction);
         } else {
             irList.add(instruction);
         }
         if (instruction instanceof Label) {
             label = "%" + ((Label) instruction).labelName;
             labelList.add((Label) instruction);
+            if (loopInvariant.isLoop()) {
+                loopInvariant.addSubBlock(irList.size());
+            }
         }
         if (instruction instanceof Call) {
             if (((Call) instruction).callTypeList.size() > maxCallPara) {
                 maxCallPara = ((Call) instruction).callTypeList.size();
             }
+        }
+    }
+
+    public void insertAlloca() {
+        for (var alloca : allocaList) {
+            irList.add(allocaIndex++, alloca);
         }
     }
 
