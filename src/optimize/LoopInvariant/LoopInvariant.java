@@ -24,12 +24,14 @@ public class LoopInvariant {
     Stack<Integer> loopPos;
     HashSet<String> notLoopInvariant;//不是循环不变量的变量
     HashSet<String> defInLoop;//在loop中store的变量
+    HashMap<String, HashSet<String>> useGlobalVar;//函数名->用到的全局变量
 
-    public LoopInvariant() {
+    public LoopInvariant(HashMap<String, HashSet<String>> useGlobalVar_) {
         allLoop = new ArrayList<>();
         loopPos = new Stack<>();
         notLoopInvariant = new HashSet<>();
         defInLoop = new HashSet<>();
+        useGlobalVar = useGlobalVar_;
     }
 
     public void setLoopEntry(Br br, FuncDef funcDef) {
@@ -96,12 +98,14 @@ public class LoopInvariant {
             }
         } else if (instr instanceof Call) {
             notLoopInvariant.add(((Call) instr).resultVar);
-        } else if (instr instanceof Getelementptr) {
-            if (judgeInvariant(((Getelementptr) instr).from) && judgeInvariant(((Getelementptr) instr).indexVar)) {
-                br.pushCache(instr);
-            } else {
-                notLoopInvariant.add(((Getelementptr) instr).result);
+            var func = useGlobalVar.get(((Call) instr).functionName.substring(1));
+            if (func != null) {
+                for (var globalVar : func) {
+                    defInLoop.add("@" + globalVar);
+                }
             }
+        } else if (instr instanceof Getelementptr) {
+            notLoopInvariant.add(((Getelementptr) instr).result);
         } else if (instr instanceof Phi) {
             notLoopInvariant.add(((Phi) instr).result);
         } else if (instr instanceof Load) {

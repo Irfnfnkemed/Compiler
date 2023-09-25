@@ -50,7 +50,7 @@ public class IRBuilder implements ASTVisitor {
         typeI1 = new IRType().setI1();
         typePtr = new IRType().setPtr();
         irProgram = new IRProgram();
-        loopInvariant = new LoopInvariant();
+        loopInvariant = new LoopInvariant(useGlobalVar);
         funcMain = new FuncDef(loopInvariant);
         funcMain.irList.add(0, new Label("entry"));
         funcMain.irType = typeI32;
@@ -1110,14 +1110,6 @@ public class IRBuilder implements ASTVisitor {
             return "@" + varName;
         } else {
             return "%" + varName + "-" + line + "-" + column;
-        }
-    }
-
-    public void insertAlloca() {
-        for (var stmt : irProgram.stmtList) {
-            if (stmt instanceof FuncDef) {
-                ((FuncDef) stmt).insertAlloca();
-            }
         }
     }
 
