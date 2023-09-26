@@ -1,6 +1,7 @@
 package src.IR;
 
 import src.IR.IRNode;
+import src.IR.instruction.Getelementptr;
 import src.IR.instruction.Instruction;
 import src.IR.statement.FuncDef;
 
@@ -17,6 +18,7 @@ public class Exp extends IRNode {
 
     public FuncDef funcDef;
     public String lhsVar;//指向存放左值的空间的指针名
+    public String heapVar;
 
     public Exp(FuncDef funcDef_) {
         funcDef = funcDef_;

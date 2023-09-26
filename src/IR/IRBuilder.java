@@ -942,6 +942,9 @@ public class IRBuilder implements ASTVisitor {
     @Override
     public void visit(PostfixExp node) {
         node.exp.accept(this);
+        if (node.exp instanceof ArrayElementLhsExp && loopInvariant.isLoop()) {
+            loopInvariant.getNowLoop().modifyHeap = true;
+        }
         Binary binary;
         if (Objects.equals(node.op, "++")) {
             binary = new Binary("+");
@@ -960,6 +963,9 @@ public class IRBuilder implements ASTVisitor {
     @Override
     public void visit(PrefixLhsExp node) {
         node.exp.accept(this);
+        if (node.exp instanceof ArrayElementLhsExp && loopInvariant.isLoop()) {
+            loopInvariant.getNowLoop().modifyHeap = true;
+        }
         Binary binary = null;
         if (Objects.equals(node.op, "++")) {
             binary = new Binary("+");

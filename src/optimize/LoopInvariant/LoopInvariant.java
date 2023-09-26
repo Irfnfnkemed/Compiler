@@ -62,8 +62,9 @@ public class LoopInvariant {
         Loop loop;
         for (int i = allLoop.size() - 1; i >= 0; --i) {
             loop = allLoop.get(i);
-            callInLoop = false;
-            modifyHeap = loop.modifyHeap;
+            if (!modifyHeap) {
+                modifyHeap = loop.modifyHeap;
+            }
             for (int pos : loop.subBlock) {
                 while (true) {
                     instr = loop.funcDef.irList.get(pos++);
@@ -74,7 +75,9 @@ public class LoopInvariant {
                         defInLoop.add(((Store) instr).toPointer);
                     }
                     if (instr instanceof Call) {
-                        callInLoop = true;
+                        if (!callInLoop) {
+                            callInLoop = true;
+                        }
                     }
                 }
             }
@@ -91,6 +94,8 @@ public class LoopInvariant {
             if (!loop.hasFatherLoop) {
                 notLoopInvariant.clear();
                 defInLoop.clear();
+                modifyHeap = false;
+                callInLoop = false;
             }
         }
     }
@@ -117,7 +122,7 @@ public class LoopInvariant {
                 }
             }
         } else if (instr instanceof Getelementptr) {
-            if (!callInLoop && !modifyHeap && judgeInvariant(((Getelementptr) instr).from) &&
+            if (!callInLoop && !modifyHeap && ((Getelementptr) instr).offset != -1 && judgeInvariant(((Getelementptr) instr).from) &&
                     !defInLoop.contains(((Getelementptr) instr).from) && judgeInvariant(((Getelementptr) instr).indexVar)) {
                 br.pushCache(instr);
             } else {
