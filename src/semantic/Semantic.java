@@ -60,6 +60,7 @@ public class Semantic implements ASTVisitor {
 
     public void visit(Program node) {
         boolean mainExist = false;
+        Definition mainDef = null;
         for (var def : node.defList) {
             if (def.mainDef != null) {
                 if (mainExist) {
@@ -67,12 +68,15 @@ public class Semantic implements ASTVisitor {
                 } else {
                     mainExist = true;
                 }
+                mainDef = def;
+                continue;
             }
             def.accept(this);
         }
         if (!mainExist) {
             throw new SemanticErrors("[Program error] Missing main function.", node.position);
         }
+        mainDef.accept(this);
     }
 
     public void visit(Definition node) {

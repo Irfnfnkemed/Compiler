@@ -20,7 +20,6 @@ public class Inline {
     public Inline() {
         replace = new HashMap<>();
         callPara = new ArrayList<>();
-        ;
     }
 
     public void inline(CALL call, List<ASMInstr> list)
@@ -78,7 +77,7 @@ public class Inline {
             } else if (instr instanceof binBase) {
                 Class<?> clazz = instr.getClass();
                 Constructor<?> constructor = clazz.getDeclaredConstructor(String.class, String.class, String.class);
-                constructor.setAccessible(true); // 设置Aa为可访问
+                constructor.setAccessible(true); // 设置为可访问
                 Object newObj = constructor.newInstance(getInlineVarName(((binBase) instr).lhs),
                         getInlineVarName(((binBase) instr).rhs), getInlineVarName(((binBase) instr).to));
                 call.inlineCache.add((ASMInstr) newObj);
