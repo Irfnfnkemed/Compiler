@@ -9,6 +9,7 @@ import src.AST.ASTBuilder;
 import src.IR.IRBuilder;
 import src.IR.IRPrinter;
 import src.IR.statement.FuncDef;
+import src.optimize.ADCE.ADCE;
 import src.optimize.Mem2Reg.Mem2Reg;
 import src.Util.error.Errors;
 import src.Util.error.ParserErrorListener;
@@ -46,6 +47,7 @@ public class Main {
             PrintStream printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);
             b.print();
+            var tt = new ADCE(a.irProgram);
             Mem2Reg mem2Reg = new Mem2Reg(a.irProgram);
             fileOutputStream = new FileOutputStream("./src/builtin/test.ll");
             printStream = new PrintStream(fileOutputStream);

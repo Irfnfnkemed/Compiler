@@ -118,7 +118,9 @@ public class CFGDom {
     }
 
     public void inverse() {//建立反图
-
+        for (BlockDom blockDom : funcBlocks.values()) {
+            blockDom.setInverse();
+        }
     }
 
 }

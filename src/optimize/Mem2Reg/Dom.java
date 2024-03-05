@@ -30,16 +30,16 @@ public class Dom {
     public List<DomInfo> dfnList;//按照dfn从小到大排列
     public int[] fatherDSU;//dfn->并查集中的fa
     public int[] minSdomDfn;//dfn->(对应节点 到 逆dfn序遍历dfs树过程中当前遍历到所有点的LCA 的路径上，sdom的dfn最小的点的dfn)
+    public String entryLabel;
     public CFGDom cfgDom;
-    public HashMap<String, BlockDom> cfgBlocks;
 
     public Dom(CFGDom cfgDom_) {
-        this(cfgDom_.funcBlocks);
-        cfgDom = cfgDom_;
+        this(cfgDom_, "entry");
     }
 
-    public Dom(HashMap<String, BlockDom> cfgBlocks_) {
-        cfgBlocks = cfgBlocks_;
+    public Dom(CFGDom cfgDom_, String entryLabel_) {
+        cfgDom = cfgDom_;
+        entryLabel = entryLabel_;
         domMap = new HashMap<>();
         dfnList = new ArrayList<>();
         DFS();
@@ -54,14 +54,15 @@ public class Dom {
         buildDomFrontier();
     }
 
+
     public void DFS() {
-        DomInfo rootDom = new DomInfo("entry", null);
+        DomInfo rootDom = new DomInfo(entryLabel, null);
         domMap.put(rootDom.blockName, rootDom);
         DFS(rootDom);
     }
 
     public void DFS(DomInfo domInfo) {
-        BlockDom blockDom = cfgBlocks.get(domInfo.blockName);
+        BlockDom blockDom = cfgDom.funcBlocks.get(domInfo.blockName);
         for (int i = 0; i < blockDom.suc; ++i) {
             if (!domMap.containsKey(blockDom.next.get(i).label)) {
                 DomInfo nextDomInfo = new DomInfo(blockDom.next.get(i).label, domInfo);
@@ -91,9 +92,12 @@ public class Dom {
         DomInfo nowDom, tmpDom;
         for (int i = dfnList.size() - 1; i > 0; --i) {//逆dfn序
             nowDom = dfnList.get(i);
-            nowBlockDom = cfgBlocks.get(nowDom.blockName);
+            nowBlockDom = cfgDom.funcBlocks.get(nowDom.blockName);
             for (var preBlock : nowBlockDom.prev) {//求半支配节点
                 tmpDom = domMap.get(preBlock.label);
+                if (tmpDom == null) {//反图建立支配树时，可能遇到死循环节点，此时无需考虑
+                    continue;
+                }
                 if (tmpDom.dfn < nowDom.dfn) {
                     if (tmpDom.semiDom.dfn < nowDom.semiDom.dfn) {
                         nowDom.semiDom = tmpDom.semiDom;
@@ -127,11 +131,14 @@ public class Dom {
         BlockDom nowBlockDom;
         DomInfo domInfoPre, domInfoNow;
         for (var entry : domMap.entrySet()) {
-            nowBlockDom = cfgBlocks.get(entry.getKey());
+            nowBlockDom = cfgDom.funcBlocks.get(entry.getKey());
             domInfoNow = domMap.get(entry.getKey());
             if (nowBlockDom.pre > 1) {//汇合点
                 for (var preBlock : nowBlockDom.prev) {
                     domInfoPre = domMap.get(preBlock.label);
+                    if (domInfoPre == null) {//反图建立支配树时，可能遇到死循环节点，此时无需考虑
+                        continue;
+                    }
                     while (domInfoPre != entry.getValue().immeDom) {
                         domMap.get(domInfoPre.blockName).domFrontier.add(domInfoNow.blockName);
                         domInfoPre = domInfoPre.immeDom;
