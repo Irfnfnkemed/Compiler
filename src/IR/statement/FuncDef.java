@@ -67,6 +67,7 @@ public class FuncDef extends IRStatement {
     public int initInsertIndex = 1;
     public int allocaIndex = 1;
     public String label = "%entry";
+    public String returnLabel = "returnLabel";
     public boolean isClassMethod = false;
     public int maxCallPara = -1;
     public HashMap<String, PhiInfo> phiMap;//phi指令，跳转来源标签->目标标签及赋值语段，便于汇编处理

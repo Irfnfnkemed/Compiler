@@ -8,7 +8,7 @@ import java.util.*;
 public class BlockDom {
     public List<Instruction> instructionList;
     public String label;
-    public BlockDom[] next;
+    public List<BlockDom> next;
     public List<BlockDom> prev;
     public int pre = 0, suc = 0;//前驱、后继个数
     public HashMap<String, Phi> insertPhi;//要插入的phi，局部变量名->phi指令
@@ -18,7 +18,7 @@ public class BlockDom {
     public BlockDom(String label_) {
         label = label_;
         instructionList = new ArrayList<>();
-        next = new BlockDom[2];
+        next = new ArrayList<>();
         prev = new ArrayList<>();
         insertPhi = new HashMap<>();
     }
@@ -33,7 +33,8 @@ public class BlockDom {
     }
 
     public void setSuc(BlockDom sucBlockDom) {
-        next[suc++] = sucBlockDom;
+        next.add(sucBlockDom);
+        ++suc;
     }
 
 }

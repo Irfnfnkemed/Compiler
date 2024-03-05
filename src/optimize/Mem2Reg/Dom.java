@@ -31,9 +31,15 @@ public class Dom {
     public int[] fatherDSU;//dfn->并查集中的fa
     public int[] minSdomDfn;//dfn->(对应节点 到 逆dfn序遍历dfs树过程中当前遍历到所有点的LCA 的路径上，sdom的dfn最小的点的dfn)
     public CFGDom cfgDom;
+    public HashMap<String, BlockDom> cfgBlocks;
 
     public Dom(CFGDom cfgDom_) {
+        this(cfgDom_.funcBlocks);
         cfgDom = cfgDom_;
+    }
+
+    public Dom(HashMap<String, BlockDom> cfgBlocks_) {
+        cfgBlocks = cfgBlocks_;
         domMap = new HashMap<>();
         dfnList = new ArrayList<>();
         DFS();
@@ -55,11 +61,11 @@ public class Dom {
     }
 
     public void DFS(DomInfo domInfo) {
-        BlockDom blockDom = cfgDom.funcBlocks.get(domInfo.blockName);
+        BlockDom blockDom = cfgBlocks.get(domInfo.blockName);
         for (int i = 0; i < blockDom.suc; ++i) {
-            if (!domMap.containsKey(blockDom.next[i].label)) {
-                DomInfo nextDomInfo = new DomInfo(blockDom.next[i].label, domInfo);
-                domMap.put(blockDom.next[i].label, nextDomInfo);
+            if (!domMap.containsKey(blockDom.next.get(i).label)) {
+                DomInfo nextDomInfo = new DomInfo(blockDom.next.get(i).label, domInfo);
+                domMap.put(blockDom.next.get(i).label, nextDomInfo);
                 DFS(nextDomInfo);
             }
         }
@@ -85,7 +91,7 @@ public class Dom {
         DomInfo nowDom, tmpDom;
         for (int i = dfnList.size() - 1; i > 0; --i) {//逆dfn序
             nowDom = dfnList.get(i);
-            nowBlockDom = cfgDom.funcBlocks.get(nowDom.blockName);
+            nowBlockDom = cfgBlocks.get(nowDom.blockName);
             for (var preBlock : nowBlockDom.prev) {//求半支配节点
                 tmpDom = domMap.get(preBlock.label);
                 if (tmpDom.dfn < nowDom.dfn) {
@@ -121,7 +127,7 @@ public class Dom {
         BlockDom nowBlockDom;
         DomInfo domInfoPre, domInfoNow;
         for (var entry : domMap.entrySet()) {
-            nowBlockDom = cfgDom.funcBlocks.get(entry.getKey());
+            nowBlockDom = cfgBlocks.get(entry.getKey());
             domInfoNow = domMap.get(entry.getKey());
             if (nowBlockDom.pre > 1) {//汇合点
                 for (var preBlock : nowBlockDom.prev) {

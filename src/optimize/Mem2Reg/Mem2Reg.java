@@ -5,6 +5,7 @@ import src.IR.instruction.*;
 import src.IR.statement.FuncDef;
 
 import java.util.HashMap;
+import java.util.Objects;
 
 public class Mem2Reg {
     public HashMap<String, String> replaceLabel;//被合并的块名->目标的块名
@@ -48,6 +49,11 @@ public class Mem2Reg {
         }
         for (String label : replaceLabel.keySet()) {
             find(label);
+        }
+        for (var entry : replaceLabel.entrySet()) {//合并能合并的块
+            if (Objects.equals(entry.getKey(), stmt.returnLabel)) {
+                stmt.returnLabel = cfg.funcBlocks.get(entry.getValue()).label;
+            }
         }
         stmt.irList.clear();
         Label nowLabel;

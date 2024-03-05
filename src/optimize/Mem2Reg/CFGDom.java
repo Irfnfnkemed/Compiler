@@ -15,6 +15,7 @@ public class CFGDom {
     public HashMap<String, List<String>> allocaVar;//alloca的变量，变量名->def的块名列表
     public HashMap<String, IRType> allocaVarType;//alloca的变量名->类型
     public boolean change = false;//控制流发生改变
+    public boolean noReturn = false;//是否一定死循环
     public FuncDef funcDef;
 
     public CFGDom(FuncDef funcDef_) {
@@ -88,8 +89,8 @@ public class CFGDom {
             blockDom = queue.poll();
             blockDom.visited = true;
             for (int i = 0; i < blockDom.suc; ++i) {
-                if (!(blockDom.next[i]).visited) {
-                    queue.add(blockDom.next[i]);
+                if (!(blockDom.next.get(i)).visited) {
+                    queue.add(blockDom.next.get(i));
                 }
             }
         }
@@ -98,7 +99,7 @@ public class CFGDom {
             var entry = iterator.next();
             if (!(entry).visited) {
                 for (int i = 0; i < entry.suc; ++i) {
-                    blockDom = entry.next[i];
+                    blockDom = entry.next.get(i);
                     for (int j = 0; j < blockDom.pre; ++j) {
                         if (blockDom.prev.get(j) == entry) {
                             blockDom.prev.remove(j);
@@ -107,10 +108,17 @@ public class CFGDom {
                         }
                     }
                 }
+                if (Objects.equals(entry.label, funcDef.returnLabel)) {
+                    noReturn = true;
+                }
                 iterator.remove();
                 change = true;
             }
         }
+    }
+
+    public void inverse() {//建立反图
+
     }
 
 }

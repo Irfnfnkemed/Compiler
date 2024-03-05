@@ -101,7 +101,7 @@ public class PutPhi {
                 var restoreStack = renameBlock(para.blockDom, para.fromLabel);
                 if (para.blockDom.suc > 0 && restoreStack != null) {
                     para.restoreStack = restoreStack;
-                    renameBlockStack.push(new renameBlockPara(para.blockDom.next[para.i++], para.blockDom.label, restoreStack, 0));
+                    renameBlockStack.push(new renameBlockPara(para.blockDom.next.get(para.i++), para.blockDom.label, restoreStack, 0));
                 } else {
                     renameBlockStack.pop();
                 }
@@ -118,7 +118,7 @@ public class PutPhi {
                     }
                 }
                 if (para.i < para.blockDom.suc) {
-                    renameBlockStack.push(new renameBlockPara(para.blockDom.next[para.i++], para.blockDom.label, null, 0));
+                    renameBlockStack.push(new renameBlockPara(para.blockDom.next.get(para.i++), para.blockDom.label, null, 0));
                 } else {
                     renameBlockStack.pop();
                 }

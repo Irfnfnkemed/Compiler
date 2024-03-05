@@ -8,6 +8,7 @@ import src.ASM.ASMPrinter;
 import src.AST.ASTBuilder;
 import src.IR.IRBuilder;
 import src.IR.IRPrinter;
+import src.IR.statement.FuncDef;
 import src.optimize.Mem2Reg.Mem2Reg;
 import src.Util.error.Errors;
 import src.Util.error.ParserErrorListener;
@@ -65,7 +66,7 @@ public class Main {
             System.err.println(errors.toString());
         }
         //testSemantic();
-       // testIR();
+        // testIR();
     }
 }
 
