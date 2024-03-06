@@ -95,7 +95,7 @@ public class CFGDom {
             }
         }
         var iterator = funcBlocks.values().iterator();
-        while (iterator.hasNext()) {//消除死块
+        while (iterator.hasNext()) {//初步消除死块
             var entry = iterator.next();
             if (!(entry).visited) {
                 for (int i = 0; i < entry.suc; ++i) {

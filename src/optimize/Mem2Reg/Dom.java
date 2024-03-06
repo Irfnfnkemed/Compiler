@@ -2,6 +2,8 @@ package src.optimize.Mem2Reg;
 
 import java.util.*;
 
+import static java.lang.Math.min;
+
 public class Dom {
     private int cnt = 0;
 
@@ -76,6 +78,7 @@ public class Dom {
         if (fatherDSU[now] == -1) {
             return now;
         }
+        minSdomDfn[now] = min(minSdomDfn[now], dfnList.get(now).semiDom.dfn);
         int tmp = fatherDSU[now];
         fatherDSU[now] = find(fatherDSU[now]);
         if (minSdomDfn[tmp] < minSdomDfn[now]) {
@@ -95,9 +98,9 @@ public class Dom {
             nowBlockDom = cfgDom.funcBlocks.get(nowDom.blockName);
             for (var preBlock : nowBlockDom.prev) {//求半支配节点
                 tmpDom = domMap.get(preBlock.label);
-                if (tmpDom == null) {//反图建立支配树时，可能遇到死循环节点，此时无需考虑
-                    continue;
-                }
+//                if (tmpDom == null) {//反图建立支配树时，可能遇到死循环节点，此时无需考虑
+//                    continue;
+//                }
                 if (tmpDom.dfn < nowDom.dfn) {
                     if (tmpDom.semiDom.dfn < nowDom.semiDom.dfn) {
                         nowDom.semiDom = tmpDom.semiDom;
@@ -136,9 +139,9 @@ public class Dom {
             if (nowBlockDom.pre > 1) {//汇合点
                 for (var preBlock : nowBlockDom.prev) {
                     domInfoPre = domMap.get(preBlock.label);
-                    if (domInfoPre == null) {//反图建立支配树时，可能遇到死循环节点，此时无需考虑
-                        continue;
-                    }
+//                    if (domInfoPre == null) {//反图建立支配树时，可能遇到死循环节点，此时无需考虑
+//                        continue;
+//                    }
                     while (domInfoPre != entry.getValue().immeDom) {
                         domMap.get(domInfoPre.blockName).domFrontier.add(domInfoNow.blockName);
                         domInfoPre = domInfoPre.immeDom;

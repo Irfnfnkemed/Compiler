@@ -24,6 +24,8 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Scanner;
 
+import static test.TestIR.testIR;
+
 
 public class Main {
     public static void main(String[] args) throws Exception {
@@ -47,8 +49,13 @@ public class Main {
             PrintStream printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);
             b.print();
-            var tt = new ADCE(a.irProgram);
             Mem2Reg mem2Reg = new Mem2Reg(a.irProgram);
+            fileOutputStream = new FileOutputStream("./src/builtin/test_mem2reg.ll");
+            printStream = new PrintStream(fileOutputStream);
+            System.setOut(printStream);
+            b.print();
+            ADCE adce = new ADCE(a.irProgram);
+            Mem2Reg mem2Reg2 = new Mem2Reg(a.irProgram);
             fileOutputStream = new FileOutputStream("./src/builtin/test.ll");
             printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);

@@ -6,6 +6,7 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import src.AST.ASTBuilder;
 import src.IR.IRBuilder;
 import src.IR.IRPrinter;
+import src.optimize.ADCE.ADCE;
 import src.optimize.Mem2Reg.Mem2Reg;
 import src.Util.error.Errors;
 import src.Util.error.ParserErrorListener;
@@ -116,6 +117,7 @@ public class TestIR {
             IRBuilder irBuilder = new IRBuilder(AST.ASTProgram, semantic.globalScope, semantic.inlineGlobalVar);
             IRPrinter irPrinter = new IRPrinter(irBuilder.irProgram);
             Mem2Reg mem2Reg = new Mem2Reg(irBuilder.irProgram);
+            ADCE adce = new ADCE(irBuilder.irProgram);
             irPrinter.print();
             printStream.close();
             String input = extractContentFromFile(folderPath + fileName, "=== input ===");
