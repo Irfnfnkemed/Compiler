@@ -5,11 +5,6 @@ import src.IR.IRProgram;
 import src.IR.statement.FuncDef;
 import src.optimize.Mem2Reg.CFGDom;
 import src.optimize.Mem2Reg.Dom;
-import src.optimize.Mem2Reg.PutPhi;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Objects;
 
 public class ADCE {
 

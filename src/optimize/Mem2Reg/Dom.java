@@ -41,7 +41,16 @@ public class Dom {
 
     public Dom(CFGDom cfgDom_, String entryLabel_) {
         cfgDom = cfgDom_;
-        entryLabel = entryLabel_;
+        if (cfgDom.funcBlocks.containsKey(entryLabel_)) {
+            entryLabel = entryLabel_;
+        } else {
+            for (var entry : cfgDom.funcBlocks.entrySet()) {
+                if (entry.getValue().pre == 0) {
+                    entryLabel = entry.getKey();
+                    cfgDom.funcDef.returnLabel = entryLabel;
+                }
+            }
+        }
         domMap = new HashMap<>();
         dfnList = new ArrayList<>();
         DFS();

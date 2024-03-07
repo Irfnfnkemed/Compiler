@@ -3,7 +3,6 @@ package src.optimize.ADCE;
 import src.IR.instruction.*;
 import src.IR.statement.FuncDef;
 import src.optimize.Mem2Reg.Dom;
-import src.optimize.Mem2Reg.PutPhi;
 
 import java.util.*;
 
@@ -22,11 +21,14 @@ public class FunctionADCE {
         defSet = new HashMap<>();
         domBr = new HashMap<>();
         activeBlock = new HashSet<>();
+        activeBlock.add("entry");
         blockBr = new HashMap<>();
         dom = dom_;
         funcDef = dom_.cfgDom.funcDef;
         setDefAndActive();
+        setBrDom();
         markActive();
+        rebuildBr();
         recollect();
     }
 
@@ -35,24 +37,9 @@ public class FunctionADCE {
         for (var instr : funcDef.irList) {
             instr.activeADCE = instr.visitADCE = false;
             if (instr instanceof Label) {
-                instr.activeADCE = true;
                 nowBlockLabel = ((Label) instr).labelName;
             } else if (instr instanceof Br) {
                 blockBr.put(((Br) instr).nowLabel.substring(1), ((Br) instr));
-                if (((Br) instr).condition == null) {
-                    instr.activeADCE = true;
-                    activeInstr.add(instr);
-                    activeBlock.add(((Br) instr).nowLabel.substring(1));
-                } else {
-                    if (dom.domMap.get(((Br) instr).trueLabel.substring(1)).
-                            domFrontier.contains(((Br) instr).nowLabel.substring(1))) {
-                        addDomBr(((Br) instr).trueLabel.substring(1), ((Br) instr));
-                    }
-                    if (dom.domMap.get(((Br) instr).falseLabel.substring(1)).
-                            domFrontier.contains(((Br) instr).nowLabel.substring(1))) {
-                        addDomBr(((Br) instr).falseLabel.substring(1), ((Br) instr));
-                    }
-                }
             } else if (instr instanceof Binary) {
                 defSet.put(((Binary) instr).output, instr);
             } else if (instr instanceof Icmp) {
@@ -62,12 +49,14 @@ public class FunctionADCE {
             } else if (instr instanceof Store) {
                 activeInstr.add(instr);
                 instr.activeADCE = true;
+                activeBlock.add(nowBlockLabel);
             } else if (instr instanceof Call) {
                 if (((Call) instr).resultVar != null) {
                     defSet.put(((Call) instr).resultVar, instr);
                 }
                 activeInstr.add(instr);
                 instr.activeADCE = true;
+                activeBlock.add(nowBlockLabel);
             } else if (instr instanceof Phi) {
                 defSet.put(((Phi) instr).result, instr);
             } else if (instr instanceof Getelementptr) {
@@ -75,8 +64,19 @@ public class FunctionADCE {
             } else if (instr instanceof Ret) {
                 activeInstr.add(instr);
                 instr.activeADCE = true;
+                activeBlock.add(nowBlockLabel);
             }
             instr.nowBlockADCE = nowBlockLabel;
+        }
+    }
+
+    private void setBrDom() {
+        for (var block : dom.domMap.values()) {
+            List<Br> tmp = new ArrayList<>();
+            for (String domFrontier : block.domFrontier) {
+                tmp.add(blockBr.get(domFrontier));
+            }
+            domBr.put(block.blockName, tmp);
         }
     }
 
@@ -88,6 +88,10 @@ public class FunctionADCE {
                 setDomInstr(instr.nowBlockADCE);
                 if (instr instanceof Br) {
                     setActiveInstr(((Br) instr).condition);
+                    activeBlock.add(((Br) instr).trueLabel.substring(1));
+                    if (((Br) instr).falseLabel != null) {
+                        activeBlock.add(((Br) instr).falseLabel.substring(1));
+                    }
                 } else if (instr instanceof Binary) {
                     setActiveInstr(((Binary) instr).operandLeft);
                     setActiveInstr(((Binary) instr).operandRight);
@@ -106,6 +110,9 @@ public class FunctionADCE {
                 } else if (instr instanceof Phi) {
                     for (var assign : ((Phi) instr).assignBlockList) {
                         setActiveInstr(assign.var);
+                        Br pre_br = blockBr.get(assign.label.substring(1));
+                        activeInstr.add(pre_br);
+                        pre_br.activeADCE = true;
                     }
                 } else if (instr instanceof Getelementptr) {
                     setActiveInstr(((Getelementptr) instr).from);
@@ -134,33 +141,41 @@ public class FunctionADCE {
     }
 
     private void setDomInstr(String nowLabel) {
+        activeBlock.add(nowLabel);
         var brList = domBr.get(nowLabel);
         if (brList != null) {
             for (Br br : brList) {//添加控制依赖
                 if (!br.visitADCE) {
                     activeInstr.add(br);
                     br.activeADCE = true;
-                    activeBlock.add(br.nowBlockADCE);
                 }
             }
         }
     }
 
+    private void rebuildBr() {
+        for (Br br : blockBr.values()) {
+            if ((activeBlock.contains(br.nowBlockADCE)) && !br.activeADCE) {
+                String label = dom.domMap.get(br.nowBlockADCE).immeDom.blockName;
+                while (!activeBlock.contains(label)) {
+                    label = dom.domMap.get(label).immeDom.blockName;
+                }
+                br.condition = null;
+                br.trueLabel = "%" + label;
+                br.activeADCE = true;
+            }
+        }
+    }
+
     private void recollect() {
+        dom.cfgDom.funcDef.labelList.clear();
         List<Instruction> newList = new ArrayList<>();
         for (Instruction instr : funcDef.irList) {
             if (instr.activeADCE) {
                 newList.add(instr);
-            } else {
-                if (instr instanceof Br) {
-                    String nextLabel = ((Br) instr).trueLabel.substring(1);
-                    while (!activeBlock.contains(nextLabel)) {
-                        nextLabel = blockBr.get(nextLabel).trueLabel.substring(1);
-                    }
-                    ((Br) instr).condition = null;
-                    ((Br) instr).trueLabel = "%" + nextLabel;
-                    newList.add(instr);
-                }
+            } else if (instr instanceof Label && activeBlock.contains(((Label) instr).labelName)) {
+                dom.cfgDom.funcDef.labelList.add((Label) instr);
+                newList.add(instr);
             }
         }
         funcDef.irList = newList;
