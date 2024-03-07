@@ -78,13 +78,13 @@ public class Dom {
         if (fatherDSU[now] == -1) {
             return now;
         }
-        minSdomDfn[now] = min(minSdomDfn[now], dfnList.get(now).semiDom.dfn);
+        //minSdomDfn[now] = min(minSdomDfn[now], dfnList.get(now).semiDom.dfn);
         int tmp = fatherDSU[now];
         fatherDSU[now] = find(fatherDSU[now]);
-        if (minSdomDfn[tmp] < minSdomDfn[now]) {
+        if (dfnList.get(minSdomDfn[tmp]).semiDom.dfn < dfnList.get(minSdomDfn[now]).semiDom.dfn) {
             minSdomDfn[now] = minSdomDfn[tmp];
         }
-        if (dfnList.get(tmp).semiDom.dfn < minSdomDfn[now]) {
+        if (dfnList.get(tmp).semiDom.dfn < dfnList.get(minSdomDfn[now]).semiDom.dfn) {
             minSdomDfn[now] = tmp;
         }
         return fatherDSU[now];
@@ -98,17 +98,14 @@ public class Dom {
             nowBlockDom = cfgDom.funcBlocks.get(nowDom.blockName);
             for (var preBlock : nowBlockDom.prev) {//求半支配节点
                 tmpDom = domMap.get(preBlock.label);
-//                if (tmpDom == null) {//反图建立支配树时，可能遇到死循环节点，此时无需考虑
-//                    continue;
-//                }
                 if (tmpDom.dfn < nowDom.dfn) {
                     if (tmpDom.semiDom.dfn < nowDom.semiDom.dfn) {
                         nowDom.semiDom = tmpDom.semiDom;
                     }
                 } else {
                     find(tmpDom.dfn);
-                    if (minSdomDfn[tmpDom.dfn] < nowDom.semiDom.dfn) {
-                        nowDom.semiDom = dfnList.get(minSdomDfn[tmpDom.dfn]);
+                    if (dfnList.get(minSdomDfn[tmpDom.dfn]).semiDom.dfn < nowDom.semiDom.dfn) {
+                        nowDom.semiDom = dfnList.get(minSdomDfn[tmpDom.dfn]).semiDom;
                     }
                 }
             }
@@ -139,9 +136,6 @@ public class Dom {
             if (nowBlockDom.pre > 1) {//汇合点
                 for (var preBlock : nowBlockDom.prev) {
                     domInfoPre = domMap.get(preBlock.label);
-//                    if (domInfoPre == null) {//反图建立支配树时，可能遇到死循环节点，此时无需考虑
-//                        continue;
-//                    }
                     while (domInfoPre != entry.getValue().immeDom) {
                         domMap.get(domInfoPre.blockName).domFrontier.add(domInfoNow.blockName);
                         domInfoPre = domInfoPre.immeDom;

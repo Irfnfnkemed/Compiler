@@ -118,6 +118,7 @@ public class TestIR {
             IRPrinter irPrinter = new IRPrinter(irBuilder.irProgram);
             Mem2Reg mem2Reg = new Mem2Reg(irBuilder.irProgram);
             ADCE adce = new ADCE(irBuilder.irProgram);
+            mem2Reg = new Mem2Reg(irBuilder.irProgram);
             irPrinter.print();
             printStream.close();
             String input = extractContentFromFile(folderPath + fileName, "=== input ===");
