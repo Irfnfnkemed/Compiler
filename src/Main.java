@@ -14,6 +14,8 @@ import src.optimize.Mem2Reg.Mem2Reg;
 import src.Util.error.Errors;
 import src.Util.error.ParserErrorListener;
 import src.optimize.RegAllocation.RegAllocation;
+import src.optimize.SCCP.FunctionSCCP;
+import src.optimize.SCCP.SCCP;
 import src.parser.MxLexer;
 import src.parser.MxParser;
 import src.semantic.Semantic;
@@ -28,6 +30,7 @@ import static test.TestIR.testIR;
 
 
 public class Main {
+
     public static void main(String[] args) throws Exception {
         Scanner scanner = new Scanner(System.in);
         try {
@@ -56,6 +59,9 @@ public class Main {
             b.print();
             ADCE adce = new ADCE(a.irProgram);
             Mem2Reg mem2Reg2 = new Mem2Reg(a.irProgram);
+            SCCP sccp = new SCCP(a.irProgram);
+            adce = new ADCE(a.irProgram);
+            mem2Reg2 = new Mem2Reg(a.irProgram);
             fileOutputStream = new FileOutputStream("./src/builtin/test.ll");
             printStream = new PrintStream(fileOutputStream);
             System.setOut(printStream);

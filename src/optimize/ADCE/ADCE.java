@@ -7,9 +7,7 @@ import src.optimize.Mem2Reg.CFGDom;
 import src.optimize.Mem2Reg.Dom;
 
 public class ADCE {
-
     public IRProgram irProgram;
-
 
     public ADCE(IRProgram irProgram_) {
         irProgram = irProgram_;

@@ -192,7 +192,9 @@ public class FuncDef extends IRStatement {
             label = labelStack.pop();
             for (var assignBlock : phi.assignBlockList) {
                 PhiInfo phiInfo = phiMap.get(assignBlock.label.substring(1));
-                phiInfo.push(assignBlock.var, phi.result, assignBlock.value, label);
+                if (phiInfo != null) {
+                    phiInfo.push(assignBlock.var, phi.result, assignBlock.value, label);
+                }
             }
         }
     }

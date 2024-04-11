@@ -65,15 +65,17 @@ public class CFGDom {
     public void collectAlloca() {
         for (var label : funcDef.labelList) {//收集alloca信息
             BlockDom blockDom = funcBlocks.get(label.labelName);
-            for (var instr : blockDom.instructionList) {
-                if (instr instanceof Alloca) {
-                    allocaVar.put(((Alloca) instr).varName, new ArrayList<>());
-                    allocaVarType.put(((Alloca) instr).varName, ((Alloca) instr).irType);
-                } else if (instr instanceof Store) {
-                    if (allocaVar.containsKey(((Store) instr).toPointer)) {
-                        var defList = allocaVar.get(((Store) instr).toPointer);
-                        if (defList.isEmpty() || !Objects.equals(defList.get(defList.size() - 1), blockDom.label)) {
-                            allocaVar.get(((Store) instr).toPointer).add(blockDom.label);
+            if (blockDom != null) {
+                for (var instr : blockDom.instructionList) {
+                    if (instr instanceof Alloca) {
+                        allocaVar.put(((Alloca) instr).varName, new ArrayList<>());
+                        allocaVarType.put(((Alloca) instr).varName, ((Alloca) instr).irType);
+                    } else if (instr instanceof Store) {
+                        if (allocaVar.containsKey(((Store) instr).toPointer)) {
+                            var defList = allocaVar.get(((Store) instr).toPointer);
+                            if (defList.isEmpty() || !Objects.equals(defList.get(defList.size() - 1), blockDom.label)) {
+                                allocaVar.get(((Store) instr).toPointer).add(blockDom.label);
+                            }
                         }
                     }
                 }

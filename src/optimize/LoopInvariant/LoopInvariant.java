@@ -122,12 +122,12 @@ public class LoopInvariant {
                 }
             }
         } else if (instr instanceof Getelementptr) {
-            if (!callInLoop && !modifyHeap && ((Getelementptr) instr).offset != -1 && judgeInvariant(((Getelementptr) instr).from) &&
-                    !defInLoop.contains(((Getelementptr) instr).from) && judgeInvariant(((Getelementptr) instr).indexVar)) {
-                br.pushCache(instr);
-            } else {
+            //if (!callInLoop && !modifyHeap && ((Getelementptr) instr).offset != -1 && judgeInvariant(((Getelementptr) instr).from) &&
+            //        !defInLoop.contains(((Getelementptr) instr).from) && judgeInvariant(((Getelementptr) instr).indexVar)) {
+            //    br.pushCache(instr);
+           // } else {
                 notLoopInvariant.add(((Getelementptr) instr).result);
-            }
+            //}
         } else if (instr instanceof Phi) {
             notLoopInvariant.add(((Phi) instr).result);
         } else if (instr instanceof Load) {
